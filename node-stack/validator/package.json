@@ -1,0 +1,36 @@
+{
+  "name": "sybil-validator",
+  "version": "0.0.1",
+  "main": "app.js",
+  "type": "module",
+  "scripts": {
+    "test": "vitest --silent=false watch",
+    "lint": "eslint --fix src",
+    "prepare": "husky",
+    "dev": "nodemon app.js"
+  },
+  "author": "Mentor <mentor@palokaj.co> (http://github.com/actuallymentor)",
+  "license": "MIT",
+  "description": "",
+  "dependencies": {
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "geoip-lite": "^1.4.10",
+    "mentie": "^0.2.38",
+    "sqlite": "^5.1.1",
+    "sqlite3": "^5.1.7",
+    "uuid": "^11.0.5"
+  },
+  "devDependencies": {
+    "@babel/eslint-parser": "^7.26.5",
+    "@babel/preset-react": "^7.26.3",
+    "airier": "^0.0.9",
+    "eslint": "^8.57.1",
+    "eslint-plugin-react": "^7.37.4",
+    "eslint-plugin-unused-imports": "^3.2.0",
+    "husky": "^9.1.7",
+    "node-fetch": "^3.3.2",
+    "nodemon": "^3.1.9",
+    "vitest": "^2.1.8"
+  }
+}
