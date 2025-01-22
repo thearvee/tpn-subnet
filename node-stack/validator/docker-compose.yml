@@ -1,0 +1,14 @@
+version: '3.7'
+services:
+  sybil-network:
+    container_name: sybil-network
+    image: sybil-network:nightly
+    ports:
+        - "3000:3000"
+    # You may also create a .env file in the same folder as the docker-compose.yml file
+    environment:
+        LOG_LEVEL: info
+        MAXMIND_LICENSE_KEY:
+        PUBLIC_URL: "http://localhost:3000"
+    volumes:
+        - ./database.sqlite:/app/database.sqlite

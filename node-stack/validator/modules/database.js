@@ -126,8 +126,36 @@ export async function save_challenge_response( { challenge, response } ) {
 
 }
 
-// Helper function that gets the response value of a challenge by it's UUID
-export async function get_challenge_response( { uuid } ) {
-    const challenge = await db.get( ` SELECT * FROM CHALLENGES WHERE id = ? LIMIT 1 `, uuid )
-    return challenge
+/**
+ * Retrieves the response and creation date for a given challenge from the database.
+ *
+ * @param {Object} params - The parameters for the function.
+ * @param {string} params.challenge - The challenge string to look up in the database.
+ * @returns {Promise<Object>} A promise that resolves to an object containing the response and creation date.
+ * @returns {string} returns.response - The response associated with the challenge.
+ * @returns {string} returns.created - The creation date of the challenge.
+ */
+export async function get_challenge_response( { challenge } ) {
+    const { response, created } = await db.get( ` SELECT * FROM CHALLENGES WHERE challenge = ? LIMIT 1 `, challenge )
+    return { response, created }
+}
+
+/**
+ * Solves a challenge by updating the solved field in the database with the current timestamp.
+ *
+ * @param {Object} params - The parameters object.
+ * @param {string} params.challenge - The challenge identifier.
+ * @returns {Promise<number>} The current timestamp when the challenge was solved.
+ */
+export async function mark_challenge_solved( { challenge } ) {
+
+    const now = Date.now()
+
+    // Update the solved field to now if the field is unset
+    await db.run( `UPDATE CHALLENGES SET solved = ? WHERE challenge = ? AND solved IS NULL`, now, challenge )
+
+    // Read the solved field
+    const { solved } = await db.get( `SELECT solved FROM CHALLENGES WHERE challenge = ? LIMIT 1`, challenge )
+    return solved
+
 }

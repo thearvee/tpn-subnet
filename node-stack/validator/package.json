@@ -6,7 +6,6 @@
   "scripts": {
     "test": "vitest --silent=false watch",
     "lint": "eslint --fix src",
-    "prepare": "husky",
     "dev": "nodemon app.js"
   },
   "author": "Mentor <mentor@palokaj.co> (http://github.com/actuallymentor)",
