@@ -16,7 +16,6 @@ docker run \
 
 Docker compose:
 
-
 ```yaml
 version: '3.7'
 services:
@@ -32,8 +31,9 @@ services:
         volumes:
             - ./database.sqlite:/app/database.sqlite
 ```
+## Development
 
-Required variables in `.env` file (for devving):
+Required variables in `.env` file:
 
 ```bash
 # .env
@@ -41,3 +41,7 @@ LOGLEVEL=info,warn,error
 MAXMIND_LICENSE_KEY= # Make a free account on maxmind.com and generate a license key in account settings
 PUBLIC_URL= # The URL where the app is hosted, may be an ip or domain based url starting with http:// or https://
 ```
+
+Building docker file:
+
+```docker build -t sybil-network:nightly . --no-cache```
