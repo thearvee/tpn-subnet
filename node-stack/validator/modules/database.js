@@ -7,7 +7,7 @@ import { log } from 'mentie'
 const __dirname = url.fileURLToPath( new URL( '.', import.meta.url ) )
 
 // Create the database
-const db = await open( {
+let db = await open( {
     filename: `${ __dirname }/../database.sqlite`,
     driver: sqlite3.Database
 } )

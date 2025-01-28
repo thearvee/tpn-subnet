@@ -7,7 +7,7 @@ WORKDIR /app
 # Copy package management files
 COPY package*.json ./
 
-# Install dependencies
+# Install dependencies, data files from maxmind and ip2location are downloaded later and not during build
 RUN npm ci --omit=dev
 
 # Copy application code

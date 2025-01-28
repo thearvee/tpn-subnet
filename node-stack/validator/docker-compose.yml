@@ -10,5 +10,14 @@ services:
         LOG_LEVEL: info
         MAXMIND_LICENSE_KEY:
         PUBLIC_URL: "http://localhost:3000"
+        IP2LOCATION_DOWNLOAD_TOKEN: 
     volumes:
-        - ./database.sqlite:/app/database.sqlite
+        - ./database.sqlite:/app/database.sqlite 
+        # - ./node_modules/geoip-lite/data:/app/node_modules/geoip-lite/data
+        - maxmind_data:/app/node_modules/geoip-lite/data
+        # - ./IP2LOCATION-LITE-ASN.IPV6.BIN:/app/IP2LOCATION-LITE-ASN.IPV6.BIN
+        - ip2location_data:/app/IP2LOCATION-LITE-ASN.IPV6.BIN
+
+volumes:
+    maxmind_data:
+    ip2location_data:

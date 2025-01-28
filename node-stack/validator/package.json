@@ -15,9 +15,12 @@
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
     "geoip-lite": "^1.4.10",
+    "ip2location-nodejs": "^9.6.3",
+    "maxmind": "^4.3.24",
     "mentie": "^0.2.38",
     "sqlite": "^5.1.1",
     "sqlite3": "^5.1.7",
+    "unzipper": "^0.12.3",
     "uuid": "^11.0.5"
   },
   "devDependencies": {

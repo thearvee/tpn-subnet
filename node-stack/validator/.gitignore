@@ -137,3 +137,8 @@ dist
 
 # Dotfiles
 .*
+
+# Program files
+database.sqlite
+*.BIN
+*.zip
