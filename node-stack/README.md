@@ -2,7 +2,7 @@
 
 This folder contains the code for the miner and validator docker images.
 
-In order to run it locally (for development purposes), you can use the following commands:
+In order to run it locally (for development purposes), make a `.env` based on the `.env.example`, then you can use the following command:
 
 ```bash
 bash start.sh
