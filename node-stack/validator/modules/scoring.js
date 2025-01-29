@@ -30,7 +30,7 @@ export async function score_request_uniqueness( request ) {
     log.info( `Request from:`, country )
     
     // Get the connection type and save ip to db
-    const [ is_dc, { ip_pct_same_country } ] = await Promise.all( [
+    const [ is_dc, { ip_pct_same_country=0 } ] = await Promise.all( [
         is_data_center( unspoofable_ip ),
         save_ip_address( { ip_address: unspoofable_ip, country } )
     ] )

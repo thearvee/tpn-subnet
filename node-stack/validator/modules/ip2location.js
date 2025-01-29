@@ -8,7 +8,9 @@ import { datacenter_patterns } from "./scoring.js"
 
 // Configurations
 const __dirname = url.fileURLToPath( new URL( '.', import.meta.url ) )
-const database_file_location = `${ __dirname }/../IP2LOCATION-LITE-ASN.IPV6.BIN`
+const database_folder = fs.realpathSync( `${ __dirname }/../ip2location_data` )
+const database_file_name = `IP2LOCATION-LITE-ASN.IPV6.BIN`
+const database_file_location = `${ database_folder }/${ database_file_name }`
 const database_max_age_ms = 1000 * 60 * 60 * 24 * 2
 
 // Init the IP2Location
@@ -26,6 +28,7 @@ async function unzip_bin( zip_path, out_path ) {
 
     // Read the zip file
     const directory = await unzipper.Open.file( zip_path )
+    log.info( `Opened the zip file ${ zip_path }, directory contents: `, directory.files.map( file => file.path ) )
 
     // Find the index of the .BIN file
     const bin_file = directory.files.find( file => file.path.endsWith( '.BIN' ) )
@@ -34,9 +37,27 @@ async function unzip_bin( zip_path, out_path ) {
     // Extract the .BIN file to out path
     return new Promise( ( resolve, reject ) => {
 
-        const out_stream = fs.createWriteStream( out_path )
+        // Create the database folder if it doesn't exist
+        if( !fs.existsSync( database_folder ) ) {
+            log.info( `Creating the folder ${ database_folder }` )
+            fs.mkdirSync( database_folder )
+        }
 
-        // Pipe the file to the out stream
+        // Delete the current .bin file
+        if( fs.existsSync( out_path ) ) {
+
+            // Remove the file
+            log.info( `Removing the file ${ out_path }` )
+            fs.unlinkSync( out_path )
+
+        }
+
+        // Create the out stream
+        const out_stream = fs.createWriteStream( out_path )
+        log.info( `Extracting the file ${ out_path }` )
+
+        // Pipe the file to the out stream 
+        log.info( `Piping the file ${ bin_file.path } to the stream` )
         bin_file.stream().pipe( out_stream )
 
         // On finish, resolve
@@ -71,6 +92,17 @@ async function download_url_to_file( url, path ) {
 
     const zip_path = `${ path }.zip`
 
+    // Check file context
+    const zip_file_exists = fs.existsSync( zip_path )
+    const zip_file_timestamp = zip_file_exists ? fs.statSync( zip_path ).mtimeMs : 0
+    const zip_outdated = Date.now() - zip_file_timestamp > database_max_age_ms
+
+    // If the zip is not outdated but does exits, extract only
+    if( !zip_outdated && zip_file_exists ) {
+        log.info( `The zip file ${ zip_path } is not outdated, extracting the file` )
+        return unzip_bin( zip_path, database_file_location )
+    }
+
     // Download the file
     log.info( `Downloading the file ${ path } from ${ url }` )
     return new Promise( ( resolve, reject ) => {
@@ -92,20 +124,24 @@ async function download_url_to_file( url, path ) {
             if( response.statusCode >= 300 && response.statusCode < 400 ) {
                 const redirect_url = new URL( response.headers.location )
                 log.info( `Redirecting to ${ redirect_url }` )
+
                 // Recursively download the redirect
                 return download_url_to_file( redirect_url, path ).then( resolve ).catch( reject )
             }
 
             // If the response is non binary, and we already have a zipfile, unzip it
-            const zip_file_exists = fs.existsSync( zip_path )
-            if( non_binary_response && zip_file_exists ) return unzip_bin( zip_path, database_file_location ).then( resolve ).catch( reject )
+            log.info( `Zip file exists: ${ zip_file_exists }` )
+            if( non_binary_response && zip_file_exists ) {
+                log.info( `The response is not a binary file, but we already have a zip file to extract` )
+                return unzip_bin( zip_path, database_file_location ).then( resolve ).catch( reject )
+            }
             if( non_binary_response && !zip_file_exists ) {
                 log.warn( `The response is not a binary file, and we don't have a zip file to extract` )
                 return resolve()
             }
             
             // Create file stream
-            const file = fs.createWriteStream( path )
+            const file = fs.createWriteStream( zip_path )
 
             // Pipe data to file
             response.pipe( file )
@@ -163,6 +199,11 @@ export async function is_data_center( ip_address ) {
 
     // Check that database file exists
     if( !fs.existsSync( database_file_location ) ) throw new Error( `Database file ${ database_file_location } does not exist` )
+
+    // Check database file metadata
+    const { mtimeMs } = fs.statSync( database_file_location )
+    const database_age_ms = Date.now() - mtimeMs
+    log.info( `Database file age: ${ database_age_ms } ms` )
 
     // Get connection type
     await ip2location.openAsync( database_file_location )

@@ -1,5 +1,5 @@
 import { describe, test, expect } from 'vitest'
-import fetch from 'node-fetch' // might be needed
+import fetch from 'node-fetch'
 import { wait_for_server_up } from './helpers.js'
 
 describe( 'GET /challenge/new', () => {
