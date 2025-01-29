@@ -6,6 +6,8 @@ For setup:
 
 - Make an account at https://lite.ip2location.com/. Set it as the `IP2LOCATION_DOWNLOAD_TOKEN` environment variable in the docker compose file.
 - Make an account at https://www.maxmind.com and generate a license key in account settings. Set it as the `MAXMIND_LICENSE_KEY` environment variable in the docker compose file.
+- Run `docker build -t sybil-network:nightly . --no-cache` to build the docker image
+- Run `docker-compose up` to start the container, note that on first start the importing or maxmind and ip2location databases may take a while.
 
 
 Docker compose:
@@ -26,6 +28,21 @@ services:
         volumes:
             - ./database.sqlite:/app/database.sqlite
 ```
+
+### Endpoints
+
+The endpoints available in this container:
+
+- `/` - Nonfunctional hello page
+- `/score` - Returns the score of the calling ip address, used for testing and debugging
+  - Sample response: `{ score: 30 }`
+- `/challenge/new` - Generates a new challenge, the validator calls this locally and sends this url to a miner
+  - Sample response: `{ challenge: 1234, challenge_url: "http://localhost:3000/challenge/1234" }`, note that the base url is configured using environment variables, in production it will not be localhost.
+- `/challenge/:id` - Returns the response belinging to a challenge, the miner calls this endpoint
+  - Sample response: `{ response: "abcd" }`
+- `/challenge/:id/:response` - Validates the response to a challenge, the miner calls this endpoint, and the validator uses it to score the miner and updates it's internal database. The endpoint returns scoring info to the miner
+   - Sample response: `{ correct: true, score: 49, speed_score: 98, uniqueness_score: 0, solved_at: 1738145282214 }`
+
 ## Development
 
 Required variables in `.env` file:

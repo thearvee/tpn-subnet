@@ -16,7 +16,7 @@ export async function wait_for_server_up() {
     // While loop that fetches server status
     let server_up = false
     let count = 0
-    const max_count = 10
+    const max_count = 60
     while( !server_up ) {
 
         // If max count exceeded, throw
