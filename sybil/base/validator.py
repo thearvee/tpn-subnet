@@ -28,13 +28,13 @@ import bittensor as bt
 from typing import List, Union
 from traceback import print_exception
 
-from template.base.neuron import BaseNeuron
-from template.base.utils.weight_utils import (
+from sybil.base.neuron import BaseNeuron
+from sybil.base.utils.weight_utils import (
     process_weights_for_netuid,
     convert_weights_and_uids_for_emit,
 )  # TODO: Replace when bittensor switches to numpy
-from template.mock import MockDendrite
-from template.utils.config import add_validator_args
+from sybil.mock import MockDendrite
+from sybil.utils.config import add_validator_args
 
 
 class BaseValidatorNeuron(BaseNeuron):
