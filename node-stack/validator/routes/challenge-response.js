@@ -19,7 +19,9 @@ router.get( "/new", async ( req, res ) => {
 
 } )
 
-// Challenge solution route
+// Challenge route
+// :challenge only - return the response for the challenge
+// :challenge and :response - validate the response and return the score
 router.get( "/:challenge/:response?", async ( req, res ) => {
 
     // Extract challenge and response from request

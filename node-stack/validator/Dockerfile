@@ -8,6 +8,7 @@ WORKDIR /app
 COPY package*.json ./
 
 # Install dependencies, data files from maxmind and ip2location are downloaded later and not during build
+RUN npm i -g npm
 RUN npm ci --omit=dev
 
 # Copy application code

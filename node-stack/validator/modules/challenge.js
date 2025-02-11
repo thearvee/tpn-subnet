@@ -2,7 +2,6 @@ import { v4 as uuidv4 } from 'uuid'
 import { get_challenge_response, mark_challenge_solved, save_challenge_response } from './database.js'
 import { log } from 'mentie'
 
-
 /**
  * Generates a new challenge and response, saves them to the database, and returns the challenge.
  *
@@ -25,6 +24,18 @@ export async function generate_challenge() {
 
 }
 
+/**
+ * Validates and solves a challenge by comparing the provided response 
+ * against the expected challenge response.
+ *
+ * @param {Object} params - The input parameters.
+ * @param {string} params.challenge - The challenge identifier or data to be solved.
+ * @param {string} params.response - The response submitted for the challenge.
+ * @returns {Promise<Object>} response - A promise that resolves to an object indicating the result:
+ * @returns {boolean} response.correct - Whether the response was correct.
+ * @returns {number} response.ms_to_solve - The time it took to solve the challenge.
+ * @returns {number} response.solved_at - The timestamp when the challenge was solved.
+ */
 export async function solve_challenge( { challenge, response } ) {
 
     const solution = await get_challenge_response( { challenge } )
