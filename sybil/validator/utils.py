@@ -1,0 +1,26 @@
+import asyncio
+import aiohttp
+from sybil.protocol import Challenge
+from typing import List
+
+async def fetch(url):
+    async with aiohttp.ClientSession() as session:
+        async with session.get(url) as response:
+            return await response.json()
+
+
+async def generate_challenges(k:int)->List[Challenge]:
+    challenges = []
+    # Create k concurrent tasks to fetch challenges
+    tasks = []
+    for _ in range(k):
+        validator_server_url = "http://localhost:3000"
+        tasks.append(fetch(f"{validator_server_url}/challenge/new"))
+    
+    # Wait for all challenge responses
+    responses = await asyncio.gather(*tasks)
+    
+    # Convert responses to Challenge objects
+    challenges = [Challenge(challenge_url=response["challenge_url"]) for response in responses]
+    
+    return challenges

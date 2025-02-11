@@ -74,3 +74,23 @@ class Dummy(bt.Synapse):
         5
         """
         return self.dummy_output
+
+
+class Challenge(bt.Synapse):
+    """
+    A challenge protocol representation which uses bt.Synapse as its base.
+    This protocol helps in handling challenge request and response communication between
+    the miner and the validator.
+    """
+    
+    challenge_url: str
+    challenge_response: typing.Optional[str]=None
+
+    def deserialize(self) -> str:
+        """
+        Deserialize the challenge response. This method retrieves the response from
+        the miner in the form of challenge_response, deserializes it and returns it
+        as the output of the dendrite.query() call.
+        """
+        
+        return self.challenge_response
