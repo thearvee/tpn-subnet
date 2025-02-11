@@ -57,15 +57,17 @@ export async function init_tables() {
  * @returns {number} statistics.country_count - The total number of IP addresses in the same country.
  * @returns {number} statistics.ip_pct_same_country - The percentage of IP addresses in the same country.
  */
-export async function save_ip_address( { ip_address, country } ) {
+export async function save_ip_address_and_return_ip_stats( { ip_address, country } ) {
 
-    // Check how many ip addresses are in the database
-    const { count: ip_count } = await db.get( ` SELECT COUNT(*) AS count FROM IP_ADDRESSES` )
+    // Check how many ip addresses are in the database, include only addresse that are not stale
+    const ms_to_stale = 1_000 * 60 * 30
+    const stale_timestamp = Date.now() - ms_to_stale
+    const { count: ip_count=0 } = await db.get( ` SELECT COUNT(*) AS count FROM IP_ADDRESSES WHERE updated > ? `, stale_timestamp )
     log.info( `Total ip addresses: ${ ip_count }` )
 
-    // Check how many are in the same country as this ip
+    // Check how many are in the same country as this ip, exclude stale ip addresses
     log.info( `Checking for ip addresses in the same country: ${ country }` )
-    const { count: country_count } = await db.get( ` SELECT COUNT(*) AS count FROM IP_ADDRESSES WHERE country = ? `, country )
+    const { count: country_count=0 } = await db.get( ` SELECT COUNT(*) AS count FROM IP_ADDRESSES WHERE country = ? AND updated > ? `, country, stale_timestamp )
     log.info( `Total ip addresses in the same country: ${ country_count }` )
 
     // Calculate the percentage of ip addresses in the same country

@@ -1,5 +1,5 @@
 import { log } from 'mentie'
-import { save_ip_address } from './database.js'
+import { save_ip_address_and_return_ip_stats } from './database.js'
 import { is_data_center } from './ip2location.js'
 
 /**
@@ -32,7 +32,7 @@ export async function score_request_uniqueness( request ) {
     // Get the connection type and save ip to db
     const [ is_dc, { ip_pct_same_country=0 } ] = await Promise.all( [
         is_data_center( unspoofable_ip ),
-        save_ip_address( { ip_address: unspoofable_ip, country } )
+        save_ip_address_and_return_ip_stats( { ip_address: unspoofable_ip, country } )
     ] )
     
     // Calcluate the score of the request, datacenters get half scores
