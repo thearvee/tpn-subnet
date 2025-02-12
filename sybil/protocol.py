@@ -83,6 +83,7 @@ class Challenge(bt.Synapse):
     the miner and the validator.
     """
     
+    challenge: str
     challenge_url: str
     challenge_response: typing.Optional[str]=None
 

@@ -21,6 +21,11 @@ async def generate_challenges(k:int)->List[Challenge]:
     responses = await asyncio.gather(*tasks)
     
     # Convert responses to Challenge objects
-    challenges = [Challenge(challenge_url=response["challenge_url"]) for response in responses]
+    challenges = [
+        Challenge(
+            challenge=response["challenge"],
+            challenge_url=response["challenge_url"]
+        ) for response in responses
+    ]
     
     return challenges

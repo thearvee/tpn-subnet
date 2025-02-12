@@ -22,10 +22,9 @@ import bittensor as bt
 import asyncio
 
 from sybil.protocol import Challenge
-from sybil.validator.reward import get_rewards
 from sybil.validator.utils import generate_challenges
 from sybil.utils.uids import get_random_uids
-
+from sybil.validator.reward import get_rewards
 async def forward(self):
     """
     The forward function is called by the validator every time step.
@@ -64,12 +63,11 @@ async def forward(self):
 
     # Log the results for monitoring purposes.
     bt.logging.info(f"Received responses: {responses}")
+    
+    # Get scores for the responses
+    rewards = await get_rewards([challenge.challenge for challenge in challenges], responses)
+    bt.logging.info(f"Scores: {rewards}")
 
-    # # TODO(developer): Define how the validator scores responses.
-    # # Adjust the scores based on responses from miners.
-    # rewards = get_rewards(self, query=self.step, responses=responses)
-
-    # bt.logging.info(f"Scored responses: {rewards}")
-    # # Update the scores based on the rewards. You may want to define your own update_scores function for custom behavior.
-    # self.update_scores(rewards, miner_uids)
+    # Update the scores based on the rewards. You may want to define your own update_scores function for custom behavior.
+    self.update_scores(rewards, miner_uids)
     time.sleep(10)
