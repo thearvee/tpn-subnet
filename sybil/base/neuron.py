@@ -23,10 +23,10 @@ import bittensor as bt
 from abc import ABC, abstractmethod
 
 # Sync calls set weights and also resyncs the metagraph.
-from template.utils.config import check_config, add_args, config
-from template.utils.misc import ttl_get_block
-from template import __spec_version__ as spec_version
-from template.mock import MockSubtensor, MockMetagraph
+from sybil.utils.config import check_config, add_args, config
+from sybil.utils.misc import ttl_get_block
+from sybil import __spec_version__ as spec_version
+from sybil.mock import MockSubtensor, MockMetagraph
 
 
 class BaseNeuron(ABC):
@@ -169,9 +169,10 @@ class BaseNeuron(ABC):
         )  # don't set weights if you're a miner
 
     def save_state(self):
-        bt.logging.warning(
-            "save_state() not implemented for this neuron. You can implement this function to save model checkpoints or other useful data."
-        )
+        # bt.logging.warning(
+        #     "save_state() not implemented for this neuron. You can implement this function to save model checkpoints or other useful data."
+        # )
+        pass
 
     def load_state(self):
         bt.logging.warning(

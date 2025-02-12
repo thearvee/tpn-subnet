@@ -18,7 +18,7 @@ services:
     environment:
         LOG_LEVEL: info
         MAXMIND_LICENSE_KEY:
-        PUBLIC_URL: "http://validator:3000"
+        PUBLIC_URL: "http://127.0.0.1:3000"
         IP2LOCATION_DOWNLOAD_TOKEN: 
     volumes:
         - ./database.sqlite:/app/database.sqlite 

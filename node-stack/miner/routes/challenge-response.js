@@ -26,7 +26,7 @@ router.post( '/', async ( req, res ) => {
     log.info( `Solution score:`, score )
 
     // Send the score back to the client
-    return res.json( score )
+    return res.json( {...score, response} )
 
 } )
 

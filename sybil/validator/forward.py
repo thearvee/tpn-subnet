@@ -19,12 +19,12 @@
 
 import time
 import bittensor as bt
+import asyncio
 
-from template.protocol import Dummy
-from template.validator.reward import get_rewards
-from template.utils.uids import get_random_uids
-
-
+from sybil.protocol import Challenge
+from sybil.validator.utils import generate_challenges
+from sybil.utils.uids import get_random_uids
+from sybil.validator.reward import get_rewards
 async def forward(self):
     """
     The forward function is called by the validator every time step.
@@ -36,28 +36,38 @@ async def forward(self):
 
     """
     # TODO(developer): Define how the validator selects a miner to query, how often, etc.
+    
     # get_random_uids is an example method, but you can replace it with your own.
     miner_uids = get_random_uids(self, k=self.config.neuron.sample_size)
+    bt.logging.info(f"Miner uids: {miner_uids}")
+    
+    # Generate k challenges
+    challenges = await generate_challenges(k=len(miner_uids))
+    bt.logging.info(f"Generated challenge: {challenges}")
 
-    # The dendrite client queries the network.
-    responses = await self.dendrite(
-        # Send the query to selected miner axons in the network.
-        axons=[self.metagraph.axons[uid] for uid in miner_uids],
-        # Construct a dummy query. This simply contains a single integer.
-        synapse=Dummy(dummy_input=self.step),
-        # All responses have the deserialize function called on them before returning.
-        # You are encouraged to define your own deserialization function.
-        deserialize=True,
-    )
+    # Create concurrent queries, one for each challenge-miner pair
+    async_queries = [
+        self.dendrite(
+            axons=[self.metagraph.axons[uid]],
+            synapse=challenge,
+            deserialize=True,
+        )
+        for uid, challenge in zip(miner_uids, challenges)
+    ]
+
+    # Execute all queries concurrently
+    responses = await asyncio.gather(*async_queries)
+
+    # Flatten the responses list since each query returns a list with one item
+    responses = [resp[0] for resp in responses]
 
     # Log the results for monitoring purposes.
     bt.logging.info(f"Received responses: {responses}")
+    
+    # Get scores for the responses
+    rewards = await get_rewards([challenge.challenge for challenge in challenges], responses)
+    bt.logging.info(f"Scores: {rewards}")
 
-    # TODO(developer): Define how the validator scores responses.
-    # Adjust the scores based on responses from miners.
-    rewards = get_rewards(self, query=self.step, responses=responses)
-
-    bt.logging.info(f"Scored responses: {rewards}")
     # Update the scores based on the rewards. You may want to define your own update_scores function for custom behavior.
     self.update_scores(rewards, miner_uids)
-    time.sleep(5)
+    time.sleep(10)

@@ -19,7 +19,8 @@
 import numpy as np
 from typing import List
 import bittensor as bt
-
+import aiohttp
+import asyncio
 
 def reward(query: int, response: int) -> float:
     """
@@ -35,21 +36,33 @@ def reward(query: int, response: int) -> float:
     return 1.0 if response == query * 2 else 0
 
 
-def get_rewards(
-    self,
-    query: int,
-    responses: List[float],
-) -> np.ndarray:
+async def get_rewards(challenges: List[str], responses: List[str]) -> List[float]:
     """
-    Returns an array of rewards for the given query and responses.
-
-    Args:
-    - query (int): The query sent to the miner.
-    - responses (List[float]): A list of responses from the miner.
-
-    Returns:
-    - np.ndarray: An array of rewards for the given query and responses.
+    Get the scores for the responses.
     """
-    # Get all the reward results by iteratively calling your reward() function.
-
-    return np.array([reward(query, response) for response in responses])
+    async def fetch_score(challenge, response) -> float:
+        if response is None:
+            return 0
+        async with aiohttp.ClientSession() as session:
+            async with session.get(
+                f"http://127.0.0.1:3000/challenge/{challenge}/{response}"
+            ) as resp:
+                result = await resp.json()
+                return result["score"]
+            
+    # Concurrently fetch all scores
+    scores = await asyncio.gather(
+        *[fetch_score(challenge, response) for challenge, response in zip(challenges, responses)]
+    )
+    return scores
+    
+    # async with aiohttp.ClientSession() as session:
+    #     async with session.post(
+    #         f"http://127.0.0.1:3000/challenge/{}",
+    #         json={"url": challenge_url},
+    #         headers={"Content-Type": "application/json"},
+    #     ) as response:
+    #         response = (await response.json())["response"]
+    #         synapse.challenge_response = response
+    #         bt.logging.info(f"Solved challenge: {synapse.challenge_response}")
+    #         return synapse

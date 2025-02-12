@@ -13,7 +13,6 @@ RUN npm ci --omit=dev
 
 # Copy application code
 COPY app.js ./
-COPY modules ./modules
 COPY routes ./routes
 
 # Expose the port the app runs on
