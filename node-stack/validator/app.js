@@ -42,5 +42,8 @@ app.use( '/challenge', challenge_router )
 
 // Listen to requests
 app.listen( 3000, () => {
-    console.log( 'Server running' )
+    const { PUBLIC_URL } = process.env
+    console.log( `Server running, serving from base url ${ PUBLIC_URL }` )
 } )
+process.on( 'SIGTERM', () => app.close() )
+process.on( 'SIGINT', () => app.close() )

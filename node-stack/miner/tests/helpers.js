@@ -36,4 +36,26 @@ export async function wait_for_server_up() {
 
     }
 
+    // Try the same for localhost:3000  
+    server_up = false
+    count = 0
+    while( !server_up ) {
+
+        // If max count exceeded, throw
+        if( count > max_count ) throw new Error( `Server did not start after ${ max_count } attempts` )
+
+        // Fetch the server status
+        const response = await fetch( 'http://localhost:3000' ).catch( e => e )
+
+        // Check if the server is up
+        server_up = response.ok
+
+        // Wait for a second before trying again
+        await wait( 1000 )
+
+        // Increment the count
+        count++
+
+    }
+
 }
