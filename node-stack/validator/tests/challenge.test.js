@@ -45,7 +45,11 @@ describe( 'GET /challenge/new', () => {
         // Wait for the server to start
         await wait_for_server_up()
 
+        // Replace the challenge host with localhost
+        challenge_url = challenge_url.replace( 'validator', 'localhost' )
+
         // Make GET request to get challenge endpoint
+        console.log( `Getting challenge at:`, challenge_url )
         const { response } = await fetch( challenge_url ).then( res => res.json() )
 
         // Expect the response to be a uuidv4
