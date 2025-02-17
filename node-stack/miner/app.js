@@ -17,3 +17,5 @@ app.use( '/challenge', challenge_response_router )
 // Start the server
 const port = process.env.PORT || 3001
 app.listen( port, () => log.info( `Server started on port ${ port }` ) )
+process.on( 'SIGTERM', () => app.close() )
+process.on( 'SIGINT', () => app.close() )
