@@ -4,8 +4,6 @@ services:
     container_name: miner
     restart: unless-stopped
     image: sybil-miner:nightly
-    env_file:
-        - .env
     ports:
         - "3001:3001"
     # You may also create a .env file in the same folder as the docker-compose.yml file
@@ -40,8 +38,6 @@ services:
         - .env
     restart: unless-stopped
     shm_size: 128mb
-    environment:
-        POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
 
 volumes:
     maxmind_data:
