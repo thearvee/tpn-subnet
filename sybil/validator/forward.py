@@ -63,6 +63,7 @@ async def forward(self):
     # Execute all queries concurrently
     responses = await asyncio.gather(*async_queries)
 
+    bt.logging.info(f"Received Raw responses: {responses}")
     # Flatten the responses list since each query returns a list with one item
     responses = [resp[0] for resp in responses]
 
