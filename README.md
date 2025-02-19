@@ -17,9 +17,13 @@ If you want to contribute to the TPN subnet, the easiers way to do so it to run 
 
 The TPN is currently in bootstrap mode. This means that miners do not yet offer VPN connections, but are incentivited to get their infrastructure up and running.
 
-## Running a miner
 
-Note that your rewards depend on the uniqueness of the location of your miner. Once you have chosen a location, either as a hosted VPS or as physical hardware, you can start the miner.
+> [!CAUTION]
+> This documentation is a work in public alpha. Expect things to break. Specifically the validator instructions are currently unstable due to development pace.
+
+## Preparing your machine
+
+Before starting your miner and/or validator, please prepare your machine by setting up the required enrivonment.
 
 ### 1: Installing dependencies
 
@@ -30,7 +34,8 @@ Requirements:
 - 512MB RAM
 - Publically accessible IP address
 
-To install the miner, start by setting up the required software. Execute the following commands:
+
+The miner and validator share the same dependencies. No matter which you choose to run, please install the dependencies by executing the following commands:
 
 ```bash
 # Install the required system dependencies
@@ -64,7 +69,6 @@ python3 -m venv venv
 source venv/bin/activate
 pip3 install -r requirements.txt
 export PYTHONPATH=.
-
 ```
 
 ### 2: Configure keys
@@ -93,10 +97,94 @@ btcli w new_hotkey --wallet.name tpn_hotkey
 
 Note that the above will generate a private key for your coldkey as well. This is a key with security implications and should be stored securely. Ideally you delete it from your miner server after backing it up safely.
 
-### 3: Run the miner software stack
 
-This consists out of two components:
+## Running a miner
 
-1. A miner neuron that is managed through `pm2`
-2. A miner docker container that is managed through `docker`
+Note that your rewards depend on the uniqueness of the location of your miner. Once you have chosen a location, either as a hosted VPS or as physical hardware, you can start the miner.
 
+The consists out of two components:
+
+1. A miner docker container that is managed through `docker`
+2. A miner neuron that is managed through `pm2`
+
+To start the docker container:
+
+```bash
+# NOTE: this assumes you are in the tpn-subnet directory
+docker compose up -f node-stack/miner/miner.docker-compose.yml
+```
+
+To start the miner neuron:
+
+```bash
+# NOTE: this assumes you are in the tpn-subnet director
+pm2 start "python3 neurons/miner.py \
+    --netuid 279 \
+    --subtensor.network finney \ # Finney means mainnet, test means testnet
+    --wallet.name tpn_coldkey \
+    --wallet.hotkey tpn_hotkey \
+    --logging.info \
+    --axon.port 8091 \
+    --force_validator_permit" --name tpn_miner
+```
+
+## Running a validator
+
+Validators are the interface between end users and miners. They send work requests to miners, which the miners complete and submit to the validator. Running a validator is more complicated than a miner and requires more setup than a miner.
+
+### Step 1: Register the validator key on chain
+
+You must announce your intention to run a validator on chain by running the following command:
+
+```bash
+btcli s register --wallet.name tpn_coldkey --hotkey tpn_hotkey --netuid 279
+```
+
+### Step 2: Configure the validator settings
+
+The validator needs to be configured with some settings and third party API keys. These values are stored in `node-stack/validator/.env`. Populate that file like so:
+
+```bash
+# This controls the verbosity of the logs. Possible values are: info, warn, error
+LOG_LEVEL=info
+
+# A free license key, obtained by creating an account and API key at http://maxmind.com/en/accounts/
+MAXMIND_LICENSE_KEY=xxxx
+
+# This is the public URL where the validator can be reached.
+PUBLIC_URL=http://1.2.3.4:3000
+
+# The free ip2location lite API key, obtained by creating an account at https://lite.ip2location.com/login
+IP2LOCATION_DOWNLOAD_TOKEN=xxxx
+POSTGRES_PASSWORD=xxxx # Choose something random, it does not matter what.
+```
+
+### Step 3: Start the validator
+
+The validator also consists out of two components:
+
+1. A validator docker container that is managed through `docker`
+2. A validator neuron that is managed through `pm2`
+
+To start the docker container:
+
+```bash
+# NOTE: this assumes you are in the tpn-subnet directory
+docker compose up -f node-stack/validator/validator.docker-compose.yml
+```
+
+To start the validator neuron:
+
+```bash
+# NOTE: this assumes you are in the tpn-subnet director
+pm2 start "python3 neurons/validator.py \
+    --netuid 279 \
+    --subtensor.network finney \ # Finney means mainnet, test means testnet
+    --wallet.name tpn_coldkey \
+    --wallet.hotkey tpn_hotkey \
+    --logging.info \
+    --axon.port 9000 \
+    --blacklist.force_validator_permit \
+    _neuron.vpermit 10000 \
+    --force_validator_permit" --name tpn_validator
+```
