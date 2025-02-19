@@ -1,0 +1,14 @@
+services:
+  miner:
+    container_name: miner
+    restart: unless-stopped
+    image: taofuprotocol/tpn-subnet-miner:latest
+    ports:
+        - "3001:3001"
+    environment:
+        LOG_LEVEL: info
+
+  watchtower:
+    image: containrrr/watchtower
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock

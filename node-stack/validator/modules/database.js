@@ -1,163 +1,132 @@
-import sqlite3 from 'sqlite3'
-import { open } from 'sqlite'
-
-// Create file system awareness
-import url from 'url'
+import postgres from 'pg'
 import { log } from 'mentie'
-const __dirname = url.fileURLToPath( new URL( '.', import.meta.url ) )
 
-// Create the database
-let db = await open( {
-    filename: `${ __dirname }/../database.sqlite`,
-    driver: sqlite3.Database
+// Create a connection pool to the postgres container
+const { POSTGRES_PASSWORD } = process.env
+const { Pool } = postgres
+const pool = new Pool( {
+    user: 'postgres',
+    host: 'postgres',
+    database: 'postgres',
+    password: POSTGRES_PASSWORD,
+    port: 5432
 } )
 
 export async function init_tables() {
-
-    // If the table "TIMESTAMPS" does not exist, create it
-    await db.exec( `
-        CREATE TABLE IF NOT EXISTS TIMESTAMPS (
-            label TEXT PRIMARY KEY, 
-            timestamp INTEGER,
-            updated INTEGER
+    // Create table for timestamps
+    await pool.query( `
+        CREATE TABLE IF NOT EXISTS timestamps (
+            label TEXT PRIMARY KEY,
+            timestamp BIGINT,
+            updated BIGINT
         )
     ` )
 
-    // If the table "CHALLENGES" does not exist, create it
-    await db.exec( `
-        CREATE TABLE IF NOT EXISTS CHALLENGES (
+    // Create table for challenges
+    await pool.query( `
+        CREATE TABLE IF NOT EXISTS challenges (
             challenge TEXT PRIMARY KEY,
             response TEXT,
-            created INTEGER,
-            solved INTEGER
+            created BIGINT,
+            solved BIGINT
         )
     ` )
 
-    // If the table "IP_ADDRESSES" does not exist, create it
-    await db.exec( `
-        CREATE TABLE IF NOT EXISTS IP_ADDRESSES (
+    // Create table for IP addresses
+    await pool.query( `
+        CREATE TABLE IF NOT EXISTS ip_addresses (
             ip_address TEXT PRIMARY KEY,
             country TEXT,
-            updated INTEGER
+            updated BIGINT
         )
     ` )
-
 }
 
-
-/**
- * Saves an IP address and its associated country to the database.
- * If the IP address already exists, it will be overwritten.
- *
- * @param {Object} params - The parameters for saving the IP address.
- * @param {string} params.ip_address - The IP address to save.
- * @param {string} params.country - The country associated with the IP address.
- * @returns {Promise<Object>} statistics
- * @returns {number} statistics.ip_count - The total number of IP addresses in the database.
- * @returns {number} statistics.country_count - The total number of IP addresses in the same country.
- * @returns {number} statistics.ip_pct_same_country - The percentage of IP addresses in the same country.
- */
 export async function save_ip_address_and_return_ip_stats( { ip_address, country } ) {
-
-    // Check how many ip addresses are in the database, include only addresse that are not stale
-    const ms_to_stale = 1_000 * 60 * 30
+    const ms_to_stale = 1000 * 60 * 30
     const stale_timestamp = Date.now() - ms_to_stale
-    const { count: ip_count=0 } = await db.get( ` SELECT COUNT(*) AS count FROM IP_ADDRESSES WHERE updated > ? `, stale_timestamp )
+
+    // Count all non-stale IP addresses
+    const ipCountResult = await pool.query(
+        `SELECT COUNT(*) AS count FROM ip_addresses WHERE updated > $1`,
+        [ stale_timestamp ]
+    )
+    const ip_count = parseInt( ipCountResult.rows[0].count, 10 ) || 0
     log.info( `Total ip addresses: ${ ip_count }` )
 
-    // Check how many are in the same country as this ip, exclude stale ip addresses
+    // Count non-stale IP addresses in the same country
     log.info( `Checking for ip addresses in the same country: ${ country }` )
-    const { count: country_count=0 } = await db.get( ` SELECT COUNT(*) AS count FROM IP_ADDRESSES WHERE country = ? AND updated > ? `, country, stale_timestamp )
+    const countryCountResult = await pool.query(
+        `SELECT COUNT(*) AS count FROM ip_addresses WHERE country = $1 AND updated > $2`,
+        [ country, stale_timestamp ]
+    )
+    const country_count = parseInt( countryCountResult.rows[0].count, 10 ) || 0
     log.info( `Total ip addresses in the same country: ${ country_count }` )
 
-    // Calculate the percentage of ip addresses in the same country
-    const ip_pct_same_country = ip_count == 0 ? 0 : Math.round( country_count / ip_count * 100 )
+    // Calculate the percentage, guarding against division by zero
+    const ip_pct_same_country = ip_count ? Math.round(  country_count / ip_count  * 100 ) : 0
     log.info( `Percentage of ip addresses in the same country: ${ ip_pct_same_country }` )
 
-    // Save this ip address and country to the database, overwrite any existing ip address with the same value
-    await db.run( `INSERT INTO IP_ADDRESSES (ip_address, country, updated) VALUES (?, ?, ?) ON CONFLICT(ip_address) DO UPDATE SET country = ?, updated = ?`, ip_address, country, Date.now(), country, Date.now() )
+    // Insert or update the IP address record
+    await pool.query(
+        `INSERT INTO ip_addresses (ip_address, country, updated) VALUES ($1, $2, $3)
+        ON CONFLICT (ip_address)
+        DO UPDATE SET country = $4, updated = $5`,
+        [ ip_address, country, Date.now(), country, Date.now() ]
+    )
 
-    // Return the counts
     return { ip_count, country_count, ip_pct_same_country }
-
 }
 
-
-/**
- * Retrieves the timestamp associated with a given label from the database.
- *
- * @param {Object} params - The parameters object.
- * @param {string} params.label - The label to search for in the database.
- * @returns {Promise<number>} The timestamp associated with the label, or 0 if not found.
- */
 export async function get_timestamp( { label } ) {
-    const { timestamp=0 } = await db.get( ` SELECT * FROM TIMESTAMPS WHERE label = ? LIMIT 1 `, label ) || {}
-    return timestamp
+    // Retrieve the timestamp for the given label
+    const result = await pool.query(
+        `SELECT timestamp FROM timestamps WHERE label = $1 LIMIT 1`,
+        [ label ]
+    )
+    return result.rows.length > 0 ? result.rows[0].timestamp : 0
 }
 
-/**
- * Sets a timestamp in the database for a given label.
- *
- * @param {Object} params - The parameters for setting the timestamp.
- * @param {string} params.label - The label associated with the timestamp.
- * @param {number} params.timestamp - The timestamp value to be set.
- * @returns {Promise<void>} A promise that resolves when the timestamp is set.
- */
 export async function set_timestamp( { label, timestamp } ) {
-    await db.run( `INSERT INTO TIMESTAMPS (label, timestamp, updated) VALUES (?, ?, ?) ON CONFLICT(label) DO UPDATE SET timestamp = ?, updated = ?`, label, timestamp, Date.now(), timestamp, Date.now() )
-    log.info( `Timestamp set:`, { label, timestamp } )
+    // Insert or update the timestamp record
+    await pool.query(
+        `INSERT INTO timestamps (label, timestamp, updated) VALUES ($1, $2, $3)
+        ON CONFLICT (label)
+        DO UPDATE SET timestamp = $4, updated = $5`,
+        [ label, timestamp, Date.now(), timestamp, Date.now() ]
+    )
+    log.info( 'Timestamp set:', { label, timestamp } )
 }
 
-/**
- * Saves a challenge and its response to the database.
- * 
- * @async
- * @function save_challenge_response
- * @param {Object} pair - The input object.
- * @param {string} pair.challenge - The challenge string.
- * @param {string} pair.response - The response string.
- * @returns {Promise<Object>} The saved challenge and response.
- * @throws Will throw an error if the challenge UUID already exists in the database.
- */
 export async function save_challenge_response( { challenge, response } ) {
-
-    // Save the challenge, but error if the uuid already exists
-    await db.run( `INSERT INTO CHALLENGES (challenge, response, created) VALUES (?, ?, ?)`, challenge, response, Date.now() )
-
+    // Save the challenge response; errors if challenge already exists
+    await pool.query(
+        `INSERT INTO challenges (challenge, response, created) VALUES ($1, $2, $3)`,
+        [ challenge, response, Date.now() ]
+    )
     return { challenge, response }
-
 }
 
-/**
- * Retrieves the response and creation date for a given challenge from the database.
- *
- * @param {Object} params - The parameters for the function.
- * @param {string} params.challenge - The challenge string to look up in the database.
- * @returns {Promise<Object>} A promise that resolves to an object containing the response and creation date.
- * @returns {string} returns.response - The response associated with the challenge.
- * @returns {string} returns.created - The creation date of the challenge.
- */
 export async function get_challenge_response( { challenge } ) {
-    const { response, created } = await db.get( ` SELECT * FROM CHALLENGES WHERE challenge = ? LIMIT 1 `, challenge )
-    return { response, created }
+    // Retrieve challenge response and creation time
+    const result = await pool.query(
+        `SELECT response, created FROM challenges WHERE challenge = $1 LIMIT 1`,
+        [ challenge ]
+    )
+    return result.rows.length > 0 ? result.rows[0] : {}
 }
 
-/**
- * Solves a challenge by updating the solved field in the database with the current timestamp.
- *
- * @param {Object} params - The parameters object.
- * @param {string} params.challenge - The challenge identifier.
- * @returns {Promise<number>} The current timestamp when the challenge was solved.
- */
 export async function mark_challenge_solved( { challenge } ) {
-
     const now = Date.now()
-
-    // Update the solved field to now if the field is unset
-    await db.run( `UPDATE CHALLENGES SET solved = ? WHERE challenge = ? AND solved IS NULL`, now, challenge )
-
-    // Read the solved field
-    const { solved } = await db.get( `SELECT solved FROM CHALLENGES WHERE challenge = ? LIMIT 1`, challenge )
-    return solved
-
+    // Update the solved field if it hasn't been set yet
+    await pool.query(
+        `UPDATE challenges SET solved = $1 WHERE challenge = $2 AND solved IS NULL`,
+        [ now, challenge ]
+    )
+    // Retrieve the updated solved timestamp
+    const result = await pool.query(
+        `SELECT solved FROM challenges WHERE challenge = $1 LIMIT 1`,
+        [ challenge ]
+    )
+    return result.rows.length > 0 ? Number( result.rows[0].solved ) : null
 }
