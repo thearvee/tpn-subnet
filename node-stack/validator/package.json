@@ -1,6 +1,6 @@
 {
-  "name": "sybil-validator",
-  "version": "0.0.1",
+  "name": "tpn-subnet-validator",
+  "version": "0.0.2",
   "main": "app.js",
   "type": "module",
   "scripts": {
