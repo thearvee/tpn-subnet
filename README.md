@@ -185,6 +185,6 @@ pm2 start "python3 neurons/validator.py \
     --logging.info \
     --axon.port 9000 \
     --blacklist.force_validator_permit \
-    _neuron.vpermit 10000 \
+    --neuron.vpermit 10000 \
     --force_validator_permit" --name tpn_validator
 ```
