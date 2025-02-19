@@ -42,7 +42,7 @@ async def forward(self):
     bt.logging.info(f"Miner uids: {miner_uids}")
     
     # Generate k challenges
-    challenges = await generate_challenges(k=len(miner_uids))
+    challenges = await generate_challenges(k=len(miner_uids), validator_server_url=self.validator_server_url)
     bt.logging.info(f"Generated challenge: {challenges}")
     
     if challenges is None:
@@ -70,7 +70,7 @@ async def forward(self):
     bt.logging.info(f"Received responses: {responses}")
     
     # Get scores for the responses
-    rewards = await get_rewards([challenge.challenge for challenge in challenges], responses)
+    rewards = await get_rewards([challenge.challenge for challenge in challenges], responses, validator_server_url=self.validator_server_url)
     bt.logging.info(f"Scores: {rewards}")
 
     if rewards is None:

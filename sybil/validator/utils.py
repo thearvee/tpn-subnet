@@ -9,13 +9,12 @@ async def fetch(url):
             return await response.json()
 
 
-async def generate_challenges(k:int)->List[Challenge]:
+async def generate_challenges(k:int, validator_server_url:str)->List[Challenge]:
     try:
         challenges = []
         # Create k concurrent tasks to fetch challenges
         tasks = []
         for _ in range(k):
-            validator_server_url = "http://localhost:3000"
             tasks.append(fetch(f"{validator_server_url}/challenge/new"))
         
         # Wait for all challenge responses

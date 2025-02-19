@@ -253,6 +253,13 @@ def add_validator_args(cls, parser):
         default="opentensor-dev",
     )
 
+    parser.add_argument(
+        "--validator.server",
+        type=str,
+        help="The url of the validator server.",
+        default="http://127.0.0.1:3000",
+    )
+
 
 def config(cls):
     """

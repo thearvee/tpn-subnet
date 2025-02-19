@@ -36,7 +36,7 @@ def reward(query: int, response: int) -> float:
     return 1.0 if response == query * 2 else 0
 
 
-async def get_rewards(challenges: List[str], responses: List[str]) -> List[float]:
+async def get_rewards(challenges: List[str], responses: List[str], validator_server_url: str) -> List[float]:
     try:
         """
         Get the scores for the responses.
@@ -46,7 +46,7 @@ async def get_rewards(challenges: List[str], responses: List[str]) -> List[float
                 return 0
             async with aiohttp.ClientSession() as session:
                 async with session.get(
-                    f"http://127.0.0.1:3000/challenge/{challenge}/{response}"
+                    f"{validator_server_url}/challenge/{challenge}/{response}"
                 ) as resp:
                     result = await resp.json()
                     return result["score"]
