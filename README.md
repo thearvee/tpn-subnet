@@ -119,7 +119,7 @@ To start the miner neuron:
 ```bash
 # NOTE: this assumes you are in the tpn-subnet director
 pm2 start "python3 neurons/miner.py \
-    --netuid 279 \
+    --netuid 65 \ # 65 for mainnet, 279 for testnet
     --subtensor.network finney \ # Finney means mainnet, test means testnet
     --wallet.name tpn_coldkey \
     --wallet.hotkey tpn_hotkey \
