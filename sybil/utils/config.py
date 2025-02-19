@@ -170,9 +170,9 @@ def add_miner_args(cls, parser):
     )
     
     parser.add_argument(
-        "--miner.node",
+        "--miner.server",
         type=str,
-        help="The url of the miner node server.",
+        help="The url of the miner server.",
         default="http://127.0.0.1:3001",
     )
 

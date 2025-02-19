@@ -60,9 +60,9 @@ class Miner(BaseMinerNeuron):
 
         try:
             async with aiohttp.ClientSession() as session:
-                bt.logging.info(f"Sending challenge to {self.miner_node}/challenge")
+                bt.logging.info(f"Sending challenge to {self.miner_server}/challenge")
                 async with session.post(
-                    f"{self.miner_node}/challenge",
+                    f"{self.miner_server}/challenge",
                     json={"url": challenge_url},
                     headers={"Content-Type": "application/json"},
                 ) as response:
