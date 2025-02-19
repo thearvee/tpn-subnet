@@ -57,21 +57,21 @@ class Miner(BaseMinerNeuron):
         bt.logging.info(f"Received challenge: {synapse.challenge_url}")
         
         challenge_url = synapse.challenge_url
-        if "127.0.0.1" in challenge_url:
-            # replace it with validator
-            challenge_url = challenge_url.replace("127.0.0.1", "validator")
 
-        async with aiohttp.ClientSession() as session:
-            async with session.post(
-                "http://127.0.0.1:3001/challenge",
-                json={"url": challenge_url},
-                headers={"Content-Type": "application/json"},
-            ) as response:
-                response = (await response.json())["response"]
-                synapse.challenge_response = response
-                bt.logging.info(f"Solved challenge: {synapse.challenge_response}")
-                return synapse
- 
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.post(
+                    "http://127.0.0.1:3001/challenge",
+                    json={"url": challenge_url},
+                    headers={"Content-Type": "application/json"},
+                ) as response:
+                    response = (await response.json())["response"]
+                    synapse.challenge_response = response
+                    bt.logging.info(f"Solved challenge: {synapse.challenge_response}")
+                    return synapse
+        except Exception as e:
+            bt.logging.error(f"Error solving challenge: {e}")
+            return None
 
     async def blacklist(
         self, synapse: sybil.protocol.Challenge
