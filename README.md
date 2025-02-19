@@ -111,7 +111,7 @@ To start the docker container:
 
 ```bash
 # NOTE: this assumes you are in the tpn-subnet directory
-docker compose up -f node-stack/miner/miner.docker-compose.yml
+docker compose -f node-stack/miner/miner.docker-compose.yml up -d
 ```
 
 To start the miner neuron:
@@ -170,7 +170,7 @@ To start the docker container:
 
 ```bash
 # NOTE: this assumes you are in the tpn-subnet directory
-docker compose up -f node-stack/validator/validator.docker-compose.yml
+docker compose -f node-stack/validator/validator.docker-compose.yml up -d
 ```
 
 To start the validator neuron:
