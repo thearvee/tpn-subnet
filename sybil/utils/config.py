@@ -254,7 +254,7 @@ def add_validator_args(cls, parser):
     )
 
     parser.add_argument(
-        "--validator.server",
+        "--validator_server_url",
         type=str,
         help="The url of the validator server.",
         default="http://127.0.0.1:3000",
