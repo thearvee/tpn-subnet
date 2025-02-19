@@ -60,8 +60,9 @@ class Miner(BaseMinerNeuron):
 
         try:
             async with aiohttp.ClientSession() as session:
+                bt.logging.info(f"Sending challenge to {self.miner_node}/challenge")
                 async with session.post(
-                    "http://127.0.0.1:3001/challenge",
+                    f"{self.miner_node}/challenge",
                     json={"url": challenge_url},
                     headers={"Content-Type": "application/json"},
                 ) as response:
@@ -71,7 +72,7 @@ class Miner(BaseMinerNeuron):
                     return synapse
         except Exception as e:
             bt.logging.error(f"Error solving challenge: {e}")
-            return None
+            return synapse
 
     async def blacklist(
         self, synapse: sybil.protocol.Challenge

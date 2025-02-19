@@ -168,6 +168,13 @@ def add_miner_args(cls, parser):
         default="opentensor-dev",
         help="Wandb entity to log to.",
     )
+    
+    parser.add_argument(
+        "--miner.node",
+        type=str,
+        help="The url of the miner node server.",
+        default="http://127.0.0.1:3001",
+    )
 
 
 def add_validator_args(cls, parser):

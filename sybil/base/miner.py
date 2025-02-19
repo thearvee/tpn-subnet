@@ -59,6 +59,8 @@ class BaseMinerNeuron(BaseNeuron):
             config=self.config() if callable(self.config) else self.config,
         )
 
+        self.miner_node = self.config.miner.node
+
         # Attach determiners which functions are called when servicing a request.
         bt.logging.info(f"Attaching forward function to miner axon.")
         self.axon.attach(
