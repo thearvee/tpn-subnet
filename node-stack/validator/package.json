@@ -22,7 +22,7 @@
     "sqlite": "^5.1.1",
     "sqlite3": "^5.1.7",
     "unzipper": "^0.12.3",
-    "uuid": "^11.0.5"
+    "uuid": "^11.1.0"
   },
   "devDependencies": {
     "@babel/eslint-parser": "^7.26.5",
