@@ -15,7 +15,12 @@ import { router as challenge_response_router } from './routes/challenge-response
 app.use( '/challenge', challenge_response_router )
 
 // Start the server
-const port = process.env.PORT || 3001
-app.listen( port, () => log.info( `Server started on port ${ port }` ) )
-process.on( 'SIGTERM', () => app.close() )
-process.on( 'SIGINT', () => app.close() )
+const { PORT=3001 } = process.env
+const server = app.listen( PORT, () => log.info( `Server started on port ${ PORT }` ) )
+const handle_close = () => {
+    log.info( 'Closing server' )
+    server.close()
+    process.exit( 0 )
+}
+process.on( 'SIGTERM', handle_close )
+process.on( 'SIGINT', handle_close )

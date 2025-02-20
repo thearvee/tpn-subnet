@@ -13,14 +13,14 @@ log.info( 'Database initialized' )
 // Update maxmind
 import { update_maxmind } from './modules/update-maxmind.js'
 log.info( 'Updating MaxMind database' )
-await update_maxmind()
+await update_maxmind().catch( e => log.error( e ) )
 log.info( `Updating MaxMind database every ${ update_interval_ms / 1000 / 60 / 60 } hours` )
 setInterval( update_maxmind, update_interval_ms )
 
 // Update ip2location
 import { update_ip2location_bin } from './modules/ip2location.js'
 log.info( 'Updating ip2location database' )
-await update_ip2location_bin()
+await update_ip2location_bin().catch( e => log.error( e ) )
 log.info( `Updating ip2location database every ${ update_interval_ms / 1000 / 60 / 60 } hours` )
 setInterval( update_ip2location_bin, update_interval_ms )
 
@@ -41,9 +41,14 @@ import { router as challenge_router } from './routes/challenge-response.js'
 app.use( '/challenge', challenge_router )
 
 // Listen to requests
-app.listen( 3000, () => {
+const server = app.listen( 3000, () => {
     const { PUBLIC_URL } = process.env
     console.log( `Server running, serving from base url ${ PUBLIC_URL }` )
 } )
-process.on( 'SIGTERM', () => app.close() )
-process.on( 'SIGINT', () => app.close() )
+const handle_close = () => {
+    log.info( 'Closing server' )
+    server.close()
+    process.exit( 0 )
+}
+process.on( 'SIGTERM', handle_close )
+process.on( 'SIGINT', handle_close )
