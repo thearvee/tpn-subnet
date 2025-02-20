@@ -2,7 +2,7 @@ import postgres from 'pg'
 import { cache, log } from 'mentie'
 
 // Create a connection pool to the postgres container
-const { POSTGRES_PASSWORD, POSTGRES_HOST='localhost', POSTGRES_PORT=5432, POSTGRES_USER='postgres' } = process.env
+const { POSTGRES_PASSWORD, POSTGRES_HOST='postgres', POSTGRES_PORT=5432, POSTGRES_USER='postgres' } = process.env
 const { Pool } = postgres
 const pool = new Pool( {
     user: POSTGRES_USER,
