@@ -97,7 +97,6 @@ btcli w new_hotkey --wallet.name tpn_hotkey
 
 Note that the above will generate a private key for your coldkey as well. This is a key with security implications and should be stored securely. Ideally you delete it from your miner server after backing it up safely.
 
-
 ## Running a miner
 
 Note that your rewards depend on the uniqueness of the location of your miner. Once you have chosen a location, either as a hosted VPS or as physical hardware, you can start the miner.
@@ -118,7 +117,7 @@ To start the miner neuron:
 
 ```bash
 # NOTE: this assumes you are in the tpn-subnet director
-pm2 start "python3 neurons/miner.py \
+export PYTHONPATH=. && pm2 start "python3 neurons/miner.py \
     --netuid 65 \ # 65 for mainnet, 279 for testnet
     --subtensor.network finney \ # Finney means mainnet, test means testnet
     --wallet.name tpn_coldkey \
@@ -141,6 +140,42 @@ btcli s register --wallet.name tpn_coldkey --hotkey tpn_hotkey --netuid 279
 ```
 
 ### Step 2: Configure the validator settings
+
+The validator neuron needs you to supply a WanDB API key. You can get one by signing up at [WanDB](https://wandb.ai/site). Once you have the key, add it to your environment by running the code below:
+
+```bash
+# 🚨 Change the below to your API key
+WANDB_API_KEY=xxxx
+
+# Determine the default login shell using the SHELL env variable
+shell=$(basename "$SHELL")
+export_line="export WANDB_API_KEY=$WANDB_API_KEY"
+
+# For bash: if the default shell is bash, add the export_line to ~/.bashrc if not present
+if [[ "$shell" == "bash" ]]; then
+  # Check if the exact export_line exists in ~/.bashrc
+  if ! grep -Fxq "$export_line" ~/.bashrc; then
+    echo "$export_line" >> ~/.bashrc  # Append if not found
+    echo "Added '$export_line' to ~/.bashrc"
+  else
+    echo "'$export_line' already exists in ~/.bashrc"
+  fi
+fi
+
+# For zsh: if the default shell is zsh, add the export_line to ~/.zshrc if not present
+if [[ "$shell" == "zsh" ]]; then
+  # Check if the exact export_line exists in ~/.zshrc
+  if ! grep -Fxq "$export_line" ~/.zshrc; then
+    echo "$export_line" >> ~/.zshrc  # Append if not found
+    echo "Added '$export_line' to ~/.zshrc"
+  else
+    echo "'$export_line' already exists in ~/.zshrc"
+  fi
+fi
+
+# Run the export line in the current shell
+eval $export_line
+```
 
 The validator needs to be configured with some settings and third party API keys. These values are stored in `node-stack/validator/.env`. Populate that file like so:
 
@@ -177,7 +212,7 @@ To start the validator neuron:
 
 ```bash
 # NOTE: this assumes you are in the tpn-subnet director
-pm2 start "python3 neurons/validator.py \
+export PYTHONPATH=. && pm2 start "python3 neurons/validator.py \
     --netuid 65 \ # 65 for mainnet, 279 for testnet
     --subtensor.network finney \ # Finney means mainnet, test means testnet
     --wallet.name tpn_coldkey \
