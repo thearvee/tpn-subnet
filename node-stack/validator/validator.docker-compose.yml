@@ -1,11 +1,12 @@
-services:
+version: "3.8"  # Define the Compose file version
 
+services:
   validator:
     container_name: tpn_validator
     image: taofuprotocol/tpn-subnet-validator:latest
     env_file:
-        - .env
-    # Note that when left empty, these variables will be set to the values in the .env file
+      - .env
+    # Environment variables will be picked from .env unless overridden here
     environment:
       - LOG_LEVEL
       - PUBLIC_URL
@@ -14,36 +15,48 @@ services:
       - POSTGRES_PASSWORD
     restart: unless-stopped
     ports:
-        - "3000:3000"
+      - "3000:3000"
     depends_on:
-        postgres:
-            condition: service_healthy
+      postgres:
+        condition: service_healthy
     volumes:
-        - maxmind_data:/app/node_modules/geoip-lite/data
-        - ip2location_data:/app/ip2location_data
+      - maxmind_data:/app/node_modules/geoip-lite/data
+      - ip2location_data:/app/ip2location_data
+    networks:
+      - tpn_network  # Connect to the custom network
+
   postgres:
     container_name: postgres
     image: postgres
     env_file:
-        - .env
+      - .env
     environment:
       - POSTGRES_PASSWORD
     volumes:
-        - postgres_data:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql/data
     restart: unless-stopped
     shm_size: 128mb
-    healthcheck:  # Add healthcheck to confirm readiness
+    healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - tpn_network  # Connect to the custom network
 
   watchtower:
+    container_name: watchtower
     image: containrrr/watchtower
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - tpn_network  # Connect to the custom network
 
 volumes:
-    maxmind_data:
-    ip2location_data:
-    postgres_data:
+  maxmind_data:
+  ip2location_data:
+  postgres_data:
+
+networks:
+  tpn_network:
+    driver: bridge  # Use the bridge driver
