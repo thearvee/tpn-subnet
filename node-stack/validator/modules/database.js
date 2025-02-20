@@ -1,15 +1,15 @@
 import postgres from 'pg'
-import { log } from 'mentie'
+import { cache, log } from 'mentie'
 
 // Create a connection pool to the postgres container
-const { POSTGRES_PASSWORD } = process.env
+const { POSTGRES_PASSWORD, POSTGRES_HOST='localhost', POSTGRES_PORT=5432, POSTGRES_USER='postgres' } = process.env
 const { Pool } = postgres
 const pool = new Pool( {
-    user: 'postgres',
-    host: 'postgres',
+    user: POSTGRES_USER,
+    host: POSTGRES_HOST,
     database: 'postgres',
     password: POSTGRES_PASSWORD,
-    port: 5432
+    port: POSTGRES_PORT
 } )
 
 export async function init_tables() {
@@ -129,4 +129,29 @@ export async function mark_challenge_solved( { challenge } ) {
         [ challenge ]
     )
     return result.rows.length > 0 ? Number( result.rows[0].solved ) : null
+}
+
+export async function get_miner_stats() {
+
+    // Check for cached value
+    const cache_key = 'miner_stats'
+    const cached_value = cache( cache_key )
+    if( cached_value ) return cached_value
+
+    // Get all ip addresses with a country that are not stale
+    const ms_to_stale = 1000 * 60 * 30
+    const stale_timestamp = Date.now() - ms_to_stale
+    const result = await pool.query(
+        `SELECT country FROM ip_addresses WHERE updated > $1`,
+        [ stale_timestamp ]
+    )
+
+    // Reduce this to a per-country count
+    const country_counts = result.rows.reduce( ( acc, { country } ) => {
+        acc[country] = ( acc[country] || 0 ) + 1
+        return acc
+    }, {} )
+
+    return cache( cache_key, country_counts,  5 * 60_000 )
+
 }

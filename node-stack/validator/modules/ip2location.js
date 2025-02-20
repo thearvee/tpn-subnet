@@ -1,14 +1,15 @@
 import { IP2Location } from "ip2location-nodejs"
 import fs from "fs"
+import { normalize } from "path"
 import url from "url"
 import https from "https"
-import { log } from "mentie"
+import { cache, log } from "mentie"
 import unzipper from "unzipper"
 import { datacenter_patterns } from "./scoring.js"
 
 // Configurations
 const __dirname = url.fileURLToPath( new URL( '.', import.meta.url ) )
-const database_folder = fs.realpathSync( `${ __dirname }/../ip2location_data` )
+const database_folder = normalize( `${ __dirname }/../ip2location_data` )
 const database_file_name = `IP2LOCATION-LITE-ASN.IPV6.BIN`
 const database_file_location = `${ database_folder }/${ database_file_name }`
 const database_max_age_ms = 1000 * 60 * 60 * 24 * 2
@@ -90,6 +91,7 @@ async function unzip_bin( zip_path, out_path ) {
  */
 async function download_url_to_file( url, path ) {
 
+    path = normalize( path )
     const zip_path = `${ path }.zip`
 
     // Check file context
@@ -113,13 +115,6 @@ async function download_url_to_file( url, path ) {
             // Log response status
             log.info( `Response status: ${ response.statusCode }, content type: ${ response.headers[ 'content-type' ] }` )
 
-            // If content type is text/html, make note
-            let non_binary_response = false
-            if( response.headers[ 'content-type' ].includes( 'text/html' ) ) {
-                non_binary_response = true
-                log.warn( `The ip2location response is not a binary file, this happens on frequent restarts and can be ignored so long as your ip2location file is up to date` )
-            }
-
             // Check if the response is a redirect
             if( response.statusCode >= 300 && response.statusCode < 400 ) {
                 const redirect_url = new URL( response.headers.location )
@@ -127,6 +122,13 @@ async function download_url_to_file( url, path ) {
 
                 // Recursively download the redirect
                 return download_url_to_file( redirect_url, path ).then( resolve ).catch( reject )
+            }
+
+            // If content type is text/html, make note
+            let non_binary_response = false
+            if( response.headers[ 'content-type' ].includes( 'text/html' ) ) {
+                non_binary_response = true
+                log.warn( `The ip2location response is not a binary file, this happens on frequent restarts and can be ignored so long as your ip2location file is up to date` )
             }
 
             // If the response is non binary, and we already have a zipfile, unzip it
@@ -141,6 +143,16 @@ async function download_url_to_file( url, path ) {
             }
             
             // Create file stream
+            log.info( `Creating the file stream ${ zip_path }` )
+            
+            // Create the folder recursively if needed
+            const folder = path.split( '/' ).slice( 0, -1 ).join( '/' )
+            if( !fs.existsSync( folder ) ) {
+                log.info( `Creating the folder ${ folder }` )
+                fs.mkdirSync( folder, { recursive: true } )
+            }
+
+            // Create the file stream
             const file = fs.createWriteStream( zip_path )
 
             // Pipe data to file
@@ -197,6 +209,15 @@ export async function update_ip2location_bin() {
  */
 export async function is_data_center( ip_address ) {
 
+    // Check for cached value
+    log.info( `Checking for cached value for IP address ${ ip_address }` )
+    const cache_key = `is_dc_${ ip_address }`
+    let cached_value = cache( cache_key )
+    if( typeof cached_value == 'boolean' ) {
+        log.info( `Returning cached value for IP address ${ ip_address }` )
+        return cached_value
+    }
+
     // Check that database file exists
     if( !fs.existsSync( database_file_location ) ) throw new Error( `Database file ${ database_file_location } does not exist` )
 
@@ -206,13 +227,16 @@ export async function is_data_center( ip_address ) {
     log.info( `Database file age: ${ database_age_ms } ms` )
 
     // Get connection type
-    await ip2location.openAsync( database_file_location )
+    ip2location.open( database_file_location )
     const automated_service_name = ip2location.getAS( ip_address )
-    await ip2location.closeAsync()
+    ip2location.close()
 
     // Check against known datacenter providers
     const is_datacenter = datacenter_patterns.some( pattern => pattern.test( automated_service_name ) )
-    log.info( `Retrieved connection type for IP address ${ ip_address } hosted by ${ automated_service_name }: ${ is_datacenter }` )
-    return is_datacenter
+    log.info( `Retrieved connection type for IP address ${ ip_address } hos ted by ${ automated_service_name }: ${ is_datacenter }` )
+    
+    cached_value = cache( cache_key, is_datacenter, 5 * 60_000 )
+    log.info( `Returning connection type for IP address ${ ip_address }: `, cached_value )
+    return cached_value
 
 }
