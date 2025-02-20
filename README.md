@@ -30,8 +30,9 @@ Before starting your miner and/or validator, please prepare your machine by sett
 Requirements:
 
 - Linux OS (Ubuntu LTS recommended)
-- 1 CPU core
-- 512MB RAM
+- 2 CPU cores
+- 2GB RAM
+- 50GB disk space
 - Publically accessible IP address
 
 
