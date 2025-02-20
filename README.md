@@ -73,7 +73,7 @@ export PYTHONPATH=.
 
 ### 2: Configure keys
 
-The next step is to configure the Bittensor keys for your miner. Note that these keys are stored in the `~/.bittensor` directory. You have 2 options:
+The next step is to configure the Bittensor keys for your miner and/or validator. Note that these keys are stored in the `~/.bittensor` directory. You have 2 options:
 
 1. Copy existing cold and hotkeys to `~/.bittensor`
 2. Generate a new coldkey and hotkey
