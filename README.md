@@ -124,7 +124,7 @@ export PYTHONPATH=. && pm2 start "python3 neurons/miner.py \
     --wallet.hotkey tpn_hotkey \
     --logging.info \
     --axon.port 8091 \
-    --force_validator_permit" --name tpn_miner
+    --blacklist.force_validator_permit" --name tpn_miner
 ```
 
 ## Running a validator
@@ -219,7 +219,6 @@ export PYTHONPATH=. && pm2 start "python3 neurons/validator.py \
     --wallet.hotkey tpn_hotkey \
     --logging.info \
     --axon.port 9000 \
-    --blacklist.force_validator_permit \
     --neuron.vpermit 10000 \
     --force_validator_permit" --name tpn_validator
 ```
