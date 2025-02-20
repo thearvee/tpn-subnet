@@ -6,3 +6,4 @@ pytest>=8
 torch>=2
 numpy>=1
 setuptools>=68
+wandb==0.19.6
