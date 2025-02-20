@@ -111,7 +111,7 @@ To start the docker container:
 
 ```bash
 # NOTE: this assumes you are in the tpn-subnet directory
-docker compose up -f node-stack/miner/miner.docker-compose.yml
+docker compose -f node-stack/miner/miner.docker-compose.yml up -d
 ```
 
 To start the miner neuron:
@@ -119,7 +119,7 @@ To start the miner neuron:
 ```bash
 # NOTE: this assumes you are in the tpn-subnet director
 pm2 start "python3 neurons/miner.py \
-    --netuid 279 \
+    --netuid 65 \ # 65 for mainnet, 279 for testnet
     --subtensor.network finney \ # Finney means mainnet, test means testnet
     --wallet.name tpn_coldkey \
     --wallet.hotkey tpn_hotkey \
@@ -170,7 +170,7 @@ To start the docker container:
 
 ```bash
 # NOTE: this assumes you are in the tpn-subnet directory
-docker compose up -f node-stack/validator/validator.docker-compose.yml
+docker compose -f node-stack/validator/validator.docker-compose.yml up -d
 ```
 
 To start the validator neuron:
@@ -178,13 +178,13 @@ To start the validator neuron:
 ```bash
 # NOTE: this assumes you are in the tpn-subnet director
 pm2 start "python3 neurons/validator.py \
-    --netuid 279 \
+    --netuid 65 \ # 65 for mainnet, 279 for testnet
     --subtensor.network finney \ # Finney means mainnet, test means testnet
     --wallet.name tpn_coldkey \
     --wallet.hotkey tpn_hotkey \
     --logging.info \
     --axon.port 9000 \
     --blacklist.force_validator_permit \
-    _neuron.vpermit 10000 \
+    --neuron.vpermit 10000 \
     --force_validator_permit" --name tpn_validator
 ```

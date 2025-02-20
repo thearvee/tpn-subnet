@@ -36,33 +36,26 @@ def reward(query: int, response: int) -> float:
     return 1.0 if response == query * 2 else 0
 
 
-async def get_rewards(challenges: List[str], responses: List[str]) -> List[float]:
-    """
-    Get the scores for the responses.
-    """
-    async def fetch_score(challenge, response) -> float:
-        if response is None:
-            return 0
-        async with aiohttp.ClientSession() as session:
-            async with session.get(
-                f"http://127.0.0.1:3000/challenge/{challenge}/{response}"
-            ) as resp:
-                result = await resp.json()
-                return result["score"]
-            
-    # Concurrently fetch all scores
-    scores = await asyncio.gather(
-        *[fetch_score(challenge, response) for challenge, response in zip(challenges, responses)]
-    )
-    return scores
-    
-    # async with aiohttp.ClientSession() as session:
-    #     async with session.post(
-    #         f"http://127.0.0.1:3000/challenge/{}",
-    #         json={"url": challenge_url},
-    #         headers={"Content-Type": "application/json"},
-    #     ) as response:
-    #         response = (await response.json())["response"]
-    #         synapse.challenge_response = response
-    #         bt.logging.info(f"Solved challenge: {synapse.challenge_response}")
-    #         return synapse
+async def get_rewards(challenges: List[str], responses: List[str], validator_server_url: str) -> List[float]:
+    try:
+        """
+        Get the scores for the responses.
+        """
+        async def fetch_score(challenge, response) -> float:
+            if response is None:
+                return 0
+            async with aiohttp.ClientSession() as session:
+                async with session.get(
+                    f"{validator_server_url}/challenge/{challenge}/{response}"
+                ) as resp:
+                    result = await resp.json()
+                    return result["score"]
+                
+        # Concurrently fetch all scores
+        scores = await asyncio.gather(
+            *[fetch_score(challenge, response) for challenge, response in zip(challenges, responses)]
+        )
+        return scores
+    except Exception as e:
+        print(f"Error getting rewards: {e}")
+        return None
