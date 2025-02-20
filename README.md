@@ -136,7 +136,7 @@ Validators are the interface between end users and miners. They send work reques
 You must announce your intention to run a validator on chain by running the following command:
 
 ```bash
-btcli s register --wallet.name tpn_coldkey --hotkey tpn_hotkey --netuid 279
+btcli s register --wallet.name tpn_coldkey --hotkey tpn_hotkey --netuid 65 # 65 for mainnet, 279 for testnet
 ```
 
 ### Step 2: Configure the validator settings
