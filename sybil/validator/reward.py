@@ -49,7 +49,7 @@ async def get_rewards(challenges: List[str], responses: List[str], validator_ser
                     f"{validator_server_url}/challenge/{challenge}/{response}"
                 ) as resp:
                     result = await resp.json()
-                    return result["score"]
+                    return result["score"] if "score" in result else 0
                 
         # Concurrently fetch all scores
         scores = await asyncio.gather(
