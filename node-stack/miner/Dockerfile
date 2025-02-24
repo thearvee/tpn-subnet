@@ -11,6 +11,9 @@ COPY package*.json ./
 RUN npm i -g npm
 RUN npm ci --omit=dev
 
+# Install curl for the healthcheck
+RUN apt update && apt install -y curl
+
 # Copy application code
 COPY app.js ./
 COPY routes ./routes
