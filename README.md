@@ -48,15 +48,6 @@ sudo apt upgrade -y # OPTIONAL, this updated system packages
 curl -fsSL https://get.docker.com -o get-docker.sh
 sudo sh get-docker.sh
 
-# Add the current user to docker for rootless docker running
-if [ -z "$USER" ]; then
-    USER=$(whoami)
-fi
-sudo groupadd docker || echo "Docker group already exists, proceeding"
-sudo usermod -aG docker $USER
-newgrp docker
-sudo service docker start
-
 # Install node and pm2
 sudo apt install -y nodejs npm
 npm install -g pm2
@@ -70,6 +61,16 @@ python3 -m venv venv
 source venv/bin/activate
 pip3 install -r requirements.txt
 export PYTHONPATH=.
+
+# Add the current user to docker for rootless docker running
+if [ -z "$USER" ]; then
+    USER=$(whoami)
+fi
+sudo groupadd docker &> /dev/null
+sudo usermod -aG docker $USER
+newgrp docker << EOF
+    sudo service docker start
+EOF
 ```
 
 ### 2: Configure keys
