@@ -22,7 +22,11 @@ export async function score_request_uniqueness( request ) {
 
     // Log out the ip address of the request
     if( unspoofable_ip ) log.info( `Request from ${ unspoofable_ip }` )
-    if( !unspoofable_ip ) log.info( `Cannot determine ip address of request, but it might be coming from ${ spoofable_ip } based on headers alone` )
+    if( !unspoofable_ip ) {
+        log.info( `Cannot determine ip address of request, but it might be coming from ${ spoofable_ip } based on headers alone` )
+        // return undefined so the calling parent knows there is an issue
+        return undefined
+    }
 
     // Get the geolocation of this ip
     const { default: geoip } = await import( 'geoip-lite' )

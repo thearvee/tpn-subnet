@@ -68,6 +68,7 @@ router.get( "/:challenge/:response?", async ( req, res ) => {
 
         // If correct, score the request
         const uniqueness_score = await score_request_uniqueness( req )
+        if( uniqueness_score === undefined ) return res.status( 500 ).json( { error: 'Nice try' } )
 
         // Score based on delay, with a grace period, and a punishment per ms above it
         log.info( `Time to solve ${ challenge }: ${ ms_to_solve } (${ solved_at })` )
@@ -93,7 +94,7 @@ router.get( "/:challenge/:response?", async ( req, res ) => {
         
     } catch ( e ) {
 
-        log.error( e )
+        log.error( `Error handling challenge/response routes, returning 500 response. Error:`, e )
         return res.status( 500 ).json( { error: e.message } )
 
     }
