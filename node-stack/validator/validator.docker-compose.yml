@@ -45,10 +45,12 @@ services:
   watchtower:
     container_name: watchtower
     image: containrrr/watchtower
+    environment:
+      - WATCHTOWER_CLEANUP=true
+      - WATCHTOWER_POLL_INTERVAL=3600
+      - WATCHTOWER_TIMEOUT=60s
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-    networks:
-      - tpn_network  # Connect to the custom network
 
 volumes:
   maxmind_data:

@@ -53,6 +53,7 @@ sudo apt install -y nodejs npm
 npm install -g pm2
 
 # Clone the TPN repository, it contains all the required code
+cd ~
 git clone https://github.com/beyond-stake/tpn-subnet.git
 
 # Install the required python dependencies
@@ -127,6 +128,25 @@ export PYTHONPATH=. && pm2 start "python3 neurons/miner.py \
     --logging.info \
     --axon.port 8091 \
     --blacklist.force_validator_permit" --name tpn_miner
+```
+
+### Updating your miner
+
+The miner automatically updates some components periodically, but not all. You should regularly run the following commands to keep your miner up to date:
+
+```bash
+# Update the TPN repository
+cd ~/tpn-subnet
+git pull
+
+# Pull the latest docker images
+docker compose -f node-stack/miner/miner.docker-compose.yml pull
+
+# Restart the miner docker container
+docker compose -f node-stack/miner/miner.docker-compose.yml up -d
+
+# Restart the pm2 process
+pm2 restart tpn_miner
 ```
 
 ## Running a validator
@@ -223,4 +243,23 @@ export PYTHONPATH=. && pm2 start "python3 neurons/validator.py \
     --axon.port 9000 \
     --neuron.vpermit 10000 \
     --force_validator_permit" --name tpn_validator
+```
+
+### Updating your validator
+
+The validator automatically updates some components periodically, but not all. You should regularly run the following commands to keep your validator up to date:
+
+```bash
+# Update the TPN repository
+cd ~/tpn-subnet
+git pull
+
+# Pull the latest docker images
+docker compose -f node-stack/validator/validator.docker-compose.yml pull
+
+# Restart the validator docker container
+docker compose -f node-stack/validator/validator.docker-compose.yml up -d
+
+# Restart the pm2 process
+pm2 restart tpn_validator
 ```
