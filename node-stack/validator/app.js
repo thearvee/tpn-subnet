@@ -1,5 +1,6 @@
 // Set up environment
 import 'dotenv/config'
+const { CI_MODE } = process.env
 import { log } from 'mentie'
 const update_interval_ms = 1000 * 60 * 60 * 24 // 24 hours
 import { readFile } from 'fs/promises'
@@ -16,7 +17,7 @@ log.info( 'Database initialized' )
 // Update maxmind
 import { update_maxmind } from './modules/update-maxmind.js'
 log.info( 'Updating MaxMind database' )
-await update_maxmind().catch( e => log.error( e ) )
+if( !CI_MODE ) await update_maxmind().catch( e => log.error( e ) )
 log.info( `Updating MaxMind database every ${ update_interval_ms / 1000 / 60 / 60 } hours` )
 setInterval( update_maxmind, update_interval_ms )
 
@@ -35,7 +36,7 @@ app.get( '/', ( req, res ) => {
     res.send( `I am a TPN Network validator component running v${ version }` )
 } )
 
-// Import and add scoring routes
+// Import and add scoring routes. This is a debugging route that is not actually used by the neurons
 import { router as score_router } from './routes/score.js'
 app.use( '/score', score_router )
 

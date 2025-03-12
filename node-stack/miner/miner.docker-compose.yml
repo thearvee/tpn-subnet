@@ -2,15 +2,50 @@ services:
   miner:
     container_name: miner
     restart: unless-stopped
-    image: taofuprotocol/tpn-subnet-miner:latest
+    # image: taofuprotocol/tpn-subnet-miner:latest
+    build:
+      context: .
+      dockerfile: Dockerfile.miner
     ports:
         - "3001:3001"
+    volumes:
+      - ./wireguard:/app/wireguard
+      - /var/run/docker.sock:/var/run/docker.sock
+    depends_on:
+      - wireguard
     environment:
         LOG_LEVEL: info
 
+  wireguard:
+    # image: lscr.io/linuxserver/wireguard:latest
+    build:
+      context: .
+      dockerfile: Dockerfile.wireguard
+    container_name: wireguard
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Etc/UTC
+      - SERVERPORT=51820
+      - PEERS=5
+      - LOG_CONFS=false
+    volumes:
+      - ./wireguard:/config
+    ports:
+      - 51820:51820/udp
+    sysctls:
+      - net.ipv4.conf.all.src_valid_mark=1
+    restart: unless-stopped
+
   watchtower:
-    container_name: watchtower
+    container_name: tpn_miner_watchtower
     image: containrrr/watchtower
+    depends_on:
+      - wireguard
+      - miner
     environment:
       - WATCHTOWER_CLEANUP=true
       - WATCHTOWER_POLL_INTERVAL=3600

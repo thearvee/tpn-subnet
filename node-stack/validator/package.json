@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "test": "vitest --silent=false watch",
+    "test:ci": "vitest run --silent=false",
     "lint": "eslint --fix src",
     "dev": "nodemon app.js"
   },
