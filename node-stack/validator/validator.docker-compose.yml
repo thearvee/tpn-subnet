@@ -11,6 +11,8 @@ services:
       - PUBLIC_PORT
       - MAXMIND_LICENSE_KEY
       - IP2LOCATION_DOWNLOAD_TOKEN
+      - POSTGRES_HOST
+      - POSTGRES_USER
       - POSTGRES_PASSWORD
     restart: unless-stopped
     ports:
@@ -44,7 +46,7 @@ services:
       - tpn_network
 
   watchtower:
-    container_name: watchtower
+    container_name: tpn_validator_watchtower
     image: containrrr/watchtower
     environment:
       - WATCHTOWER_CLEANUP=true

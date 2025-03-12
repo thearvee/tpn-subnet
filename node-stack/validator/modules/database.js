@@ -2,8 +2,9 @@ import postgres from 'pg'
 import { cache, log } from 'mentie'
 
 // Create a connection pool to the postgres container
-const { POSTGRES_PASSWORD, POSTGRES_HOST='postgres', POSTGRES_PORT=5432, POSTGRES_USER='postgres' } = process.env
+const { POSTGRES_PASSWORD, POSTGRES_HOST='postgres', POSTGRES_PORT=5432, POSTGRES_USER='postgres', CI_MODE } = process.env
 const { Pool } = postgres
+log.info( `Connecting to postgres at ${ POSTGRES_USER }@${ POSTGRES_HOST }:${ POSTGRES_PORT }` )
 const pool = new Pool( {
     user: POSTGRES_USER,
     host: POSTGRES_HOST,
@@ -13,6 +14,15 @@ const pool = new Pool( {
 } )
 
 export async function init_tables() {
+
+    // In dev, delete old table
+    if( CI_MODE ) {
+        log.info( 'Dropping old table, in CI mode' )
+        await pool.query( `DROP TABLE IF EXISTS timestamps` )
+        await pool.query( `DROP TABLE IF EXISTS challenges` )
+        await pool.query( `DROP TABLE IF EXISTS ip_addresses` )
+    }
+
     // Create table for timestamps
     await pool.query( `
         CREATE TABLE IF NOT EXISTS timestamps (
