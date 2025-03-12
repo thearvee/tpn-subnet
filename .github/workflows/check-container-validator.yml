@@ -1,0 +1,42 @@
+# .github/workflows/docker-deploy.yml
+
+name: Test miner changes
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'node-stack/miner/**'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      
+      # Checkout with enough history to compare previous commit
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 1
+
+      # Set up node
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version-file: "node-stack/miner/.nvmrc"
+          cache: 'npm'
+      
+      # Run the tests
+      - name: Run tests
+        run: |
+          cd node-stack
+          docker compose -f ci.docker-compose.yml build --no-cache
+          docker compose -f ci.docker-compose.yml up -d --wait
+          cd validator
+          echo ${{ SECRETS.DOTENV_VALIDATOR }} > .env
+          npm ci
+          npm run test:ci
+          cd ..
+          docker compose -f ci.docker-compose.yml down
