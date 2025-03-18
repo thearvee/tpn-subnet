@@ -6,7 +6,7 @@ const { PUBLIC_URL, PUBLIC_VALIDATOR_URL, PUBLIC_PORT } = process.env
 let base_url = PUBLIC_VALIDATOR_URL || PUBLIC_URL
 
 // Remove trailing slash
-base_url = base_url.replace( /\/$/, '' )
+base_url = `${ base_url }`.replace( /\/$/, '' )
 
 // Check if public url has a port
 const has_port = `${ base_url }`.includes( ':' )
