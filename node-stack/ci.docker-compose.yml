@@ -6,8 +6,6 @@ services:
     build:
       context: ./miner
       dockerfile: Dockerfile.miner
-    env_file:
-      - ./miner/.env
     ports:
         - "3001:3001"
     volumes:
@@ -23,7 +21,7 @@ services:
         - POSTGRES_PASSWORD
         - POSTGRES_HOST
         - POSTGRES_USER
-        - CI_MODE
+        - CI_MODE=true
     networks:
       - tpn_network
 
@@ -52,6 +50,8 @@ services:
     sysctls:
       - net.ipv4.conf.all.src_valid_mark=1
     restart: unless-stopped
+    networks:
+      - tpn_network
 
   validator:
     container_name: tpn_validator
@@ -59,17 +59,14 @@ services:
     build:
       context: ./validator
       dockerfile: Dockerfile
-    env_file:
-      - ./validator/.env
     # Environment variables will be picked from .env unless overridden here
     environment:
-      - LOG_LEVEL
-      - PUBLIC_URL
+      - LOG_LEVEL=info
+      - PUBLIC_VALIDATOR_URL
       - MAXMIND_LICENSE_KEY
       - IP2LOCATION_DOWNLOAD_TOKEN
       - POSTGRES_PASSWORD
       - CI_MODE=true
-      - CI_IP
     restart: unless-stopped
     cap_add:
       - NET_ADMIN
@@ -96,8 +93,6 @@ services:
   postgres:
     container_name: postgres
     image: postgres
-    env_file:
-      - ./validator/.env
     environment:
       - POSTGRES_PASSWORD
     volumes:
