@@ -18,13 +18,14 @@ services:
     sybil-network:
         image: sybil-network:nightly
         ports:
-            - "3000:3000"
+            - "${PUBLIC_PORT:-3000}:3000" 
         # You may also create a .env file in the same folder as the docker-compose.yml file
         environment:
             LOG_LEVEL: info
             MAXMIND_LICENSE_KEY:
             IP2LOCATION_DOWNLOAD_TOKEN:
-            PUBLIC_URL: "http://localhost:3000"
+            PUBLIC_VALIDATOR_URL: "http://localhost"
+            PUBLIC_PORT: 3000
         volumes:
             - ./database.sqlite:/app/database.sqlite
 ```
@@ -51,7 +52,8 @@ Required variables in `.env` file:
 # .env
 LOGLEVEL=info,warn,error
 MAXMIND_LICENSE_KEY= # Make a free account on maxmind.com and generate a license key in account settings
-PUBLIC_URL= # The URL where the app is hosted, may be an ip or domain based url starting with http:// or https://
+PUBLIC_VALIDATOR_URL= # The URL where the app is hosted, may be an ip or domain based url starting with http:// or https://
+PUBLIC_PORT= # The port where the app is hosted, usually 3000
 ```
 
 Docker run:
@@ -61,7 +63,8 @@ docker run \
     -p 3000:3000 \
     -e LOG_LEVEL=info \
     -e MAXMIND_LICENSE_KEY="" \
-    -e PUBLIC_URL="http://localhost:3000" \
+    -e PUBLIC_VALIDATOR_URL="http://localhost" \
+    - e PUBLIC_PORT=3000 \
     -v "$(pwd)/database.sqlite:/app/database.sqlite" \
     sybil-network:nightly
 ```

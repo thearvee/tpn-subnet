@@ -3,6 +3,7 @@ import { generate_challenge, solve_challenge } from "../modules/challenge.js"
 import { score_request_uniqueness } from "../modules/scoring.js"
 import { get_challenge_response } from "../modules/database.js"
 import { cache, log, make_retryable } from "mentie"
+import { base_url } from "../modules/url.js"
 export const router = Router()
 
 // Generate challenge route
@@ -14,8 +15,7 @@ router.get( "/new", async ( req, res ) => {
         const challenge = await generate_challenge()
 
         // Formulate public challenge URL
-        const { PUBLIC_URL } = process.env
-        const challenge_url = `${ PUBLIC_URL }/challenge/${ challenge }`
+        const challenge_url = `${ base_url }/challenge/${ challenge }`
 
         return res.json( { challenge, challenge_url } )
 

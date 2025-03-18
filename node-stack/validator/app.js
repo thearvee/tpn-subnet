@@ -38,12 +38,12 @@ app.use( '/score', score_router )
 
 // Import and add challenge routes
 import { router as challenge_router } from './routes/challenge-response.js'
+import { base_url } from './modules/url.js'
 app.use( '/challenge', challenge_router )
 
 // Listen to requests
 const server = app.listen( 3000, () => {
-    const { PUBLIC_URL } = process.env
-    console.log( `Server running, serving from base url ${ PUBLIC_URL }` )
+    console.log( `Server running, serving from base url ${ base_url }` )
 } )
 const handle_close = () => {
     log.info( 'Closing server' )

@@ -7,13 +7,14 @@ services:
     # Environment variables will be picked from .env unless overridden here
     environment:
       - LOG_LEVEL
-      - PUBLIC_URL
+      - PUBLIC_VALIDATOR_URL
+      - PUBLIC_PORT
       - MAXMIND_LICENSE_KEY
       - IP2LOCATION_DOWNLOAD_TOKEN
       - POSTGRES_PASSWORD
     restart: unless-stopped
     ports:
-      - "3000:3000"
+      - "${PUBLIC_PORT:-3000}:3000" 
     depends_on:
       postgres:
         condition: service_healthy
