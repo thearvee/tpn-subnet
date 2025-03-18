@@ -1,7 +1,7 @@
 // Set up environment
 import 'dotenv/config'
 import { log } from 'mentie'
-log.info( `Starting server` )
+log.info( `Starting server with env`, process.env )
 
 // Initialise database
 import { init_tables } from './modules/database.js'

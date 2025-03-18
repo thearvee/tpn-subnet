@@ -3,7 +3,7 @@ import 'dotenv/config'
 const { CI_MODE } = process.env
 import { log } from 'mentie'
 const update_interval_ms = 1000 * 60 * 60 * 24 // 24 hours
-log.info( 'Starting Sybil Network validator component' )
+log.info( 'Starting Sybil Network validator component with env', process.env )
 
 // Initialize the database
 import { init_tables } from './modules/database.js'

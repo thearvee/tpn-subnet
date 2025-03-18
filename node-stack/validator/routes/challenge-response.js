@@ -50,7 +50,7 @@ router.get( "/:challenge/:response?", async ( req, res ) => {
             const challenge_response = await get_challenge_response( { challenge } )
             if( !cached_value ) cache( `challenge_solution_${ challenge }`, challenge_response )
 
-            log.info( `Returning challenge response for challenge ${ challenge }` )
+            log.info( `Returning challenge response for challenge ${ challenge }: `, challenge_response )
             return res.json( { response: challenge_response.response } )
 
         }

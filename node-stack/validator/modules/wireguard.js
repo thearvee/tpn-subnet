@@ -1,4 +1,4 @@
-import { log } from "mentie"
+import { log, random_string_of_length } from "mentie"
 import { generate_challenge, solve_challenge } from "./challenge.js"
 import { run } from "./shell.js"
 
@@ -17,8 +17,9 @@ export async function validate_wireguard_config( { peer_config, peer_id } ) {
     
     // Generate a challenge on this machine
     const { CI_MODE, CI_IP, PUBLIC_VALIDATOR_URL } = process.env
-    let [ ci_ip ] = CI_IP.split( '\n' ).filter( ip => ip.trim() ) || []
-    const base_url = CI_MODE ? `http://${ ci_ip }:3000` : PUBLIC_VALIDATOR_URL
+    // let [ ci_ip ] = CI_IP.split( '\n' ).filter( ip => ip.trim() ) || []
+    // const base_url = CI_MODE ? `http://${ ci_ip }:3000` : PUBLIC_VALIDATOR_URL
+    const base_url = PUBLIC_VALIDATOR_URL
     const challenge = await generate_challenge()
     const challenge_url = `${ base_url }/challenge/${ challenge }`
 
@@ -29,42 +30,62 @@ export async function validate_wireguard_config( { peer_config, peer_id } ) {
     //     log.info( `Peer config after replacement:` )
     // }
 
-    // Parse the wg config with sane checks
-    // 1: Add a Table = off line if it doesn't exist, add it after the Address line
+    // Run specific variables
+    const interface_id = `tpn${ peer_id }${ random_string_of_length( 10 ) }`
+    const config_path = `/tmp/${ interface_id }.conf`
+
+
+    // Get the endpoint host from the config
+    let { 1: endpoint } = peer_config.match( /Endpoint ?= ?(.*)/ ) || []
+    endpoint = `${ endpoint }`.split( ':' )[ 0 ]
+    log.info( `Parsed endpoint from wireguard config for peer ${ peer_id }:`, endpoint )
+    let { 1: address } = peer_config.match( /Address ?= ?(.*)/ ) || []
+    address = `${ address }`.split( '/' )[ 0 ]
+    log.info( `Parsed address from wireguard config for peer ${ peer_id }:`, address )
+
+    // If endpoint is not cidr, add /32
+    if( endpoint.match( /\d*\.\d*\.\d*\.\d*/ ) && !endpoint.contains( '/' ) ) endpoint += '/32'
+
+    // If endpoint is string, resolve it
+    if( !endpoint.match( /\d*\.\d*\.\d*\.\d*\/\d*/ ) ) {
+        const { stdout, stderr } = await run( `dig +short ${ endpoint }`, false )
+        log.info( `Resolved endpoint ${ endpoint } to ${ stdout }` )
+        endpoint = `${ stdout }`.trim()
+    }
+
+    // Add a Table = off line if it doesn't exist, add it after the Address line
     if( !peer_config.includes( 'Table = off' ) ) peer_config = peer_config.replace( /Address =.*/, `$&\nTable = off` )
-    // // 2: Remove the DNS line
-    peer_config = peer_config.replace( /^DNS =.*/gm, '' )
-    // // 3: if the Address line is not in CIDR add a /32
-    // peer_config = peer_config.replace( /Address = (.*)(\/\d+)?/gm, 'Address = $1/32' )
-    // // 4: Add a default route in Preup if there is no preup
-    // if( !peer_config.includes( 'PreUp' ) ) peer_config = peer_config.replace( /\[Interface\]/, `$&\nPostUp = echo "explain please"` )
-
-    // Remove ipv6 from AllowedIPs line, line looks like AllowedIPs = 0.0.0.0/0, ::/0
-    peer_config = peer_config.replace( /,.*::.*\/0/gm, '' )
-
+    
+    // Add PostUp and PostDown scripts
+    const PostUp = `
+        PostUp = ip -4 route add ${ endpoint } via "$(ip route | awk '/default/ {print $3}')" dev "$(ip route | awk '/default/ {print $5}')"; \
+        ip rule add from ${ address } lookup 200; \
+        ip route add default dev ${ interface_id } table 200
+    `
+    const PostDown = `
+        PostDown = ip -4 route del ${ endpoint } via "$(ip route | awk '/default/ {print $3}')" dev "$(ip route | awk '/default/ {print $5}')"; \
+        ip rule del from ${ address } lookup 200; \
+        ip route del default dev ${ interface_id } table 200
+    `
+    if( !peer_config.includes( PostUp ) ) peer_config = peer_config.replace( /Address =.*/, `$&\n${ PostUp }` )
+    if( !peer_config.includes( PostDown ) ) peer_config = peer_config.replace( /Address =.*/, `$&\n${ PostDown }` )
     log.info( `Parsed wireguard config for peer ${ peer_id }:`, peer_config )
 
 
     // Formulate shell commands used for testing and cleanup
     const write_config_command = `
         # Write the wireguard config to a temporary file
-        printf "%s" "${ peer_config }" > /tmp/c_wg${ peer_id }.conf && \
+        printf "%s" "${ peer_config }" > ${ config_path } && \
         # Chmod the file
-        chmod 600 /tmp/c_wg${ peer_id }.conf
+        chmod 600 ${ config_path }
     `
     const network_setup_command = `
-
-        ip netns list
-        cat /tmp/c_wg${ peer_id }.conf
-        WG_DEBUG=1 wg-quick up /tmp/c_wg${ peer_id }.conf
-
-        # Post wireguard setup status checks
+        ping -c1 -W1 ${ endpoint }
+        WG_DEBUG=1 wg-quick up ${ config_path }
+        ip route add default dev ${ interface_id }
+        wg show
         ip route show
-        cat /etc/resolv.conf
-        ip addr show wg${ peer_id }
-        dig +short google.com
-        ping -c 4 8.8.8.8
-    
+        ip addr show ${ interface_id }
     `
     // const network_setup_command = `
     //     ip netns list
@@ -97,14 +118,11 @@ export async function validate_wireguard_config( { peer_config, peer_id } ) {
     //     ip netns exec ns_wg${ peer_id } ping -c 4 8.8.8.8
     
     // `
-    const curl_command = `curl -s ${ challenge_url }`
+    const curl_command = `curl -m 5 --interface ${ interface_id } -s ${ challenge_url }`
     const cleanup_command = `
-        wg-quick down /tmp/c_wg${ peer_id }.conf
-        // ip netns exec ns_wg${ peer_id } wg${ peer_id } down # Bring the wireguard interface down
-        // ip netns exec ns_wg${ peer_id } ip link delete i_wg${ peer_id } # Delete the wireguard interface
-        // ip netns del ns_wg${ peer_id } # Delete the network namespace
-        // ip link delete i_wg${ peer_id } > /dev/null 2>&1 | echo "No need to clean up untrashed interface" # Delete the wireguard interface if a previous run failed
-        // rm -f /tmp/c_wg${ peer_id }.conf # Remove the temporary wireguard config file
+        wg-quick down ${ config_path }
+        rm -f /tmp/${ config_path }
+        ip link delete ${ interface_id } || echo "No need to force delete interface"
     `
 
 
@@ -129,12 +147,12 @@ export async function validate_wireguard_config( { peer_config, peer_id } ) {
 
         for( const command of network_setup_commands ) {
             const { error, stderr, stdout } = await run( command )
-            if( error || stderr ) throw new Error( `Error setting up network: ${ error } ${ stderr }` )
+            // if( error || stderr ) throw new Error( `Error setting up network: ${ error } ${ stderr }` )
         }
     
 
         // Run the curl command
-        const { error, stderr, stdout } = await run( curl_command )
+        const { error, stderr, stdout } = await run( curl_command, false, true )
         if( error || stderr ) throw new Error( `Error running curl command: ${ error } ${ stderr }` )
         
         // Isolate the json
@@ -188,6 +206,7 @@ export async function validate_wireguard_config( { peer_config, peer_id } ) {
     } catch ( e ) {
 
         log.error( `Error validating wireguard config for peer ${ peer_id }:`, e )
+        await run_cleanup( { silent: true } )
         return false
 
     }
