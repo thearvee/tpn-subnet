@@ -37,7 +37,7 @@ export async function validate_wireguard_config( { peer_config, peer_id } ) {
 
     // Get the endpoint host from the config
     let { 1: endpoint } = peer_config.match( /Endpoint ?= ?(.*)/ ) || []
-    endpoint = `${ endpoint }`.split( ':' )[ 0 ]
+    endpoint = `${ endpoint }`.trim().split( ':' )[ 0 ]
     log.info( `Parsed endpoint from wireguard config for peer ${ peer_id }:`, endpoint )
     let { 1: address } = peer_config.match( /Address ?= ?(.*)/ ) || []
     address = `${ address }`.split( '/' )[ 0 ]
@@ -47,7 +47,7 @@ export async function validate_wireguard_config( { peer_config, peer_id } ) {
     // if( endpoint.match( /\d*\.\d*\.\d*\.\d*/ ) && !endpoint.includes( '/' ) ) endpoint += '/32'
 
     // If endpoint is string, resolve it
-    if( !endpoint.match( /\d*\.\d*\.\d*\.\d*\/\d*/ ) ) {
+    if( !endpoint.match( /\d*\.\d*\.\d*\.\d*/ ) ) {
         const { stdout, stderr } = await run( `dig +short ${ endpoint }`, false )
         log.info( `Resolved endpoint ${ endpoint } to ${ stdout }` )
         endpoint = `${ stdout }`.trim()
