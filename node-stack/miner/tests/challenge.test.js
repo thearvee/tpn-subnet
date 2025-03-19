@@ -1,6 +1,7 @@
 import { wait_for_server_up } from "./helpers"
 import { describe, test, expect } from 'vitest'
 import fetch from 'node-fetch'
+import 'dotenv/config'
 
 const { PUBLIC_VALIDATOR_URL='http://localhost:3000' } = process.env
 

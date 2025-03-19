@@ -23,6 +23,7 @@ export async function wait_for_server_up() {
         if( count > max_count ) throw new Error( `Server did not start after ${ max_count } attempts` )
 
         // Fetch the server status
+        console.log( 'Waiting for http://localhost:3001 to be up' )
         const response = await fetch( 'http://localhost:3001' ).catch( e => e )
 
         // Check if the server is up
@@ -46,6 +47,7 @@ export async function wait_for_server_up() {
         if( count > max_count ) throw new Error( `Server did not start after ${ max_count } attempts` )
 
         // Fetch the server status
+        console.log( `Waiting for ${ PUBLIC_VALIDATOR_URL } to be up` )
         const response = await fetch( PUBLIC_VALIDATOR_URL ).catch( e => e )
 
         // Check if the server is up
