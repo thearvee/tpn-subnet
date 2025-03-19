@@ -30,7 +30,7 @@ import { app } from './routes/server.js'
 
 // Root route responds with identity
 app.get( '/', ( req, res ) => {
-    res.send( "I am a Sybil Network validator component" )
+    res.send( "I am a TPN Network validator component" )
 } )
 
 // Import and add scoring routes. This is a debugging route that is not actually used by the neurons
