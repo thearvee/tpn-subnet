@@ -43,6 +43,7 @@ services:
       - PEERS=5
       - LOG_CONFS=false
       - SERVERURL=wireguard
+
     volumes:
       - ./wireguard:/config
     ports:
@@ -54,7 +55,7 @@ services:
       - tpn_network
 
   validator:
-    container_name: tpn_validator
+    container_name: validator
     # image: taofuprotocol/tpn-subnet-validator:latest
     build:
       context: ./validator
@@ -115,3 +116,6 @@ volumes:
 networks:
   tpn_network:
     driver: bridge
+    ipam:
+      config:
+        - subnet: 192.168.144.0/24

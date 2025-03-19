@@ -2,6 +2,9 @@ import { wait_for_server_up } from "./helpers"
 import { describe, test, expect } from 'vitest'
 import fetch from 'node-fetch'
 
+const { PUBLIC_VALIDATOR_URL='http://localhost:3000' } = process.env
+
+
 describe(  'Challenge', () => {
 
     test( 'Solves provided challenges', { timeout: 60_000 }, async () => {
@@ -12,11 +15,11 @@ describe(  'Challenge', () => {
         console.log( 'Server is up' )
 
         // Grab a challenge from localhost:3000/challenge/new
-        const challenge_res = await fetch( 'http://localhost:3000/challenge/new' )
+        const challenge_res = await fetch( `${ PUBLIC_VALIDATOR_URL }/challenge/new` )
         let { challenge_url } = await challenge_res.json()
         console.log( `Challenge url: ${ challenge_url }` )
 
-        // Reformat internal challenge url to point to docker container as the miner container sees it
+        // Reformat internal challenge url to point to docker container as the miner container sees it (if we are running on localhost)
         challenge_url = challenge_url.replace( `localhost`, 'validator' )
 
         // Post the challenge url to localhost:3001/challenge in url json key

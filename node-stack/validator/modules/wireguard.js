@@ -1,6 +1,7 @@
 import { log, random_string_of_length } from "mentie"
 import { generate_challenge, solve_challenge } from "./challenge.js"
 import { run } from "./shell.js"
+import { base_url } from "./url.js"
 
 const split_ml_commands = commands => commands.split( '\n' ).map( c => c.replace( /#.*$/gm, '' ) ).filter( c => c.trim() ).map( c => c.trim() )
 
@@ -19,7 +20,6 @@ export async function validate_wireguard_config( { peer_config, peer_id } ) {
     const { CI_MODE, CI_IP, PUBLIC_VALIDATOR_URL } = process.env
     // let [ ci_ip ] = CI_IP.split( '\n' ).filter( ip => ip.trim() ) || []
     // const base_url = CI_MODE ? `http://${ ci_ip }:3000` : PUBLIC_VALIDATOR_URL
-    const base_url = PUBLIC_VALIDATOR_URL
     const challenge = await generate_challenge()
     const challenge_url = `${ base_url }/challenge/${ challenge }`
 
@@ -60,13 +60,15 @@ export async function validate_wireguard_config( { peer_config, peer_id } ) {
     const PostUp = `
         PostUp = ip -4 route add ${ endpoint } via "$(ip route | awk '/default/ {print $3}')" dev "$(ip route | awk '/default/ {print $5}')"; \
         ip rule add from ${ address } lookup 200; \
-        ip route add default dev ${ interface_id } table 200
-    `
+        ip route add default dev ${ interface_id } table 200; \
+        ip rule add from ${ address } lookup 200; 
+    `.trim()
     const PostDown = `
         PostDown = ip -4 route del ${ endpoint } via "$(ip route | awk '/default/ {print $3}')" dev "$(ip route | awk '/default/ {print $5}')"; \
         ip rule del from ${ address } lookup 200; \
-        ip route del default dev ${ interface_id } table 200
-    `
+        ip route del default dev ${ interface_id } table 200; \
+        ip rule del from ${ address } lookup 200;
+    `.trim()
     if( !peer_config.includes( PostUp ) ) peer_config = peer_config.replace( /Address =.*/, `$&\n${ PostUp }` )
     if( !peer_config.includes( PostDown ) ) peer_config = peer_config.replace( /Address =.*/, `$&\n${ PostDown }` )
     log.info( `Parsed wireguard config for peer ${ peer_id }:`, peer_config )
@@ -80,44 +82,13 @@ export async function validate_wireguard_config( { peer_config, peer_id } ) {
         chmod 600 ${ config_path }
     `
     const network_setup_command = `
-        ping -c1 -W1 ${ endpoint }
+        ping -c1 -W1 ${ endpoint }  > /dev/null 2>&1 && echo "Endpoint ${ endpoint } is reachable" || echo "Endpoint ${ endpoint } is not reachable"
         WG_DEBUG=1 wg-quick up ${ config_path }
-        ip route add default dev ${ interface_id }
         wg show
         ip route show
         ip addr show ${ interface_id }
+        ping -c1 -W1 ${ endpoint }  > /dev/null 2>&1 && echo "Endpoint ${ endpoint } is reachable" || echo "Endpoint ${ endpoint } is not reachable"
     `
-    // const network_setup_command = `
-    //     ip netns list
-    //     cat /tmp/c_wg${ peer_id }.conf
-
-    //     # Networking setup
-    //     ip netns add ns_wg${ peer_id } # Create a new network namespace
-    //     ip netns exec ns_wg${ peer_id } ip link set lo up # Bring the loopback interface up 
-
-        
-    //     # Post network setup status checks
-    //     ip netns list
-    //     ip netns exec ns_wg$peer_id lsmod | grep wireguard
-    //     ip netns exec ns_wg${ peer_id } ls -l /dev/net/tun
-
-
-    //     # Wireguard setup
-    //     ip netns exec ns_wg${ peer_id } ip link set lo up # Bring the loopback interface up
-    //     ip netns exec ns_wg$peer_id sh -x -c 'WG_DEBUG=1 wg-quick up ./wg.conf'
-
-    //     # Networking setup within namespace
-    //     ip netns exec ns_wg${ peer_id } bash -c 'echo "nameserver 8.8.8.8" >> /etc/resolv.conf'
-    //     ip netns exec ns_wg${ peer_id } bash -c 'echo "nameserver 1.1.1.1" >> /etc/resolv.conf'
-
-    //     # Post wireguard setup status checks
-    //     ip netns exec ns_wg${ peer_id } ip route show
-    //     ip netns exec ns_wg${ peer_id } cat /etc/resolv.conf
-    //     ip netns exec ns_wg${ peer_id } ip addr show wg${ peer_id }
-    //     ip netns exec ns_wg${ peer_id } dig +short google.com
-    //     ip netns exec ns_wg${ peer_id } ping -c 4 8.8.8.8
-    
-    // `
     const curl_command = `curl -m 5 --interface ${ interface_id } -s ${ challenge_url }`
     const cleanup_command = `
         wg-quick down ${ config_path }

@@ -2,6 +2,7 @@ services:
   validator:
     container_name: tpn_validator
     image: taofuprotocol/tpn-subnet-validator:latest
+    # image: tpn-validator:local # cd node-stack/validator; docker build -t tpn-validator:local . --no-cache
     env_file:
       - .env
     # Environment variables will be picked from .env unless overridden here
