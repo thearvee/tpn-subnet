@@ -55,7 +55,7 @@ services:
       - PGID=1000
       - TZ=Etc/UTC
       - SERVERPORT=51820
-      - PEERS=5
+      - PEERS=${WIREGUARD_PEER_COUNT:-250}
       - LOG_CONFS=false
     volumes:
       - ./wireguard:/config

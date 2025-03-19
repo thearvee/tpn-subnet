@@ -67,7 +67,10 @@ export async function register_wireguard_lease( { start_id=1, end_id=250, expire
 
     // Delete all expired rows and their associated configs
     const expired_ids = expired_rows.rows.map( row => row.id )
-    if( expired_ids.length ) {
+    const { WIREGUARD_PEER_COUNT=250 } = process.env
+    if( expired_ids.length == WIREGUARD_PEER_COUNT ) {
+
+        log.info( `All ${ WIREGUARD_PEER_COUNT } WireGuard configs have expired, deleting all and restarting server` )
 
         // Delete and restart the wireguard server
         await delete_wireguard_configs( expired_ids )
