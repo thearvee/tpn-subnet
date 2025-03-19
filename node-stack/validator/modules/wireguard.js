@@ -1,4 +1,4 @@
-import { log, random_string_of_length } from "mentie"
+import { log, random_number_between, random_string_of_length } from "mentie"
 import { generate_challenge, solve_challenge } from "./challenge.js"
 import { run } from "./shell.js"
 import { base_url } from "./url.js"
@@ -32,6 +32,7 @@ export async function validate_wireguard_config( { peer_config, peer_id } ) {
 
     // Run specific variables
     const interface_id = `tpn${ peer_id }${ random_string_of_length( 10 ) }`
+    const routing_table = random_number_between( 255, 2**32 - 1 ) // Up to 255 is used by the system
     const config_path = `/tmp/${ interface_id }.conf`
 
 
@@ -59,15 +60,12 @@ export async function validate_wireguard_config( { peer_config, peer_id } ) {
     // Add PostUp and PostDown scripts
     const PostUp = `
         PostUp = ip -4 route add ${ endpoint } via "$(ip route | awk '/default/ {print $3}')" dev "$(ip route | awk '/default/ {print $5}')"; \
-        ip rule add from ${ address } lookup 200; \
-        ip route add default dev ${ interface_id } table 200; \
-        ip rule add from ${ address } lookup 200; 
+        ip rule add from ${ address } lookup ${ routing_table }; \
+        ip route add default dev ${ interface_id } table ${ routing_table }; \
+        ip rule add from ${ address } lookup ${ routing_table }; 
     `.trim()
     const PostDown = `
-        PostDown = ip -4 route del ${ endpoint } via "$(ip route | awk '/default/ {print $3}')" dev "$(ip route | awk '/default/ {print $5}')"; \
-        ip rule del from ${ address } lookup 200; \
-        ip route del default dev ${ interface_id } table 200; \
-        ip rule del from ${ address } lookup 200;
+        PostDown = ip route flush table ${ routing_table };
     `.trim()
     if( !peer_config.includes( PostUp ) ) peer_config = peer_config.replace( /Address =.*/, `$&\n${ PostUp }` )
     if( !peer_config.includes( PostDown ) ) peer_config = peer_config.replace( /Address =.*/, `$&\n${ PostDown }` )
@@ -83,7 +81,9 @@ export async function validate_wireguard_config( { peer_config, peer_id } ) {
     `
     const network_setup_command = `
         ping -c1 -W1 ${ endpoint }  > /dev/null 2>&1 && echo "Endpoint ${ endpoint } is reachable" || echo "Endpoint ${ endpoint } is not reachable"
+        curl -m 5 icanhazip.com
         WG_DEBUG=1 wg-quick up ${ config_path }
+        curl -m 5 icanhazip.com
         wg show
         ip route show
         ip addr show ${ interface_id }
@@ -91,9 +91,12 @@ export async function validate_wireguard_config( { peer_config, peer_id } ) {
     `
     const curl_command = `curl -m 60 --interface ${ interface_id } -s ${ challenge_url }`
     const cleanup_command = `
+        curl -m 5 icanhazip.com
         wg-quick down ${ config_path }
+        curl -m 5 icanhazip.com
         rm -f /tmp/${ config_path }
         ip link delete ${ interface_id } || echo "No need to force delete interface"
+        ip route flush table ${ routing_table }
     `
 
 
