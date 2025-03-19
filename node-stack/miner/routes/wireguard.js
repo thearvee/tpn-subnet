@@ -20,7 +20,7 @@ router.get( '/new', async ( req, res ) => {
         // Lease must be between 5 and 60 minutes
         const lease_min = CI_MODE ? .1 : 5
         const lease_max = 60
-        if( lease_min < 5 || lease_minutes > lease_max ) return res.status( 400 ).json( { error: 'Lease must be between 5 and 60 minutes' } )
+        if( lease_min > lease_minutes || lease_minutes > lease_max ) return res.status( 400 ).json( { error: 'Lease must be between 5 and 60 minutes' } )
         
         // Get a valid WireGuard configuration
         const { peer_config, peer_id, peer_slots, expires_at } = await get_valid_wireguard_config( { lease_minutes } )
