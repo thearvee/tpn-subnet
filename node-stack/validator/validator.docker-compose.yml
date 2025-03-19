@@ -2,7 +2,10 @@ services:
   validator:
     container_name: tpn_validator
     image: taofuprotocol/tpn-subnet-validator:latest
-    # image: tpn-validator:local # cd node-stack/validator; docker build -t tpn-validator:local . --no-cache
+    # Suggested command: docker compose -f validator.docker-compose.yml build --build-arg CACHEBUST=$(date +%s) && docker compose -f validator.docker-compose.yml up; docker compose -f validator.docker-compose.yml down -v
+    build:
+      context: .
+      dockerfile: Dockerfile
     env_file:
       - .env
     # Environment variables will be picked from .env unless overridden here
