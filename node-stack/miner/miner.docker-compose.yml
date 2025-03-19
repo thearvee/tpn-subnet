@@ -22,24 +22,24 @@ services:
     networks:
       - tpn_network
 
-    postgres:
-      container_name: postgres
-      image: postgres
-      env_file:
-        - .env
-      environment:
-        - POSTGRES_PASSWORD
-      volumes:
-        - postgres_data:/var/lib/postgresql/data
-      restart: unless-stopped
-      shm_size: 128mb
-      healthcheck:
-        test: ["CMD-SHELL", "pg_isready -U postgres"]
-        interval: 10s
-        timeout: 5s
-        retries: 5
-      networks:
-        - tpn_network
+  postgres:
+    container_name: postgres
+    image: postgres
+    env_file:
+      - .env
+    environment:
+      - POSTGRES_PASSWORD
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+    shm_size: 128mb
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - tpn_network
 
   wireguard:
     # image: lscr.io/linuxserver/wireguard:latest
