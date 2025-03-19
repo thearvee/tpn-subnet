@@ -2,6 +2,8 @@ import { wait_for_server_up } from "./helpers"
 import { describe, test, expect } from 'vitest'
 import fetch from 'node-fetch'
 
+const { CI_MODE } = process.env
+
 describe( 'Wireguard endpoint', () => {
 
     test( 'Can release a new wireguard config', { timeout: 60_000 }, async () => {
@@ -12,7 +14,8 @@ describe( 'Wireguard endpoint', () => {
         console.log( 'Server is up' )
 
         // Can retreive new wireguard config
-        const response = await fetch( 'http://localhost:3001/wireguard/new?geo=any&lease_minutes=.0001' ).then( r => r.json() )
+        const lease_min = CI_MODE ? .1 : 5
+        const response = await fetch( `http://localhost:3001/wireguard/new?geo=any&lease_minutes=${ lease_min }` ).then( r => r.json() )
         console.log( 'Response: ', response )
 
         // Expect properties peer-slots, peer_config, peer_id
