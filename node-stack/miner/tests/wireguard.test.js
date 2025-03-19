@@ -13,6 +13,7 @@ describe( 'Wireguard endpoint', () => {
 
         // Can retreive new wireguard config
         const response = await fetch( 'http://localhost:3001/wireguard/new?geo=any&lease_minutes=.0001' ).then( r => r.json() )
+        console.log( 'Response: ', response )
 
         // Expect properties peer-slots, peer_config, peer_id
         expect( response ).toHaveProperty( 'peer_slots' )
