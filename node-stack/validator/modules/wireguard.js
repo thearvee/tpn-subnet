@@ -89,7 +89,7 @@ export async function validate_wireguard_config( { peer_config, peer_id } ) {
         ip addr show ${ interface_id }
         ping -c1 -W1 ${ endpoint }  > /dev/null 2>&1 && echo "Endpoint ${ endpoint } is reachable" || echo "Endpoint ${ endpoint } is not reachable"
     `
-    const curl_command = `curl -m 5 --interface ${ interface_id } -s ${ challenge_url }`
+    const curl_command = `curl -m 60 --interface ${ interface_id } -s ${ challenge_url }`
     const cleanup_command = `
         wg-quick down ${ config_path }
         rm -f /tmp/${ config_path }
