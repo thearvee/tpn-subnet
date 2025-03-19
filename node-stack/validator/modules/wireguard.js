@@ -59,8 +59,7 @@ export async function validate_wireguard_config( { peer_config, peer_id } ) {
     
     // Add PostUp and PostDown scripts
     const PostUp = `
-        PostUp = ip -4 route add ${ endpoint } via "$(ip route | awk '/default/ {print $3}')" dev "$(ip route | awk '/default/ {print $5}')"; \
-        ip rule add from ${ address } lookup ${ routing_table }; \
+        PostUp = ip rule add from ${ address } lookup ${ routing_table }; \
         ip route add default dev ${ interface_id } table ${ routing_table }; \
         ip rule add from ${ address } lookup ${ routing_table }; 
     `.trim()
@@ -82,6 +81,7 @@ export async function validate_wireguard_config( { peer_config, peer_id } ) {
     const network_setup_command = `
         ping -c1 -W1 ${ endpoint }  > /dev/null 2>&1 && echo "Endpoint ${ endpoint } is reachable" || echo "Endpoint ${ endpoint } is not reachable"
         curl -m 5 -s icanhazip.com
+        ip route show
         WG_DEBUG=1 wg-quick up ${ config_path }
         curl -m 5 -s --interface ${ interface_id } icanhazip.com
         wg show
