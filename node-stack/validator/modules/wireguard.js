@@ -83,7 +83,7 @@ export async function validate_wireguard_config( { peer_config, peer_id } ) {
         ping -c1 -W1 ${ endpoint }  > /dev/null 2>&1 && echo "Endpoint ${ endpoint } is reachable" || echo "Endpoint ${ endpoint } is not reachable"
         curl -m 5 -s icanhazip.com
         WG_DEBUG=1 wg-quick up ${ config_path }
-        curl -m 5 -s icanhazip.com
+        curl -m 5 -s --interface ${ interface_id } icanhazip.com
         wg show
         ip route show
         ip addr show ${ interface_id }
