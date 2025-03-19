@@ -12,6 +12,7 @@ router.get( '/new', async ( req, res ) => {
 
         // Get properties from query string
         const { geo, lease_minutes } = req.query
+        log.info( `Received request for new wireguard config with geo ${ geo } and lease_minutes ${ lease_minutes }` )
 
         // Check if properties are valid
         if( !geo || !lease_minutes ) return res.status( 400 ).json( { error: 'Missing geo or lease_minutes' } )
