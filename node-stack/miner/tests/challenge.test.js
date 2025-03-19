@@ -16,6 +16,7 @@ describe(  'Challenge', () => {
         console.log( 'Server is up' )
 
         // Grab a challenge from localhost:3000/challenge/new
+        console.log( `Fetching challenge from ${ PUBLIC_VALIDATOR_URL }/challenge/new` )
         const challenge_res = await fetch( `${ PUBLIC_VALIDATOR_URL }/challenge/new` )
         let { challenge_url } = await challenge_res.json()
         console.log( `Challenge url: ${ challenge_url }` )
@@ -24,11 +25,13 @@ describe(  'Challenge', () => {
         challenge_url = challenge_url.replace( `localhost`, 'validator' )
 
         // Post the challenge url to localhost:3001/challenge in url json key
+        console.log( `Posting challenge to http://localhost:3001/challenge` )
         const solution_response = await fetch( 'http://localhost:3001/challenge', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify( { url: challenge_url } )
         } )
+        console.log( `Solution response:`, solution_response.status )
         const score = await solution_response.json()
         console.log( `Score:`, JSON.stringify( score, null, 2 ) )
 
