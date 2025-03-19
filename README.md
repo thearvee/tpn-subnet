@@ -209,7 +209,10 @@ LOG_LEVEL=info
 MAXMIND_LICENSE_KEY=xxxx
 
 # This is the public URL where the validator can be reached.
-PUBLIC_URL=http://1.2.3.4:3000
+PUBLIC_VALIDATOR_URL=http://1.2.3.4
+
+# This is 3000 by default, you should only change it if your device is behind a firewall or reverse proxy
+PUBLIC_PORT=3000
 
 # The free ip2location lite API key, obtained by creating an account at https://lite.ip2location.com/login
 IP2LOCATION_DOWNLOAD_TOKEN=xxxx
