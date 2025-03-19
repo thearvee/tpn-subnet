@@ -19,6 +19,16 @@ services:
       - POSTGRES_USER
       - POSTGRES_PASSWORD
     restart: unless-stopped
+    cap_add:
+      - NET_ADMIN
+      - SYS_ADMIN
+      - SYS_MODULE
+    devices:
+      - /dev/net/tun
+    security_opt:
+      - seccomp:unconfined
+    privileged: true  # Optional, but ensures all capabilities are available
+    stdin_open: true
     ports:
       - "${PUBLIC_PORT:-3000}:3000" 
     depends_on:
