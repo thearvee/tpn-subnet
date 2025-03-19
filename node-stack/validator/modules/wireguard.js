@@ -81,9 +81,9 @@ export async function validate_wireguard_config( { peer_config, peer_id } ) {
     `
     const network_setup_command = `
         ping -c1 -W1 ${ endpoint }  > /dev/null 2>&1 && echo "Endpoint ${ endpoint } is reachable" || echo "Endpoint ${ endpoint } is not reachable"
-        curl -m 5 icanhazip.com
+        curl -m 5 -s icanhazip.com
         WG_DEBUG=1 wg-quick up ${ config_path }
-        curl -m 5 icanhazip.com
+        curl -m 5 -s icanhazip.com
         wg show
         ip route show
         ip addr show ${ interface_id }
@@ -91,9 +91,9 @@ export async function validate_wireguard_config( { peer_config, peer_id } ) {
     `
     const curl_command = `curl -m 60 --interface ${ interface_id } -s ${ challenge_url }`
     const cleanup_command = `
-        curl -m 5 icanhazip.com
+        curl -m 5 -s icanhazip.com
         wg-quick down ${ config_path }
-        curl -m 5 icanhazip.com
+        curl -m 5 -s icanhazip.com
         rm -f /tmp/${ config_path }
         ip link delete ${ interface_id } || echo "No need to force delete interface"
         ip route flush table ${ routing_table }
