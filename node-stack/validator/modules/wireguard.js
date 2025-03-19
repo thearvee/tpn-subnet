@@ -154,10 +154,10 @@ export async function validate_wireguard_config( { peer_config, peer_id } ) {
             log.warn( `No JSON response found in stdout:`, stdout )
             return false
         }
-        const response = JSON.parse( json_response )
+        const { response } = JSON.parse( json_response )
 
         // Verify that the response is valid
-        log.info( `Checkin challenge/response solution ${ response.challenge }/${ response.response }` )
+        log.info( `Checkin challenge/response solution ${ challenge }/${ response }` )
         const { correct } = await solve_challenge( { challenge, response } )
         
         // Check that the response is valid
