@@ -6,10 +6,10 @@ const { PUBLIC_URL, PUBLIC_VALIDATOR_URL='validator', PUBLIC_PORT=3000, CI_MODE 
 let base_url = PUBLIC_VALIDATOR_URL || PUBLIC_URL
 
 // If CI_MODE is enabled, use docker container name
-if( CI_MODE ) {
-    log.warn( `CI_MODE is enabled, using docker container name as base url` )
-    base_url = `http://validator`
-}
+// if( CI_MODE ) {
+//     log.warn( `CI_MODE is enabled, using docker container name as base url` )
+//     base_url = `http://validator`
+// }
 
 // Remove trailing slash
 base_url = `${ base_url }`.replace( /\/$/, '' )
