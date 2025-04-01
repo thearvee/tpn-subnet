@@ -1,20 +1,17 @@
 services:
   validator:
     container_name: tpn_validator
-    # image: taofuprotocol/tpn-subnet-validator:latest
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: taofuprotocol/tpn-subnet-validator:latest
     env_file:
       - .env
     # Environment variables will be picked from .env unless overridden here
-    # environment:
-      # - LOG_LEVEL
-      # - PUBLIC_VALIDATOR_URL
-      # - PUBLIC_PORT
-      # - MAXMIND_LICENSE_KEY
-      # - IP2LOCATION_DOWNLOAD_TOKEN
-      # - POSTGRES_PASSWORD
+    environment:
+      - LOG_LEVEL
+      - PUBLIC_VALIDATOR_URL
+      - PUBLIC_PORT
+      - MAXMIND_LICENSE_KEY
+      - IP2LOCATION_DOWNLOAD_TOKEN
+      - POSTGRES_PASSWORD
     restart: unless-stopped
     ports:
       - "${PUBLIC_PORT:-3000}:3000" 
