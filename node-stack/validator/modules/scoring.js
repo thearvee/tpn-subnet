@@ -40,10 +40,9 @@ export async function score_request_uniqueness( request, disable_rate_limit=fals
         return { uniqueness_score: undefined }
     }
 
-    // Check if the last time this ip was seen was within 20 minutes, if it was score as 0 as it indicates multiple miners at the same ip
+    // TEMPOTARY rate limit until neuron code filters duplicate ips
     const last_seen = cache( `last_seen_${ unspoofable_ip }` )
-    const grace_minutes = 11
-    const cooldown_minutes = 20 - grace_minutes // Weightset time minus grace window
+    const cooldown_minutes = .5
     const minutes_since_seen = ( Date.now() - last_seen ) / 1000 / 60
     if( !disable_rate_limit && last_seen && minutes_since_seen < cooldown_minutes ) {
         log.info( `Request from ${ unspoofable_ip } seen ${ minutes_since_seen } minutes ago, scoring as 0` )

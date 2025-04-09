@@ -83,7 +83,6 @@ router.get( "/:challenge/:response?", async ( req, res ) => {
 
         // Uniqeness score, minus maximum speed score, plus speed score
         const score = Math.max( Math.round( uniqueness_score - 10 + speed_score ), 0 )
-        
 
         // Formulate and cache response
         const data = { correct, score, speed_score, uniqueness_score, country_uniqueness_score,  solved_at }
