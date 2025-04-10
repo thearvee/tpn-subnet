@@ -87,7 +87,7 @@ router.get( "/:challenge/:response?", async ( req, res ) => {
         const score = Math.max( Math.round( uniqueness_score - 10 + speed_score ), 0 )
 
         // Formulate and cache response
-        const data = { correct, score, speed_score, uniqueness_score, country_uniqueness_score,  solved_at }
+        const data = { correct, score, speed_score, uniqueness_score, country_uniqueness_score, solved_at }
         cache( `solution_score_${ challenge }`, data )
 
         return res.json( data )
@@ -102,7 +102,7 @@ router.get( "/:challenge/:response?", async ( req, res ) => {
     } catch ( e ) {
 
         log.error( `Error handling challenge/response routes, returning 500 response. Error:`, e )
-        return res.status( 500 ).json( { error: e.message } )
+        return res.status( 500 ).json( { error: e.message, score: 0 } )
 
     }
 } )
@@ -172,7 +172,7 @@ router.post( "/:challenge/:response", async ( req, res ) => {
     } catch ( e ) {
 
         log.error( `Error handling challenge/response routes, returning 500 response. Error:`, e )
-        return res.status( 500 ).json( { error: e.message } )
+        return res.status( 500 ).json( { error: e.message, score: 0 } )
 
     }
 } )
