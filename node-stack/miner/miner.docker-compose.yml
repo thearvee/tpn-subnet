@@ -42,7 +42,7 @@ services:
       - tpn_network
 
   wireguard:
-    # image: lscr.io/linuxserver/wireguard:latest
+    image: taofuprotocol/wireguard:latest
     build:
       context: .
       dockerfile: Dockerfile.wireguard
