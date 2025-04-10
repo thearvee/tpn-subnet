@@ -52,9 +52,17 @@ def get_random_uids(self, k: int, exclude: List[int] = None) -> np.ndarray:
                 candidate_uids.append(uid)
     # If k is larger than the number of available uids, set k to the number of available uids.
     k = min(k, len(avail_uids))
+    # Remove uids with duplicate IPs
+    unique_ips = set()
+    unique_candidate_uids = []
+    for uid in candidate_uids:
+        ip = self.metagraph.axons[uid].ip
+        if ip not in unique_ips:
+            unique_ips.add(ip)
+            unique_candidate_uids.append(uid)
     # Check if candidate_uids contain enough for querying, if not grab all avaliable uids
-    available_uids = candidate_uids
-    if len(candidate_uids) < k:
+    available_uids = unique_candidate_uids
+    if len(unique_candidate_uids) < k:
         available_uids += random.sample(
             [uid for uid in avail_uids if uid not in candidate_uids],
             k - len(candidate_uids),
