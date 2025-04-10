@@ -1,6 +1,6 @@
 # .github/workflows/docker-deploy.yml
 
-name: Deploy Docker Image
+name: Deploy Validator Docker Image
 
 on:
   push:
