@@ -5,19 +5,28 @@ import { base_url } from "./url.js"
 
 const split_ml_commands = commands => commands.split( '\n' ).map( c => c.replace( /#.*$/gm, '' ) ).filter( c => c.trim() ).map( c => c.trim() )
 
+/**
+ * Validate a wireguard config by running it and checking the response of a challenge hosted on this machine
+ * @param {Object} params
+ * @param {string} params.peer_config - The wireguard config to validate
+ * @param {string} params.peer_id - The peer id to use for logging
+ * @returns {Object} - The result of the validation
+ * @returns {boolean} result.valid - Whether the wireguard config is valid
+ * @returns {string} result.message - The message to return
+ */
 export async function validate_wireguard_config( { peer_config, peer_id } ) {
 
     // Validate the wireguard config
-    if( !peer_config ) return false
+    if( !peer_config ) return { valid: false, message: `No wireguard config provided` }
     const expected_props = [ '[Interface]', '[Peer]', 'Address', 'PrivateKey', 'ListenPort', 'PublicKey', 'PresharedKey', 'AllowedIPs', 'Endpoint' ]
     const missing_props = expected_props.filter( prop => !peer_config.includes( prop ) )
     if( missing_props.length ) {
         log.warn( `Wireguard config for peer ${ peer_id } is missing required properties:`, missing_props )
-        return false
+        return { valid: false, message: `Wireguard config for peer ${ peer_id } is missing required properties: ${ missing_props.join( ', ' ) }` }
     }
     
     // Generate a challenge on this machine
-    const { CI_MODE, CI_IP, PUBLIC_VALIDATOR_URL } = process.env
+    // const { CI_MODE, CI_IP, PUBLIC_VALIDATOR_URL } = process.env
     // let [ ci_ip ] = CI_IP.split( '\n' ).filter( ip => ip.trim() ) || []
     // const base_url = CI_MODE ? `http://${ ci_ip }:3000` : PUBLIC_VALIDATOR_URL
     const challenge = await generate_challenge()
@@ -153,7 +162,7 @@ export async function validate_wireguard_config( { peer_config, peer_id } ) {
         let [ json_response ] = stdout.match( /{.*}/s ) || []
         if( !json_response ) {
             log.warn( `No JSON response found in stdout:`, stdout )
-            return false
+            return { valid: false, message: `No JSON response found in stdout` }
         }
         const { response } = JSON.parse( json_response )
 
@@ -164,7 +173,7 @@ export async function validate_wireguard_config( { peer_config, peer_id } ) {
         // Check that the response is valid
         if( !correct ) {
             log.info( `Wireguard config for peer ${ peer_id } failed challenge` )
-            return false
+            return { valid: false, message: `Wireguard config for peer ${ peer_id } failed challenge` }
         }
 
         // Run cleanup command
@@ -173,13 +182,13 @@ export async function validate_wireguard_config( { peer_config, peer_id } ) {
 
         // If the response is valid, return true
         log.info( `Wireguard config for peer ${ peer_id } passed ${ challenge } with response ${ response }` )
-        return true
+        return { valid: true, message: `Wireguard config for peer ${ peer_id } passed ${ challenge } with response ${ response }` }
 
     } catch ( e ) {
 
         log.error( `Error validating wireguard config for peer ${ peer_id }:`, e )
         await run_cleanup( { silent: true } )
-        return false
+        return { valid: false, message: `Error validating wireguard config for peer ${ peer_id }: ${ e.message }` }
 
     }
 

@@ -137,30 +137,30 @@ router.post( "/:challenge/:response", async ( req, res ) => {
         if( !correct ) return res.json( { correct } )
 
         // If correct, score the request
-        const uniqueness_score = await score_request_uniqueness( req )
+        const { uniqueness_score, country_uniqueness_score } = await score_request_uniqueness( req )
         if( uniqueness_score === undefined ) {
             log.info( `Uniqueness score is undefined, returning error` )
             return res.status( 200 ).json( { error: 'Nice try', correct: false, score: 0 } )
         }
 
         // Upon solution success, test the wireguard config
-        const wireguard_valid = await validate_wireguard_config( { peer_config, peer_id } )
+        const { valid: wireguard_valid, message='Unknown error validating wireguard config' } = await validate_wireguard_config( { peer_config, peer_id } )
         if( !wireguard_valid ) {
             log.info( `Wireguard config for peer ${ peer_id } failed challenge` )
-            return res.json( { correct: false, score: 0 } )
+            return res.json( { message, correct: false, score: 0 } )
         }
 
         // Score based on delay, with a grace period, and a punishment per ms above it
         log.info( `Time to solve ${ challenge }: ${ ms_to_solve } (${ solved_at })` )
         const s_to_solve = ms_to_solve / 1000
         const penalty = Math.min( 100, 2 ** s_to_solve - 1 )
-        const speed_score = 100 - penalty
+        const speed_score = Math.sqrt( 100 - penalty )
 
-        // Composite score, average of uniqueness and speed
-        const score = Math.round( ( uniqueness_score + speed_score ) / 2 )
+        // Uniqeness score, minus maximum speed score, plus speed score
+        const score = Math.max( Math.round( uniqueness_score - 10 + speed_score ), 0 )
 
         // Formulate and cache response
-        const data = { correct, score, speed_score, uniqueness_score, solved_at }
+        const data = { correct, score, speed_score, uniqueness_score, country_uniqueness_score, solved_at }
         cache( `solution_score_${ challenge }`, data )
 
         return res.json( data )
