@@ -10,14 +10,14 @@ services:
       - .env
     # Environment variables will be picked from .env unless overridden here
     environment:
-      - LOG_LEVEL
+      - LOG_LEVEL=${LOG_LEVEL:-info}
       - PUBLIC_VALIDATOR_URL
-      - PUBLIC_PORT
+      - PUBLIC_PORT=${PUBLIC_PORT:-3000}
       - MAXMIND_LICENSE_KEY
       - IP2LOCATION_DOWNLOAD_TOKEN
       - POSTGRES_HOST
       - POSTGRES_USER
-      - POSTGRES_PASSWORD
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-setthispasswordinthedotenvfile}
     restart: unless-stopped
     cap_add:
       - NET_ADMIN
@@ -46,7 +46,7 @@ services:
     env_file:
       - .env
     environment:
-      - POSTGRES_PASSWORD
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-setthispasswordinthedotenvfile}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     restart: unless-stopped

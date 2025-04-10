@@ -4,7 +4,7 @@ import { delete_wireguard_configs, restart_wg_container, wireguard_server_ready 
 const { CI_MODE } = process.env
 
 // Create a connection pool to the postgres container
-const { POSTGRES_PASSWORD, POSTGRES_HOST='postgres', POSTGRES_PORT=5432, POSTGRES_USER='postgres' } = process.env
+const { POSTGRES_PASSWORD='setthispasswordinthedotenvfile', POSTGRES_HOST='postgres', POSTGRES_PORT=5432, POSTGRES_USER='postgres' } = process.env
 log.info( `Connecting to postgres at ${ POSTGRES_USER }@${ POSTGRES_HOST }:${ POSTGRES_PORT } -p ${ POSTGRES_PASSWORD }` )
 const { Pool } = postgres
 const pool = new Pool( {

@@ -52,6 +52,10 @@ sudo sh get-docker.sh
 sudo apt install -y nodejs npm
 npm install -g pm2
 
+# Install wireguard and wireguard-tools, these are commonly preinstalled on Ubuntu
+sudo apt install -y wireguard wireguard-tools
+sudo modprobe wireguard
+
 # Clone the TPN repository, it contains all the required code
 cd ~
 git clone https://github.com/beyond-stake/tpn-subnet.git
@@ -147,18 +151,8 @@ export PYTHONPATH=. && pm2 start "python3 neurons/miner.py \
 The miner automatically updates some components periodically, but not all. You should regularly run the following commands to keep your miner up to date:
 
 ```bash
-# Update the TPN repository
-cd ~/tpn-subnet
-git pull
-
-# Pull the latest docker images
-docker compose -f node-stack/miner/miner.docker-compose.yml pull
-
-# Restart the miner docker container
-docker compose -f node-stack/miner/miner.docker-compose.yml up -d
-
-# Restart the pm2 process
-pm2 restart tpn_miner
+# Run the update script, this assumes the tpn repository is located at ~/tpn-subnet
+bash scripts/update_miner.sh
 ```
 
 ## Running a validator
@@ -266,16 +260,5 @@ export PYTHONPATH=. && pm2 start "python3 neurons/validator.py \
 The validator automatically updates some components periodically, but not all. You should regularly run the following commands to keep your validator up to date:
 
 ```bash
-# Update the TPN repository
-cd ~/tpn-subnet
-git pull
-
-# Pull the latest docker images
-docker compose -f node-stack/validator/validator.docker-compose.yml pull
-
-# Restart the validator docker container
-docker compose -f node-stack/validator/validator.docker-compose.yml up -d
-
-# Restart the pm2 process
-pm2 restart tpn_validator
+bash scripts/update_validator.sh
 ```
