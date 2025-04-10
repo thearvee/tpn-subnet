@@ -48,5 +48,5 @@ jobs:
           file: ./node-stack/miner/Dockerfile.wireguard
           push: true
           tags: |
-            taofuprotocol/wireguard:${{ steps.version_check.outputs.version }}${{ github.ref == 'refs/heads/development' && '-dev' }}
-            taofuprotocol/wireguard:latest${{ github.ref == 'refs/heads/development' && '-dev' }}
+            taofuprotocol/wireguard:${{ steps.version_check.outputs.version }}${{ github.ref == 'refs/heads/development' && '-dev' || '' }}
+            taofuprotocol/wireguard:latest${{ github.ref == 'refs/heads/development' && '-dev'  || '' }}

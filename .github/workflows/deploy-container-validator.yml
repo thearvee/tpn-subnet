@@ -60,5 +60,5 @@ jobs:
           file: ./node-stack/validator/Dockerfile # Dockerfile location
           push: true
           tags: |
-            taofuprotocol/tpn-subnet-validator:${{ steps.version_check.outputs.version }}${{ github.ref == 'refs/heads/development' && '-dev' }}
-            taofuprotocol/tpn-subnet-validator:latest${{ github.ref == 'refs/heads/development' && '-dev' }}
+            taofuprotocol/tpn-subnet-validator:${{ steps.version_check.outputs.version }}${{ github.ref == 'refs/heads/development' && '-dev'  || '' }}
+            taofuprotocol/tpn-subnet-validator:latest${{ github.ref == 'refs/heads/development' && '-dev'  || '' }}

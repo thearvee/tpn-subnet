@@ -60,6 +60,6 @@ jobs:
           file: ./node-stack/miner/Dockerfile.miner
           push: true
           tags: |
-            taofuprotocol/tpn-subnet-miner:${{ steps.version_check.outputs.version }}${{ github.ref == 'refs/heads/development' && '-dev' }}
-            taofuprotocol/tpn-subnet-miner:latest${{ github.ref == 'refs/heads/development' && '-dev' }}
+            taofuprotocol/tpn-subnet-miner:${{ steps.version_check.outputs.version }}${{ github.ref == 'refs/heads/development' && '-dev'  || '' }}
+            taofuprotocol/tpn-subnet-miner:latest${{ github.ref == 'refs/heads/development' && '-dev'  || '' }}
 

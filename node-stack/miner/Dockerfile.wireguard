@@ -1,4 +1,4 @@
-# Use wireguard image base
+# Use linuxserver wireguard image base
 FROM lscr.io/linuxserver/wireguard:latest
 
 # Modify the startup script so it always regenerates the client files that are missing
