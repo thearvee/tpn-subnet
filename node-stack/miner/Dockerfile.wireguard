@@ -1,5 +1,5 @@
-# Use Nodejs image base
-FROM  lscr.io/linuxserver/wireguard:latest
+# Use wireguard image base
+FROM lscr.io/linuxserver/wireguard:latest
 
 # Modify the startup script so it always regenerates the client files that are missing
 # by appending "generate_confs" to the /etc/s6-overlay/s6-rc.d/init-wireguard-confs/run script
