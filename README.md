@@ -15,7 +15,7 @@ If you want to contribute to the TPN subnet, the easiers way to do so it to run 
 
 **CURRENT SUBNET STATUS**
 
-The TPN is currently in bootstrap mode. This means that miners do not yet offer VPN connections, but are incentivited to get their infrastructure up and running.
+The TPN is currently in beta mode, VPN scaffolding is present and consumer endpoints will be released soon.
 
 
 > [!CAUTION]
@@ -34,7 +34,6 @@ Requirements:
 - 2GB RAM
 - 50GB disk space
 - Publically accessible IP address
-
 
 The miner and validator share the same dependencies. No matter which you choose to run, please install the dependencies by executing the following commands:
 
@@ -118,7 +117,7 @@ To start the docker container, there are 2 steps. Creating a `.env` file and sta
 Create a `.env` file in the `node-stack/miner` directory with the following content:
 
 ```bash
-POSTGRES_PASSWORD=xxxx c# REQUIRED, may be any valid string, choose something random
+POSTGRES_PASSWORD=xxxx # REQUIRED, may be any valid string, choose something random
 LOG_LEVEL=info # optional, this controls the log level, valid values are: info, warn, error
 POSTGRES_HOST=postgres # optional, only use if you have a remote database (not recommended)
 POSTGRES_PORT=5432 # optional, this changes the postgres port (not recommended)

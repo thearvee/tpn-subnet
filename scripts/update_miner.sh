@@ -6,7 +6,7 @@ REPO_UP_TO_DATE=$(git pull 2>&1 | grep -c "Already up to date.")
 
 # Check for update crontab
 if ! crontab -l | grep -q "update_miner.sh"; then
-    (crontab -l 2>/dev/null; echo "0 * * * * ~/tpn-subnet/scripts/update_miner.sh") | crontab -
+    (crontab -l 2> /dev/null; echo "0 * * * * ~/tpn-subnet/scripts/update_miner.sh") | crontab -
 fi
 
 # Pull the latest docker images

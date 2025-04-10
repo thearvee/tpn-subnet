@@ -2,7 +2,7 @@
 
 # Check for update crontab
 if ! crontab -l | grep -q "update_validator.sh"; then
-    (crontab -l 2>/dev/null; echo "0 * * * * ~/tpn-subnet/scripts/update_validator.sh") | crontab -
+    (crontab -l 2> /dev/null; echo "0 * * * * ~/tpn-subnet/scripts/update_validator.sh") | crontab -
 fi
 
 # Update the TPN repository
