@@ -1,5 +1,11 @@
 #!/bin/bash
 
+# Check for TPN repository
+if [ ! -d ~/tpn-subnet ]; then
+    echo "TPN repository not found. Please clone it first."
+    exit 1
+fi
+
 # Check for update crontab
 if ! crontab -l | grep -q "update_validator.sh"; then
     (crontab -l 2> /dev/null; echo "0 * * * * ~/tpn-subnet/scripts/update_validator.sh") | crontab -

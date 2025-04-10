@@ -1,5 +1,11 @@
 #!/bin/bash
 
+# Check for TPN repository
+if [ ! -d ~/tpn-subnet ]; then
+    echo "TPN repository not found. Please clone it first."
+    exit 1
+fi
+
 # Update the TPN repository
 cd ~/tpn-subnet
 REPO_UP_TO_DATE=$(git pull 2>&1 | grep -c "Already up to date.")
