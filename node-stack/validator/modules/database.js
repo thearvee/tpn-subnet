@@ -151,7 +151,7 @@ export async function get_miner_stats() {
     if( cached_value ) return cached_value
 
     // Get all ip addresses with a country that are not stale
-    const ms_to_stale = 1000 * 60 * 30
+    const ms_to_stale = 1000 * 60 * 60
     const stale_timestamp = Date.now() - ms_to_stale
     const result = await pool.query(
         `SELECT country FROM ip_addresses WHERE updated > $1`,
@@ -164,6 +164,6 @@ export async function get_miner_stats() {
         return acc
     }, {} )
 
-    return cache( cache_key, country_counts,  5 * 60_000 )
+    return cache( cache_key, country_counts, 60_000 )
 
 }
