@@ -60,6 +60,10 @@ async def get_rewards(challenges: List[str], responses: List[str], validator_ser
         scores = await asyncio.gather(
             *[fetch_score(challenge, response) for challenge, response in zip(challenges, responses)]
         )
+        
+        # Convert None to 0
+        scores = [0 if score is None else score for score in scores]
+        
         return scores
     except Exception as e:
         print(f"Error getting rewards: {e}")
