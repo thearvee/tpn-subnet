@@ -1,18 +1,34 @@
 services:
   validator:
     container_name: tpn_validator
-    image: taofuprotocol/tpn-subnet-validator:latest
+    # image: taofuprotocol/tpn-subnet-validator:latest
+    # Suggested dev command: docker compose -f validator.docker-compose.yml build --build-arg CACHEBUST=$(date +%s) && docker compose -f validator.docker-compose.yml up; docker compose -f validator.docker-compose.yml down -v
+    build:
+      context: .
+      dockerfile: Dockerfile
     env_file:
       - .env
     # Environment variables will be picked from .env unless overridden here
     environment:
-      - LOG_LEVEL
+      - LOG_LEVEL=${LOG_LEVEL:-info}
       - PUBLIC_VALIDATOR_URL
-      - PUBLIC_PORT
+      - PUBLIC_PORT=${PUBLIC_PORT:-3000}
       - MAXMIND_LICENSE_KEY
       - IP2LOCATION_DOWNLOAD_TOKEN
-      - POSTGRES_PASSWORD
+      - POSTGRES_HOST
+      - POSTGRES_USER
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-setthispasswordinthedotenvfile}
     restart: unless-stopped
+    cap_add:
+      - NET_ADMIN
+      - SYS_ADMIN
+      - SYS_MODULE
+    devices:
+      - /dev/net/tun
+    security_opt:
+      - seccomp:unconfined
+    privileged: true  # Optional, but ensures all capabilities are available
+    stdin_open: true
     ports:
       - "${PUBLIC_PORT:-3000}:3000" 
     depends_on:
@@ -30,7 +46,7 @@ services:
     env_file:
       - .env
     environment:
-      - POSTGRES_PASSWORD
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-setthispasswordinthedotenvfile}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     restart: unless-stopped
@@ -44,7 +60,7 @@ services:
       - tpn_network
 
   watchtower:
-    container_name: watchtower
+    container_name: tpn_validator_watchtower
     image: containrrr/watchtower
     environment:
       - WATCHTOWER_CLEANUP=true

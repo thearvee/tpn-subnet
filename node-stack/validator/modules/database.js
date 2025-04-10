@@ -2,8 +2,9 @@ import postgres from 'pg'
 import { cache, log } from 'mentie'
 
 // Create a connection pool to the postgres container
-const { POSTGRES_PASSWORD, POSTGRES_HOST='postgres', POSTGRES_PORT=5432, POSTGRES_USER='postgres' } = process.env
+const { POSTGRES_PASSWORD='setthispasswordinthedotenvfile', POSTGRES_HOST='postgres', POSTGRES_PORT=5432, POSTGRES_USER='postgres', CI_MODE } = process.env
 const { Pool } = postgres
+log.info( `Connecting to postgres at ${ POSTGRES_USER }@${ POSTGRES_HOST }:${ POSTGRES_PORT } -p ${ POSTGRES_PASSWORD }` )
 const pool = new Pool( {
     user: POSTGRES_USER,
     host: POSTGRES_HOST,
@@ -13,6 +14,15 @@ const pool = new Pool( {
 } )
 
 export async function init_tables() {
+
+    // In dev, delete old table
+    if( CI_MODE ) {
+        log.info( 'Dropping old table, in CI mode' )
+        await pool.query( `DROP TABLE IF EXISTS timestamps` )
+        await pool.query( `DROP TABLE IF EXISTS challenges` )
+        await pool.query( `DROP TABLE IF EXISTS ip_addresses` )
+    }
+
     // Create table for timestamps
     await pool.query( `
         CREATE TABLE IF NOT EXISTS timestamps (
@@ -109,8 +119,10 @@ export async function save_challenge_response( { challenge, response } ) {
 
 export async function get_challenge_response( { challenge } ) {
     // Retrieve challenge response and creation time
+    const query = `SELECT response, created FROM challenges WHERE challenge = $1 LIMIT 1`
+    log.info( 'Querying for challenge response:', query, [ challenge ] )
     const result = await pool.query(
-        `SELECT response, created FROM challenges WHERE challenge = $1 LIMIT 1`,
+        query,
         [ challenge ]
     )
     return result.rows.length > 0 ? result.rows[0] : {}
@@ -139,7 +151,7 @@ export async function get_miner_stats() {
     if( cached_value ) return cached_value
 
     // Get all ip addresses with a country that are not stale
-    const ms_to_stale = 1000 * 60 * 30
+    const ms_to_stale = 1000 * 60 * 60
     const stale_timestamp = Date.now() - ms_to_stale
     const result = await pool.query(
         `SELECT country FROM ip_addresses WHERE updated > $1`,
@@ -152,6 +164,6 @@ export async function get_miner_stats() {
         return acc
     }, {} )
 
-    return cache( cache_key, country_counts,  5 * 60_000 )
+    return cache( cache_key, country_counts, 60_000 )
 
 }
