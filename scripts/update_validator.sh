@@ -11,11 +11,6 @@ if ! crontab -l | grep -q "update_validator.sh"; then
     (crontab -l 2> /dev/null; echo "0 * * * * ~/tpn-subnet/scripts/update_validator.sh") | crontab -
 fi
 
-# Update system dependencies relevant to the validator silently
-echo "Updating relevant system dependencies, this can take a few minutes..."
-sudo apt update &> /dev/null
-sudo apt install -y wireguard wireguard-tools &> /dev/null
-
 # Update the TPN repository
 cd ~/tpn-subnet
 REPO_UP_TO_DATE=$(git pull 2>&1 | grep -c "Already up to date.")

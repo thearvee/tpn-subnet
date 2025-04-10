@@ -15,13 +15,6 @@ if ! crontab -l | grep -q "update_miner.sh"; then
     (crontab -l 2> /dev/null; echo "0 * * * * ~/tpn-subnet/scripts/update_miner.sh") | crontab -
 fi
 
-
-# Update system dependencies relevant to the validator silently
-echo "Updating relevant system dependencies, this can take a few minutes..."
-sudo apt update &> /dev/null
-sudo apt install -y wireguard wireguard-tools &> /dev/null
-
-
 # Pull the latest docker images
 docker compose -f node-stack/miner/miner.docker-compose.yml pull
 
