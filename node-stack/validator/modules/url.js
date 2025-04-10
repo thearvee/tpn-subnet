@@ -1,6 +1,6 @@
 import { log } from "mentie"
 
-const { PUBLIC_URL, PUBLIC_VALIDATOR_URL='validator', PUBLIC_PORT=3000, CI_MODE } = process.env
+const { PUBLIC_URL, PUBLIC_VALIDATOR_URL, PUBLIC_PORT=3000, CI_MODE } = process.env
 
 // Base url based on environment
 let base_url = PUBLIC_VALIDATOR_URL || PUBLIC_URL
