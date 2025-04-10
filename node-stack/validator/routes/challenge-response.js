@@ -24,7 +24,7 @@ router.get( "/new", async ( req, res ) => {
     } catch ( e ) {
 
         log.error( e )
-        return res.status( 500 ).json( { error: e.message } )
+        return res.status( 200 ).json( { error: e.message } )
 
     }
 
@@ -73,8 +73,8 @@ router.get( "/:challenge/:response?", async ( req, res ) => {
         const { uniqueness_score, country_uniqueness_score } = await score_request_uniqueness( req )
         log.info( `Uniqueness score for ${ challenge }: ${ uniqueness_score }` )
         if( uniqueness_score === undefined && !CI_MODE ) {
-            log.info( `Uniqueness score is undefined, returning 500` )
-            return res.status( 500 ).json( { error: 'Nice try', score: 0, correct: false } )
+            log.info( `Uniqueness score is undefined, returning error` )
+            return res.status( 200 ).json( { error: 'Nice try', score: 0, correct: false } )
         }
 
         // Score based on delay, with a grace period, and a punishment per ms above it
@@ -101,8 +101,8 @@ router.get( "/:challenge/:response?", async ( req, res ) => {
         
     } catch ( e ) {
 
-        log.error( `Error handling challenge/response routes, returning 500 response. Error:`, e )
-        return res.status( 500 ).json( { error: e.message, score: 0 } )
+        log.error( `Error handling challenge/response routes, returning error response. Error:`, e )
+        return res.status( 200 ).json( { error: e.message, score: 0 } )
 
     }
 } )
@@ -126,7 +126,7 @@ router.post( "/:challenge/:response", async ( req, res ) => {
         // Validate existence of wireguard config fields
         if( !peer_config || !peer_id || !peer_slots || !expires_at ) {
             log.info( `Bad challenge/response ${ challenge }/${ response } with body:`, req.body )
-            return res.status( 400 ).json( { error: 'Missing wireguard config fields' } )
+            return res.status( 200 ).json( { error: 'Missing wireguard config fields', score: 0, correct: false } )
         }
 
         // Validate the challenge solution
@@ -138,13 +138,16 @@ router.post( "/:challenge/:response", async ( req, res ) => {
 
         // If correct, score the request
         const uniqueness_score = await score_request_uniqueness( req )
-        if( uniqueness_score === undefined ) return res.status( 500 ).json( { error: 'Nice try' } )
+        if( uniqueness_score === undefined ) {
+            log.info( `Uniqueness score is undefined, returning error` )
+            return res.status( 200 ).json( { error: 'Nice try', correct: false, score: 0 } )
+        }
 
         // Upon solution success, test the wireguard config
         const wireguard_valid = await validate_wireguard_config( { peer_config, peer_id } )
         if( !wireguard_valid ) {
             log.info( `Wireguard config for peer ${ peer_id } failed challenge` )
-            return res.json( { correct: false } )
+            return res.json( { correct: false, score: 0 } )
         }
 
         // Score based on delay, with a grace period, and a punishment per ms above it
@@ -171,8 +174,8 @@ router.post( "/:challenge/:response", async ( req, res ) => {
         
     } catch ( e ) {
 
-        log.error( `Error handling challenge/response routes, returning 500 response. Error:`, e )
-        return res.status( 500 ).json( { error: e.message, score: 0 } )
+        log.error( `Error handling challenge/response routes, returning error response. Error:`, e )
+        return res.status( 200 ).json( { error: e.message, score: 0, correct: false } )
 
     }
 } )
