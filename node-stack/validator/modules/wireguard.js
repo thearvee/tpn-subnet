@@ -1,4 +1,4 @@
-import { log, random_number_between, random_string_of_length, wait } from "mentie"
+import { cache, log, random_number_between, random_string_of_length, wait } from "mentie"
 import { generate_challenge, solve_challenge } from "./challenge.js"
 import { run } from "./shell.js"
 import { base_url } from "./url.js"
@@ -19,8 +19,13 @@ const split_ml_commands = commands => commands.split( '\n' ).map( c => c.replace
  */
 export async function wait_for_ip_free( { ip_address, timeout_s=test_timeout_seconds } ) {
 
+    log.info( `Waiting for IP address ${ ip_address } to become free` )
+
     // Check if the ip address is valid
     if( !ip_address ) throw new Error( `No ip address provided` )
+
+    // Check the cache for the ip address being in process
+    let ip_being_processed = cache( `ip_being_processed_${ ip_address }` )
 
     // Check if the ip address is already in use
     const { stdout, stderr } = await run( `ip addr show | grep ${ ip_address } || true`, { silent: false } )
@@ -37,8 +42,14 @@ export async function wait_for_ip_free( { ip_address, timeout_s=test_timeout_sec
         log.info( `IP address ${ ip_address } is in use, waiting ${ interval / 1000 }s (waited for ${ waited_for / 1000 }s) for it to become free...` )
         await wait( interval )
         waited_for += interval
+
+        // Check on interface level
         const { stdout, stderr } = await run( `ip addr show | grep ${ ip_address } || true`, { silent: false } )
-        ip_taken = stdout?.includes( ip_address )
+
+        // Check on cache level
+        ip_being_processed = cache( `ip_being_processed_${ ip_address }` )
+
+        ip_taken = stdout?.includes( ip_address ) || ip_being_processed
         if( !ip_taken ) break
     }
 
@@ -242,6 +253,10 @@ export async function validate_wireguard_config( { peer_config, peer_id } ) {
             await run( command, { silent, log_tag } )
         }
 
+        // Mark ip address as no longer in processing
+        cache( `ip_being_processed_${ address }`, false )
+        log.info( `${ log_tag } Marking ip address ${ address } as no longer in processing` )
+
     }
     const run_test = async () => {
 
@@ -253,6 +268,10 @@ export async function validate_wireguard_config( { peer_config, peer_id } ) {
             if( !ip_cleared ) throw new Error( `IP address ${ address } is still in use after cleanup` )
             log.info( `${ log_tag } IP address ${ address } is free after cleanup` )
         }
+
+        // Mark the ip address as in processing
+        cache( `ip_being_processed_${ address }`, true, timeout * 1000 )
+        log.info( `${ log_tag } Marking ip address ${ address } as in processing` )
 
         // Write the wireguard config to a file
         const config_cmd = await run( write_config_command, { silent: true, log_tag } )
