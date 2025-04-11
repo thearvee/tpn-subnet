@@ -23,8 +23,8 @@ export async function wait_for_ip_free( { ip_address, timeout_s=test_timeout_sec
     if( !ip_address ) throw new Error( `No ip address provided` )
 
     // Check if the ip address is already in use
-    const { stdout='', stderr } = await run( `ip addr show | grep ${ ip_address }`, false )
-    let ip_taken = stdout.includes( ip_address )
+    const { stdout, stderr } = await run( `ip addr show | grep ${ ip_address }`, false )
+    let ip_taken = stdout?.includes( ip_address )
 
     // If ip not taken, return out
     if( !ip_taken ) return true
@@ -37,8 +37,8 @@ export async function wait_for_ip_free( { ip_address, timeout_s=test_timeout_sec
         log.info( `IP address ${ ip_address } is in use, waiting ${ interval / 1000 }s (waited for ${ waited_for / 1000 }s) for it to become free...` )
         await wait( interval )
         waited_for += interval
-        const { stdout='', stderr } = await run( `ip addr show | grep ${ ip_address }`, false )
-        ip_taken = stdout.includes( ip_address )
+        const { stdout, stderr } = await run( `ip addr show | grep ${ ip_address }`, false )
+        ip_taken = stdout?.includes( ip_address )
         if( !ip_taken ) break
     }
 
@@ -78,8 +78,8 @@ export async function clean_up_tpn_interfaces( { interfaces, ip_addresses, dryru
     if( ip_addresses ) {
         log.info( `Getting all interfaces associated with ip addresses:`, ip_addresses )
         const interfaces_of_ips = await Promise.all( ip_addresses.map( ip => {
-            const { stdout='' } = run( `ip addr show | grep ${ ip } |  awk -F' ' '{print $2}'` )
-            if( stdout.includes( 'tpn' ) ) return stdout.trim()
+            const { stdout } = run( `ip addr show | grep ${ ip } |  awk -F' ' '{print $2}'` )
+            if( stdout?.includes( 'tpn' ) ) return stdout.trim()
             return null
         } ) ).split( '\n' ).filter( line => line?.includes( 'tpn' ) ).trim()
         log.info( `Found interfaces associated with ip addresses:`, interfaces_of_ips )
