@@ -169,9 +169,17 @@ export async function validate_wireguard_config( { peer_config, peer_id } ) {
     let { 1: endpoint } = peer_config.match( /Endpoint ?= ?(.*)/ ) || []
     endpoint = `${ endpoint }`.trim().split( ':' )[ 0 ]
     log.info( `${ log_tag } Parsed endpoint from wireguard config for peer ${ peer_id }:`, endpoint )
+
+    // Get the address from the config
     let { 1: address } = peer_config.match( /Address ?= ?(.*)/ ) || []
     address = `${ address }`.split( '/' )[ 0 ]
     log.info( `${ log_tag } Parsed address from wireguard config for peer ${ peer_id }:`, address )
+
+    // If the config file has no MTU value, set it to 1280
+    if( !peer_config.includes( 'MTU' ) ) {
+        log.info( `${ log_tag } Wireguard config for peer ${ peer_id } is missing MTU, setting it to 1280` )
+        peer_config = peer_config.replace( /Address =.*/, `$&\nMTU = 1280` )
+    }
 
     log.info( `${ log_tag } Validating wireguard config for peer ${ peer_id }:`, {
         address,
