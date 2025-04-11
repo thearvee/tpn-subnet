@@ -191,7 +191,7 @@ export async function validate_wireguard_config( { peer_config, peer_id } ) {
     }
 
     // If endpoint is not cidr, add /32
-    // if( endpoint.match( /\d*\.\d*\.\d*\.\d*/ ) && !endpoint.includes( '/' ) ) endpoint += '/32'
+    if( endpoint.match( /\d*\.\d*\.\d*\.\d*/ ) && !endpoint.includes( '/' ) ) endpoint += '/32'
 
     // If endpoint is string, resolve it
     if( !endpoint.match( /\d*\.\d*\.\d*\.\d*/ ) ) {
