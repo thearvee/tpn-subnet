@@ -153,7 +153,8 @@ router.post( "/:challenge/:response", async ( req, res ) => {
         // Score based on delay, with a grace period, and a punishment per ms above it
         log.info( `Time to solve ${ challenge }: ${ ms_to_solve } (${ solved_at })` )
         const s_to_solve = ms_to_solve / 1000
-        const penalty = Math.min( 100, 2 ** s_to_solve - 1 )
+        const grace_secs = 45
+        const penalty = Math.min( 100, 1.1 ** ( grace_secs - s_to_solve ) )
         const speed_score = Math.sqrt( 100 - penalty )
 
         // Uniqeness score, minus maximum speed score, plus speed score
