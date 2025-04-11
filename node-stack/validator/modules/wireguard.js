@@ -1,9 +1,114 @@
-import { log, random_number_between, random_string_of_length } from "mentie"
+import { log, random_number_between, random_string_of_length, wait } from "mentie"
 import { generate_challenge, solve_challenge } from "./challenge.js"
 import { run } from "./shell.js"
 import { base_url } from "./url.js"
 
+// Timeout used for curl commands
+const test_timeout_seconds = 60
+
+// Split multi-line commands into an array of commands
 const split_ml_commands = commands => commands.split( '\n' ).map( c => c.replace( /#.*$/gm, '' ) ).filter( c => c.trim() ).map( c => c.trim() )
+
+/**
+ * Waits for a given IP address to become free (not in use) within a specified timeout period.
+ * @param {Object} options - The options for the function.
+ * @param {string} options.ip_address - The IP address to check.
+ * @param {number} [options.timeout=test_timeout_ms] - The maximum time to wait for the IP address to become free, in milliseconds.
+ * @throws {Error} Throws an error if no IP address is provided.
+ * @returns {Promise<boolean>} Resolves to `true` if the IP address becomes free within the timeout, or `false` if it remains in use.
+ */
+export async function wait_for_ip_free( { ip_address, timeout_s=test_timeout_seconds } ) {
+
+    // Check if the ip address is valid
+    if( !ip_address ) throw new Error( `No ip address provided` )
+
+    // Check if the ip address is already in use
+    const { stdout, stderr } = await run( `ip addr show | grep ${ ip_address }`, false )
+    let ip_taken = stdout?.includes( ip_address )
+
+    // If ip not taken, return out
+    if( !ip_taken ) return true
+
+    // If ip is taken, wait for it to be free
+    let waited_for = 0
+    const timeout = timeout_s * 1000
+    const interval = 5000
+    while( ip_taken && waited_for < timeout ) {
+        log.info( `IP address ${ ip_address } is in use, waiting ${ interval / 1000 }s (waited for ${ waited_for / 1000 }s) for it to become free...` )
+        await wait( interval )
+        waited_for += interval
+        const { stdout, stderr } = await run( `ip addr show | grep ${ ip_address }`, false )
+        ip_taken = stdout?.includes( ip_address )
+        if( !ip_taken ) break
+    }
+
+    // If ip is still taken, return false
+    if( ip_taken ) {
+        log.warn( `IP address ${ ip_address } is still in use after ${ waited_for / 1000 } seconds` )
+        return false
+    }
+    log.info( `IP address ${ ip_address } is free after ${ waited_for / 1000 } seconds` )
+    return true
+
+}
+
+/**
+ * Cleans up TPN interfaces by deleting their links, routing tables, 
+ * and configuration files. Can operate in dry-run mode to simulate the cleanup process.
+ *
+ * @param {Object} [options={}] - The options for the cleanup process.
+ * @param {string[]} [options.interfaces] - The list of interface names to clean up. If not provided, all TPN interfaces will be targeted.
+ * @param {string[]} [options.ip_addresses] - The list of IP addresses to find associated interfaces for cleanup.
+ * @param {boolean} [options.dryrun=false] - If true, the cleanup process will only log actions without making changes.
+ * @returns {Promise<boolean>} - Returns `true` if any interfaces were cleaned up, otherwise `false`.
+ */
+export async function clean_up_tpn_interfaces( { interfaces, ip_addresses, dryrun=false }={} ) {
+
+    log.info( `Cleaning up ${ interfaces?.length || 'all' } interfaces` )
+
+    // Get all interfaces
+    if( !interfaces && !ip_addresses ) {
+        log.info( `No interfaces provided, getting all interfaces` )
+        const { stdout } = await run( `ip link show`, false )
+        interfaces = stdout.split( '\n' ).filter( line => line.includes( 'tpn' ) ).map( line => line.split( ':' )[ 1 ].trim() )   
+        log.info( `Found TPN interfaces:`, interfaces )
+    }
+
+    // Get all interfaces associated with the ip addresses
+    if( ip_addresses ) {
+        log.info( `Getting all interfaces associated with ip addresses:`, ip_addresses )
+        const interfaces_of_ips = await Promise.all( ip_addresses.map( ip => {
+            const { stdout } = run( `ip addr show | grep ${ ip } |  awk -F' ' '{print $2}'` )
+            if( stdout?.includes( 'tpn' ) ) return stdout.trim()
+            return null
+        } ) ).split( '\n' ).filter( line => line?.includes( 'tpn' ) ).trim()
+        log.info( `Found interfaces associated with ip addresses:`, interfaces_of_ips )
+        interfaces = interfaces ? [ ...interfaces, ...interfaces_of_ips ] : interfaces_of_ips
+    }
+
+    // If no interfaces found, return
+    if( !interfaces || !interfaces?.length ) {
+        log.info( `No interfaces found to clean up` )
+        return false
+    }
+
+    // Loop over interfaces and delete them, their routing tables, and their config file
+    log.info( `Deleting ${ interfaces?.length } interfaces` )
+    for( const interface_id of interfaces ) {
+        if( dryrun ) {
+            log.info( `Dryrun enabled, not deleting interface ${ interface_id }` )
+            continue
+        }
+        log.info( `Cleaning up interface ${ interface_id } link, route, config` )
+        await run( `ip link delete ${ interface_id }`, false )
+        await run( `ip route flush table ${ interface_id }`, false )
+        await run( `rm -f /tmp/${ interface_id }.conf`,  false )
+        log.info( `Deleted interface ${ interface_id } and all associated entries` )
+    }
+
+    return !!interfaces?.length
+
+}
 
 /**
  * Validate a wireguard config by running it and checking the response of a challenge hosted on this machine
@@ -79,7 +184,6 @@ export async function validate_wireguard_config( { peer_config, peer_id } ) {
     if( !peer_config.includes( PostDown ) ) peer_config = peer_config.replace( /Address =.*/, `$&\n${ PostDown }` )
     log.info( `Parsed wireguard config for peer ${ peer_id }:`, peer_config )
 
-
     // Formulate shell commands used for testing and cleanup
     const write_config_command = `
         # Write the wireguard config to a temporary file
@@ -98,7 +202,7 @@ export async function validate_wireguard_config( { peer_config, peer_id } ) {
         ip addr show ${ interface_id }
         ping -c1 -W1 ${ endpoint }  > /dev/null 2>&1 && echo "Endpoint ${ endpoint } is reachable" || echo "Endpoint ${ endpoint } is not reachable"
     `
-    const curl_command = `curl -m 60 --interface ${ interface_id } -s ${ challenge_url }`
+    const curl_command = `curl -m ${ test_timeout_seconds } --interface ${ interface_id } -s ${ challenge_url }`
     const cleanup_command = `
         ip route flush table ${ routing_table }
         wg-quick down ${ config_path }
@@ -118,6 +222,15 @@ export async function validate_wireguard_config( { peer_config, peer_id } ) {
 
     }
     const run_test = async () => {
+
+        // Check for ip address conflicts
+        const timeout = test_timeout_seconds * 5 // How many ip addresses to assume in the worst of circumstances to take their max timeout
+        const ip_free = await wait_for_ip_free( { ip_address: address, timeout } )
+        if( !ip_free ) {
+            const ip_cleared = await clean_up_tpn_interfaces( { ip_addresses: [ address ] } )
+            if( !ip_cleared ) throw new Error( `IP address ${ address } is still in use after cleanup` )
+            log.info( `IP address ${ address } is free after cleanup` )
+        }
 
         // Write the wireguard config to a file
         const config_cmd = await run( write_config_command, true )
