@@ -28,11 +28,14 @@ export async function wait_for_ip_free( { ip_address, timeout_s=test_timeout_sec
     let ip_being_processed = cache( `ip_being_processed_${ ip_address }` )
 
     // Check if the ip address is already in use
-    const { stdout, stderr } = await run( `ip addr show | grep ${ ip_address } || true`, { silent: false } )
+    const { stdout, stderr } = await run( `ip addr show | grep ${ ip_address } || true`, { silent: false, verbose: true } )
     let ip_taken = stdout?.includes( ip_address )
 
     // If ip not taken, return out
-    if( !ip_taken ) return true
+    if( !ip_taken ) {
+        log.info( `IP address ${ ip_address } is free, no need to wait` )
+        return true
+    }
 
     // If ip is taken, wait for it to be free
     let waited_for = 0
@@ -133,6 +136,7 @@ export async function clean_up_tpn_interfaces( { interfaces, ip_addresses, dryru
 export async function validate_wireguard_config( { peer_config, peer_id } ) {
 
     const log_tag = `[ ${ peer_id }_${ Date.now() } ]`
+    log.info( `${ log_tag } Validating wireguard config for peer ${ peer_id }` )
 
     // Validate the wireguard config
     if( !peer_config ) return { valid: false, message: `No wireguard config provided` }
@@ -161,7 +165,6 @@ export async function validate_wireguard_config( { peer_config, peer_id } ) {
     const interface_id = `tpn${ peer_id }${ random_string_of_length( 9 ) }`
     const routing_table = random_number_between( 255, 2**32 - 1 ) // Up to 255 is used by the system
     const config_path = `/tmp/${ interface_id }.conf`
-
 
     // Get the endpoint host from the config
     let { 1: endpoint } = peer_config.match( /Endpoint ?= ?(.*)/ ) || []
@@ -253,12 +256,11 @@ export async function validate_wireguard_config( { peer_config, peer_id } ) {
             await run( command, { silent, log_tag } )
         }
 
-        // Mark ip address as no longer in processing
-        cache( `ip_being_processed_${ address }`, false )
-        log.info( `${ log_tag } Marking ip address ${ address } as no longer in processing` )
-
     }
     const run_test = async () => {
+
+        // TEMPORARY CHECK, log out all intefaces
+        await run( `ip addr show`, { silent: false, verbose: true, log_tag } )
 
         // Check for ip address conflicts
         const timeout = test_timeout_seconds * 5 // How many ip addresses to assume in the worst of circumstances to take their max timeout
@@ -313,6 +315,12 @@ export async function validate_wireguard_config( { peer_config, peer_id } ) {
         // Solve the challenge from the miner ip
         log.info( `\n ${ log_tag } 🔎 Running test commands for peer ${ peer_id }` )
         const stdout = await run_test()
+
+        // Mark ip address as no longer in processing
+        cache( `ip_being_processed_${ address }`, false )
+        log.info( `${ log_tag } Marking ip address ${ address } as no longer in processing` )
+
+        // Extract the challenge and response from the stdout
         let [ json_response ] = stdout.match( /{.*}/s ) || []
         if( !json_response ) {
             log.warn( `${ log_tag } No JSON response found in stdout:`, stdout )
