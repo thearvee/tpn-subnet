@@ -28,6 +28,10 @@ await update_ip2location_bin().catch( e => log.error( e ) )
 log.info( `Updating ip2location database every ${ update_interval_ms / 1000 / 60 / 60 } hours` )
 setInterval( update_ip2location_bin, update_interval_ms )
 
+// On restart, delete old interfaces
+import { clean_up_tpn_interfaces } from './modules/wireguard.js'
+await clean_up_tpn_interfaces()
+
 // Import express
 import { app } from './routes/server.js'
 

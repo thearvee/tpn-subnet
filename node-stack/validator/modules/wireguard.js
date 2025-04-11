@@ -6,6 +6,64 @@ import { base_url } from "./url.js"
 const split_ml_commands = commands => commands.split( '\n' ).map( c => c.replace( /#.*$/gm, '' ) ).filter( c => c.trim() ).map( c => c.trim() )
 
 /**
+ * Cleans up TPN interfaces by deleting their links, routing tables, 
+ * and configuration files. Can operate in dry-run mode to simulate the cleanup process.
+ *
+ * @param {Object} [options={}] - The options for the cleanup process.
+ * @param {string[]} [options.interfaces] - The list of interface names to clean up. If not provided, all TPN interfaces will be targeted.
+ * @param {string[]} [options.ip_addresses] - The list of IP addresses to find associated interfaces for cleanup.
+ * @param {boolean} [options.dryrun=false] - If true, the cleanup process will only log actions without making changes.
+ * @returns {Promise<boolean>} - Returns `true` if any interfaces were cleaned up, otherwise `false`.
+ */
+export async function clean_up_tpn_interfaces( { interfaces, ip_addresses, dryrun=false }={} ) {
+
+    log.info( `Cleaning up ${ interfaces.length || 'all' } interfaces` )
+
+    // Get all interfaces
+    if( !interfaces && !ip_addresses ) {
+        log.info( `No interfaces provided, getting all interfaces` )
+        const { stdout } = await run( `ip link show`, false )
+        interfaces = stdout.split( '\n' ).filter( line => line.includes( 'tpn' ) ).map( line => line.split( ':' )[ 1 ].trim() )   
+        log.info( `Found interfaces:`, interfaces )
+    }
+
+    // Get all interfaces associated with the ip addresses
+    if( ip_addresses ) {
+        log.info( `Getting all interfaces associated with ip addresses:`, ip_addresses )
+        const interfaces_of_ips = await Promise.all( ip_addresses.map( ip => {
+            const { stdout } = run( `ip addr show | grep ${ ip } |  awk -F' ' '{print $2}'` )
+            if( stdout.includes( 'tpn' ) ) return stdout.trim()
+            return null
+        } ) ).split( '\n' ).filter( line => line.includes( 'tpn' ) ).trim()
+        log.info( `Found interfaces associated with ip addresses:`, interfaces_of_ips )
+        interfaces = interfaces ? [ ...interfaces, ...interfaces_of_ips ] : interfaces_of_ips
+    }
+
+    // If no interfaces found, return
+    if( !interfaces || !interfaces.length ) {
+        log.info( `No interfaces found to clean up` )
+        return false
+    }
+
+    // Loop over interfaces and delete them, their routing tables, and their config file
+    log.info( `Deleting ${ interfaces.length } interfaces` )
+    for( const interface_id of interfaces ) {
+        if( dryrun ) {
+            log.info( `Dryrun enabled, not deleting interface ${ interface_id }` )
+            continue
+        }
+        log.info( `Cleaning up interface ${ interface_id } link, route, config` )
+        await run( `ip link delete ${ interface_id }`, false )
+        await run( `ip route flush table ${ interface_id }`, false )
+        await run( `rm -f /tmp/${ interface_id }.conf`,  false )
+        log.info( `Deleted interface ${ interface_id } and all associated entries` )
+    }
+
+    return !!interfaces.length
+
+}
+
+/**
  * Validate a wireguard config by running it and checking the response of a challenge hosted on this machine
  * @param {Object} params
  * @param {string} params.peer_config - The wireguard config to validate
@@ -79,7 +137,6 @@ export async function validate_wireguard_config( { peer_config, peer_id } ) {
     if( !peer_config.includes( PostDown ) ) peer_config = peer_config.replace( /Address =.*/, `$&\n${ PostDown }` )
     log.info( `Parsed wireguard config for peer ${ peer_id }:`, peer_config )
 
-
     // Formulate shell commands used for testing and cleanup
     const write_config_command = `
         # Write the wireguard config to a temporary file
@@ -118,6 +175,13 @@ export async function validate_wireguard_config( { peer_config, peer_id } ) {
 
     }
     const run_test = async () => {
+
+        // Check for ip address conflicts
+        const has_conflict = await clean_up_tpn_interfaces( { ip_addresses: [ address ], dryrun: true } )
+        if( has_conflict ) {
+            log.warn( `IP address ${ address } is already in use by another interface, this indicates failed cleanups. THIS SHOULD NOT HAPPEN.` )
+            await clean_up_tpn_interfaces( { ip_addresses: [ address ] } )
+        }
 
         // Write the wireguard config to a file
         const config_cmd = await run( write_config_command, true )
