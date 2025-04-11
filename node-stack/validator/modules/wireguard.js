@@ -17,9 +17,9 @@ const split_ml_commands = commands => commands.split( '\n' ).map( c => c.replace
  * @throws {Error} Throws an error if no IP address is provided.
  * @returns {Promise<boolean>} Resolves to `true` if the IP address becomes free within the timeout, or `false` if it remains in use.
  */
-export async function wait_for_ip_free( { ip_address, timeout_s=test_timeout_seconds } ) {
+export async function wait_for_ip_free( { ip_address, timeout_s=test_timeout_seconds, log_tag=Date.now() } ) {
 
-    log.info( `Waiting for IP address ${ ip_address } to become free` )
+    log.info( log_tag, `Waiting for IP address ${ ip_address } to become free` )
 
     // Check if the ip address is valid
     if( !ip_address ) throw new Error( `No ip address provided` )
@@ -33,7 +33,7 @@ export async function wait_for_ip_free( { ip_address, timeout_s=test_timeout_sec
 
     // If ip not taken, return out
     if( !ip_taken ) {
-        log.info( `IP address ${ ip_address } is free, no need to wait` )
+        log.info( log_tag, `IP address ${ ip_address } is free, no need to wait` )
         return true
     }
 
@@ -42,7 +42,7 @@ export async function wait_for_ip_free( { ip_address, timeout_s=test_timeout_sec
     const timeout = timeout_s * 1000
     const interval = 5000
     while( ip_taken && waited_for < timeout ) {
-        log.info( `IP address ${ ip_address } is in use, waiting ${ interval / 1000 }s (waited for ${ waited_for / 1000 }s) for it to become free...` )
+        log.info( log_tag, `IP address ${ ip_address } is in use, waiting ${ interval / 1000 }s (waited for ${ waited_for / 1000 }s) for it to become free...` )
         await wait( interval )
         waited_for += interval
 
@@ -58,10 +58,10 @@ export async function wait_for_ip_free( { ip_address, timeout_s=test_timeout_sec
 
     // If ip is still taken, return false
     if( ip_taken ) {
-        log.warn( `IP address ${ ip_address } is still in use after ${ waited_for / 1000 } seconds` )
+        log.warn( log_tag, `IP address ${ ip_address } is still in use after ${ waited_for / 1000 } seconds` )
         return false
     }
-    log.info( `IP address ${ ip_address } is free after ${ waited_for / 1000 } seconds` )
+    log.info( log_tag, `IP address ${ ip_address } is free after ${ waited_for / 1000 } seconds` )
     return true
 
 }
@@ -136,7 +136,6 @@ export async function clean_up_tpn_interfaces( { interfaces, ip_addresses, dryru
 export async function validate_wireguard_config( { peer_config, peer_id } ) {
 
     const log_tag = `[ ${ peer_id }_${ Date.now() } ]`
-    log.info( `${ log_tag } Validating wireguard config for peer ${ peer_id }` )
 
     // Validate the wireguard config
     if( !peer_config ) return { valid: false, message: `No wireguard config provided` }
@@ -173,6 +172,13 @@ export async function validate_wireguard_config( { peer_config, peer_id } ) {
     let { 1: address } = peer_config.match( /Address ?= ?(.*)/ ) || []
     address = `${ address }`.split( '/' )[ 0 ]
     log.info( `${ log_tag } Parsed address from wireguard config for peer ${ peer_id }:`, address )
+
+    log.info( `${ log_tag } Validating wireguard config for peer ${ peer_id }:`, {
+        address,
+        endpoint,
+        interface_id,
+        routing_table
+    } )
 
     // If endpoint or address are missing, error
     if( !endpoint ) {
@@ -264,7 +270,7 @@ export async function validate_wireguard_config( { peer_config, peer_id } ) {
 
         // Check for ip address conflicts
         const timeout = test_timeout_seconds * 5 // How many ip addresses to assume in the worst of circumstances to take their max timeout
-        const ip_free = await wait_for_ip_free( { ip_address: address, timeout } )
+        const ip_free = await wait_for_ip_free( { ip_address: address, timeout, log_tag } )
         if( !ip_free ) {
             const ip_cleared = await clean_up_tpn_interfaces( { ip_addresses: [ address ] } )
             if( !ip_cleared ) throw new Error( `IP address ${ address } is still in use after cleanup` )
