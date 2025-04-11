@@ -198,12 +198,6 @@ export async function validate_wireguard_config( { peer_config, peer_id } ) {
         return { valid: false, message: `Wireguard config for peer ${ peer_id } is missing address` }
     }
 
-    // If endpoint is not cidr, add /32
-    if( endpoint.match( /\d*\.\d*\.\d*\.\d*/ ) && !endpoint.includes( '/' ) ) {
-        endpoint += '/32'
-        peer_config = peer_config.replace( /Endpoint =.*/, `Endpoint = ${ endpoint }` )
-    }
-
     // If endpoint is string, resolve it
     if( !endpoint.match( /\d*\.\d*\.\d*\.\d*/ ) ) {
         const { stdout, stderr } = await run( `dig +short ${ endpoint }`, { silent: false, log_tag } )
@@ -219,6 +213,13 @@ export async function validate_wireguard_config( { peer_config, peer_id } ) {
     if( !address.match( /\d*\.\d*\.\d*\.\d*/ ) ) {
         log.warn( `${ log_tag } Wireguard config for peer ${ peer_id } is missing address` )
         return { valid: false, message: `Wireguard config for peer ${ peer_id } is missing address` }
+    }
+
+    // If the address is not in CIDR notation, add /32
+    if( !address.includes( '/' ) ) {
+        log.info( `${ log_tag } Wireguard config for peer ${ peer_id } address ${ address } is not in CIDR notation, adding /32` )
+        address = `${ address }/32`
+        peer_config = peer_config.replace( /Address =.*/, `Address = ${ address }` )
     }
 
     // Add a Table = off line if it doesn't exist, add it after the Address line
