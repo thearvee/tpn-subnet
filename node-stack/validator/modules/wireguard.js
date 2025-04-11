@@ -23,7 +23,7 @@ export async function wait_for_ip_free( { ip_address, timeout_s=test_timeout_sec
     if( !ip_address ) throw new Error( `No ip address provided` )
 
     // Check if the ip address is already in use
-    const { stdout, stderr } = await run( `ip addr show | grep ${ ip_address }`, false )
+    const { stdout, stderr } = await run( `ip addr show | grep ${ ip_address } || true`, { silent: false } )
     let ip_taken = stdout?.includes( ip_address )
 
     // If ip not taken, return out
@@ -37,7 +37,7 @@ export async function wait_for_ip_free( { ip_address, timeout_s=test_timeout_sec
         log.info( `IP address ${ ip_address } is in use, waiting ${ interval / 1000 }s (waited for ${ waited_for / 1000 }s) for it to become free...` )
         await wait( interval )
         waited_for += interval
-        const { stdout, stderr } = await run( `ip addr show | grep ${ ip_address }`, false )
+        const { stdout, stderr } = await run( `ip addr show | grep ${ ip_address } || true`, { silent: false } )
         ip_taken = stdout?.includes( ip_address )
         if( !ip_taken ) break
     }
@@ -69,7 +69,7 @@ export async function clean_up_tpn_interfaces( { interfaces, ip_addresses, dryru
     // Get all interfaces
     if( !interfaces && !ip_addresses ) {
         log.info( `No interfaces provided, getting all interfaces` )
-        const { stdout } = await run( `ip link show`, false )
+        const { stdout } = await run( `ip link show`, { silent: false } )
         interfaces = stdout.split( '\n' ).filter( line => line.includes( 'tpn' ) ).map( line => line.split( ':' )[ 1 ].trim() )   
         log.info( `Found TPN interfaces:`, interfaces )
     }
@@ -78,7 +78,7 @@ export async function clean_up_tpn_interfaces( { interfaces, ip_addresses, dryru
     if( ip_addresses ) {
         log.info( `Getting all interfaces associated with ip addresses:`, ip_addresses )
         const interfaces_of_ips = await Promise.all( ip_addresses.map( ip => {
-            const { stdout } = run( `ip addr show | grep ${ ip } |  awk -F' ' '{print $2}'` )
+            const { stdout } = run( `ip addr show | grep ${ ip } | awk -F' ' '{print $2}'` )
             if( stdout?.includes( 'tpn' ) ) return stdout.trim()
             return null
         } ) ).split( '\n' ).filter( line => line?.includes( 'tpn' ) ).trim()
@@ -100,9 +100,9 @@ export async function clean_up_tpn_interfaces( { interfaces, ip_addresses, dryru
             continue
         }
         log.info( `Cleaning up interface ${ interface_id } link, route, config` )
-        await run( `ip link delete ${ interface_id }`, false )
-        await run( `ip route flush table ${ interface_id }`, false )
-        await run( `rm -f /tmp/${ interface_id }.conf`,  false )
+        await run( `ip link delete ${ interface_id }`, { silent: false } )
+        await run( `ip route flush table ${ interface_id }`, { silent: false } )
+        await run( `rm -f /tmp/${ interface_id }.conf`,  { silent: false } )
         log.info( `Deleted interface ${ interface_id } and all associated entries` )
     }
 
@@ -175,7 +175,7 @@ export async function validate_wireguard_config( { peer_config, peer_id } ) {
 
     // If endpoint is string, resolve it
     if( !endpoint.match( /\d*\.\d*\.\d*\.\d*/ ) ) {
-        const { stdout, stderr } = await run( `dig +short ${ endpoint }`, false )
+        const { stdout, stderr } = await run( `dig +short ${ endpoint }`, { silent: false, log_tag } )
         if( stderr ) {
             log.warn( `${ log_tag } Error resolving endpoint ${ endpoint }:`, stderr )
             return { valid: false, message: `Error resolving endpoint ${ endpoint }: ${ stderr }` }
@@ -239,7 +239,7 @@ export async function validate_wireguard_config( { peer_config, peer_id } ) {
         // loop over cleanup commands
         const cleanup_commands = split_ml_commands( cleanup_command )
         for( const command of cleanup_commands ) {
-            await run( command, silent )
+            await run( command, { silent, log_tag } )
         }
 
     }
@@ -255,20 +255,20 @@ export async function validate_wireguard_config( { peer_config, peer_id } ) {
         }
 
         // Write the wireguard config to a file
-        const config_cmd = await run( write_config_command, true )
+        const config_cmd = await run( write_config_command, { silent: true, log_tag } )
         if( config_cmd.error || config_cmd.stderr ) throw new Error( `Error writing wireguard config: ${ config_cmd.error } ${ config_cmd.stderr }` )
 
         // loop over network commands
         const network_setup_commands = split_ml_commands( network_setup_command )
 
         for( const command of network_setup_commands ) {
-            const { error, stderr, stdout } = await run( command )
-            // if( error || stderr ) throw new Error( `Error setting up network: ${ error } ${ stderr }` )
+            const { error, stderr, stdout } = await run( command, { log_tag } )
+            if( error || stderr ) log.info( `${ log_tag } Error running command ${ command }: ${ error } ${ stderr }` )
         }
     
 
         // Run the curl command
-        const { error, stderr, stdout } = await run( curl_command, false, true )
+        const { error, stderr, stdout } = await run( curl_command, { silent: false, verbose: true, log_tag } )
         if( error || stderr ) throw new Error( `Error running curl command: ${ error } ${ stderr }` )
         
         // Isolate the json
@@ -289,7 +289,7 @@ export async function validate_wireguard_config( { peer_config, peer_id } ) {
 
         // Do pre-emptive cleanup in case a previous run messed up
         log.info( `\n ${ log_tag } 🧹 Running pre-cleanup commands for peer ${ peer_id }}` )
-        await run_cleanup( { silent: true } )
+        await run_cleanup( { silent: true, log_tag } )
 
         // Solve the challenge from the miner ip
         log.info( `\n ${ log_tag } 🔎 Running test commands for peer ${ peer_id }` )
@@ -307,22 +307,22 @@ export async function validate_wireguard_config( { peer_config, peer_id } ) {
         
         // Check that the response is valid
         if( !correct ) {
-            log.info( `${ log_tag } Wireguard config for peer ${ peer_id } failed challenge` )
-            return { valid: false, message: `Wireguard config for peer ${ peer_id } failed challenge` }
+            log.info( `${ log_tag } Wireguard config failed challenge for peer ${ peer_id }` )
+            return { valid: false, message: `Wireguard config failed challenge for peer ${ peer_id }` }
         }
 
         // Run cleanup command
         log.info( `\n ${ log_tag } 🧹  Running cleanup commands for peer ${ peer_id }` )
-        await run_cleanup( { silent: false } )
+        await run_cleanup( { silent: false, log_tag } )
 
         // If the response is valid, return true
-        log.info( `${ log_tag } Wireguard config for peer ${ peer_id } passed ${ challenge } with response ${ response }` )
-        return { valid: true, message: `Wireguard config for peer ${ peer_id } passed ${ challenge } with response ${ response }` }
+        log.info( `${ log_tag } Wireguard config passed for peer ${ peer_id } ${ challenge } with response ${ response }` )
+        return { valid: true, message: `Wireguard config passed for peer ${ peer_id } ${ challenge } with response ${ response }` }
 
     } catch ( e ) {
 
         log.error( `${ log_tag } Error validating wireguard config for peer ${ peer_id }:`, e )
-        await run_cleanup( { silent: true } )
+        await run_cleanup( { silent: true, log_tag } )
         return { valid: false, message: `Error validating wireguard config for peer ${ peer_id }: ${ e.message }` }
 
     }
