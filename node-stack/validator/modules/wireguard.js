@@ -121,12 +121,14 @@ export async function clean_up_tpn_interfaces( { interfaces, ip_addresses, dryru
  */
 export async function validate_wireguard_config( { peer_config, peer_id } ) {
 
+    const log_tag = `[ ${ peer_id }_${ Date.now() } ]`
+
     // Validate the wireguard config
     if( !peer_config ) return { valid: false, message: `No wireguard config provided` }
     const expected_props = [ '[Interface]', '[Peer]', 'Address', 'PrivateKey', 'ListenPort', 'PublicKey', 'PresharedKey', 'AllowedIPs', 'Endpoint' ]
     const missing_props = expected_props.filter( prop => !peer_config.includes( prop ) )
     if( missing_props.length ) {
-        log.warn( `Wireguard config for peer ${ peer_id } is missing required properties:`, missing_props )
+        log.warn( `${ log_tag } Wireguard config for peer ${ peer_id } is missing required properties:`, missing_props )
         return { valid: false, message: `Wireguard config for peer ${ peer_id } is missing required properties: ${ missing_props.join( ', ' ) }` }
     }
     
@@ -153,10 +155,20 @@ export async function validate_wireguard_config( { peer_config, peer_id } ) {
     // Get the endpoint host from the config
     let { 1: endpoint } = peer_config.match( /Endpoint ?= ?(.*)/ ) || []
     endpoint = `${ endpoint }`.trim().split( ':' )[ 0 ]
-    log.info( `Parsed endpoint from wireguard config for peer ${ peer_id }:`, endpoint )
+    log.info( `${ log_tag } Parsed endpoint from wireguard config for peer ${ peer_id }:`, endpoint )
     let { 1: address } = peer_config.match( /Address ?= ?(.*)/ ) || []
     address = `${ address }`.split( '/' )[ 0 ]
-    log.info( `Parsed address from wireguard config for peer ${ peer_id }:`, address )
+    log.info( `${ log_tag } Parsed address from wireguard config for peer ${ peer_id }:`, address )
+
+    // If endpoint or address are missing, error
+    if( !endpoint ) {
+        log.warn( `${ log_tag } Wireguard config for peer ${ peer_id } is missing endpoint` )
+        return { valid: false, message: `Wireguard config for peer ${ peer_id } is missing endpoint` }
+    }
+    if( !address ) {
+        log.warn( `${ log_tag } Wireguard config for peer ${ peer_id } is missing address` )
+        return { valid: false, message: `Wireguard config for peer ${ peer_id } is missing address` }
+    }
 
     // If endpoint is not cidr, add /32
     // if( endpoint.match( /\d*\.\d*\.\d*\.\d*/ ) && !endpoint.includes( '/' ) ) endpoint += '/32'
@@ -164,8 +176,18 @@ export async function validate_wireguard_config( { peer_config, peer_id } ) {
     // If endpoint is string, resolve it
     if( !endpoint.match( /\d*\.\d*\.\d*\.\d*/ ) ) {
         const { stdout, stderr } = await run( `dig +short ${ endpoint }`, false )
-        log.info( `Resolved endpoint ${ endpoint } to ${ stdout }` )
+        if( stderr ) {
+            log.warn( `${ log_tag } Error resolving endpoint ${ endpoint }:`, stderr )
+            return { valid: false, message: `Error resolving endpoint ${ endpoint }: ${ stderr }` }
+        }
+        log.info( `${ log_tag } Resolved endpoint ${ endpoint } to ${ stdout }` )
         endpoint = `${ stdout }`.trim()
+    }
+
+    // If address is not an ip address, error
+    if( !address.match( /\d*\.\d*\.\d*\.\d*/ ) ) {
+        log.warn( `${ log_tag } Wireguard config for peer ${ peer_id } is missing address` )
+        return { valid: false, message: `Wireguard config for peer ${ peer_id } is missing address` }
     }
 
     // Add a Table = off line if it doesn't exist, add it after the Address line
@@ -182,7 +204,7 @@ export async function validate_wireguard_config( { peer_config, peer_id } ) {
     `.trim()
     if( !peer_config.includes( PostUp ) ) peer_config = peer_config.replace( /Address =.*/, `$&\n${ PostUp }` )
     if( !peer_config.includes( PostDown ) ) peer_config = peer_config.replace( /Address =.*/, `$&\n${ PostDown }` )
-    log.info( `Parsed wireguard config for peer ${ peer_id }:`, peer_config )
+    log.info( `${ log_tag } Parsed wireguard config for peer ${ peer_id }:`, peer_config )
 
     // Formulate shell commands used for testing and cleanup
     const write_config_command = `
@@ -229,7 +251,7 @@ export async function validate_wireguard_config( { peer_config, peer_id } ) {
         if( !ip_free ) {
             const ip_cleared = await clean_up_tpn_interfaces( { ip_addresses: [ address ] } )
             if( !ip_cleared ) throw new Error( `IP address ${ address } is still in use after cleanup` )
-            log.info( `IP address ${ address } is free after cleanup` )
+            log.info( `${ log_tag } IP address ${ address } is free after cleanup` )
         }
 
         // Write the wireguard config to a file
@@ -252,12 +274,12 @@ export async function validate_wireguard_config( { peer_config, peer_id } ) {
         // Isolate the json
         const [ json ] = stdout.match( /{.*}/s ) || []
         if( !json ) {
-            log.warn( `No JSON response found in stdout:`, stdout )
+            log.warn( `${ log_tag } No JSON response found in stdout:`, stdout )
             return false
         }
 
         // Return the json response
-        log.info( `Wireguard config for peer ${ peer_id } responded with:`, json )
+        log.info( `${ log_tag } Wireguard config for peer ${ peer_id } responded with:`, json )
         return json
 
     } 
@@ -266,40 +288,40 @@ export async function validate_wireguard_config( { peer_config, peer_id } ) {
     try {
 
         // Do pre-emptive cleanup in case a previous run messed up
-        log.info( `\n 🧹 Running pre-cleanup commands for peer ${ peer_id }}` )
+        log.info( `\n ${ log_tag } 🧹 Running pre-cleanup commands for peer ${ peer_id }}` )
         await run_cleanup( { silent: true } )
 
         // Solve the challenge from the miner ip
-        log.info( `\n 🔎 Running test commands for peer ${ peer_id }` )
+        log.info( `\n ${ log_tag } 🔎 Running test commands for peer ${ peer_id }` )
         const stdout = await run_test()
         let [ json_response ] = stdout.match( /{.*}/s ) || []
         if( !json_response ) {
-            log.warn( `No JSON response found in stdout:`, stdout )
+            log.warn( `${ log_tag } No JSON response found in stdout:`, stdout )
             return { valid: false, message: `No JSON response found in stdout` }
         }
         const { response } = JSON.parse( json_response )
 
         // Verify that the response is valid
-        log.info( `Checkin challenge/response solution ${ challenge }/${ response }` )
+        log.info( `${ log_tag } Checkin challenge/response solution ${ challenge }/${ response }` )
         const { correct } = await solve_challenge( { challenge, response } )
         
         // Check that the response is valid
         if( !correct ) {
-            log.info( `Wireguard config for peer ${ peer_id } failed challenge` )
+            log.info( `${ log_tag } Wireguard config for peer ${ peer_id } failed challenge` )
             return { valid: false, message: `Wireguard config for peer ${ peer_id } failed challenge` }
         }
 
         // Run cleanup command
-        log.info( `\n 🧹  Running cleanup commands for peer ${ peer_id }` )
+        log.info( `\n ${ log_tag } 🧹  Running cleanup commands for peer ${ peer_id }` )
         await run_cleanup( { silent: false } )
 
         // If the response is valid, return true
-        log.info( `Wireguard config for peer ${ peer_id } passed ${ challenge } with response ${ response }` )
+        log.info( `${ log_tag } Wireguard config for peer ${ peer_id } passed ${ challenge } with response ${ response }` )
         return { valid: true, message: `Wireguard config for peer ${ peer_id } passed ${ challenge } with response ${ response }` }
 
     } catch ( e ) {
 
-        log.error( `Error validating wireguard config for peer ${ peer_id }:`, e )
+        log.error( `${ log_tag } Error validating wireguard config for peer ${ peer_id }:`, e )
         await run_cleanup( { silent: true } )
         return { valid: false, message: `Error validating wireguard config for peer ${ peer_id }: ${ e.message }` }
 
