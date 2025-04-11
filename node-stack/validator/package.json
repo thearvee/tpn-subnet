@@ -1,6 +1,6 @@
 {
   "name": "tpn-subnet-validator",
-  "version": "0.0.23",
+  "version": "0.0.24",
   "main": "app.js",
   "type": "module",
   "scripts": {

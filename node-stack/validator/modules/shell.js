@@ -29,7 +29,7 @@ export async function run( command, silent=false, verbose=false ) {
             if( stdout ) log.info( `stdout:`, stdout.trim?.() || stdout )
             if( stderr ) log.warn( `stderr:`, stderr.trim?.() || stderr )
             if( error && verbose ) log.warn( `error:`, error.trim?.() || error )
-            if( error ) log.info( `Error running ${ command }:` )
+            if( error ) log.info( `Error running ${ command }:`, error )
 
 
             // Resolve with data
