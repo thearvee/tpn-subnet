@@ -261,6 +261,10 @@ export async function validate_wireguard_config( { peer_config, peer_id } ) {
     peer_config += `\n`
     const wg_peer_config = `[Peer]\n${ peer_config.split( '[Peer]' )[1].trim() }`
     const wg_config_path = `/tmp/wg_${ peer_id }.conf`
+    log.info( `${ log_tag } Parsed wireguard config for peer ${ peer_id }:`, {
+        peer_config,
+        wg_peer_config
+    } )
 
     // Formulate shell commands used for testing and cleanup
     const write_config_command = `
@@ -295,6 +299,7 @@ export async function validate_wireguard_config( { peer_config, peer_id } ) {
         # === POLICY ROUTING ===
         ip rule add from "${ address.replace( '/32', '' ) }" lookup "${ routing_table }"
         ip route add default dev "${ interface_id }" table "${ routing_table }"
+        ip route add ${ endpoint } via 172.18.0.1 table ${ routing_table }  # Direct traffic to the endpoint outside the tunnel
 
         echo "Interface ${ interface_id } created with address ${ address } and routing table ${ routing_table }"
 
