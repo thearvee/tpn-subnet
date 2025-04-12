@@ -299,10 +299,19 @@ export async function validate_wireguard_config( { peer_config, peer_id } ) {
 
 
         # === POLICY ROUTING ===
-        ip route add ${ endpoint } via ${ default_route } || echo "No need to add route"
+        ip route add ${ endpoint } via ${ default_route }
         ip rule add from ${ address.replace( '/32', '' ) } lookup ${ routing_table }
-        ip route add ${ endpoint } via ${ default_route } table ${ routing_table }
+        #ip route add ${ endpoint } via ${ default_route } table ${ routing_table }
         ip route add default dev ${ interface_id } table ${ routing_table }
+        ip route add ${ endpoint } via ${ default_route } table ${ routing_table }
+
+        # Enable IP forwarding
+        echo 1 > /proc/sys/net/ipv4/ip_forward
+
+        # Set up NAT for traffic coming from the WireGuard interface
+        iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE
+        iptables -A FORWARD -i ${interface_id} -j ACCEPT
+        iptables -A FORWARD -o ${interface_id} -j ACCEPT
 
         echo "Interface ${ interface_id } created with address ${ address } and routing table ${ routing_table }"
 
