@@ -175,15 +175,36 @@ export async function validate_wireguard_config( { peer_config, peer_id } ) {
     address = `${ address }`.split( '/' )[ 0 ]
     log.info( `${ log_tag } Parsed address from wireguard config for peer ${ peer_id }:`, address )
 
-    // If the config file has no MTU value, set it to 1280
-    if( !peer_config.includes( 'MTU' ) ) {
-        log.info( `${ log_tag } Wireguard config for peer ${ peer_id } is missing MTU, setting it to 1280` )
-        peer_config = peer_config.replace( /Address =.*/, `$&\nMTU = 1280` )
+    // Get other relevant wireguard info from config
+    const privatekey = peer_config.match( /PrivateKey ?= ?(.*)/ )?.[ 1 ]?.trim()
+    const listenport = peer_config.match( /ListenPort ?= ?(.*)/ )?.[ 1 ]?.trim()
+    const dns = peer_config.match( /DNS ?= ?(.*)/ )?.[ 1 ]?.trim()
+    const peer_publickey = peer_config.match( /PublicKey ?= ?(.*)/ )?.[ 1 ]?.trim()
+    const peer_presharedkey = peer_config.match( /PresharedKey ?= ?(.*)/ )?.[ 1 ]?.trim()
+    const peer_allowedips = peer_config.match( /AllowedIPs ?= ?(.*)/ )?.[ 1 ]?.trim()
+
+    // Validate the wireguard config variables for correct format
+    let format_errors = []
+    if( !privatekey.match( /^[A-Za-z0-9+/=]+$/ ) ) format_errors.push( `PrivateKey is not a valid base64 string` )
+    if( !listenport.match( /^\d+$/ ) ) format_errors.push( `ListenPort is not a number` )
+    if( !dns.match( /\d*\.\d*\.\d*\.\d*/ ) ) format_errors.push( `DNS is not a valid IP address` )
+    if( !peer_publickey.match( /^[A-Za-z0-9+/=]+$/ ) ) format_errors.push( `PublicKey is not a valid base64 string` )
+    if( !peer_presharedkey.match( /^[A-Za-z0-9+/=]+$/ ) ) format_errors.push( `PresharedKey is not a valid base64 string` )
+    if( !peer_allowedips.match( /\d*\.\d*\.\d*\.\d*/ ) ) format_errors.push( `AllowedIPs is not a valid IP address` )
+    if( format_errors.length ) {
+        log.warn( `${ log_tag } Wireguard config for peer ${ peer_id } has format errors:`, format_errors )
+        return { valid: false, message: `Wireguard config for peer ${ peer_id } has format errors: ${ format_errors.join( ', ' ) }` }
     }
 
     log.info( `${ log_tag } Validating wireguard config for peer ${ peer_id }:`, {
         address,
         endpoint,
+        privatekey,
+        listenport,
+        dns,
+        peer_publickey,
+        peer_presharedkey,
+        peer_allowedips,
         interface_id,
         routing_table
     } )
@@ -226,26 +247,33 @@ export async function validate_wireguard_config( { peer_config, peer_id } ) {
     if( !peer_config.includes( 'Table = off' ) ) peer_config = peer_config.replace( /Address =.*/, `$&\nTable = off` )
     
     // Add PostUp and PostDown scripts
-    const PostUp = `
-        PostUp = echo upsuccess 
-    `.trim()
-    const PostDown = `
-        PostDown = echo downsuccess
-    `.trim()
-    if( !peer_config.includes( PostUp ) ) peer_config = peer_config.replace( /Address =.*/, `$&\n${ PostUp }` )
-    if( !peer_config.includes( PostDown ) ) peer_config = peer_config.replace( /Address =.*/, `$&\n${ PostDown }` )
-    log.info( `${ log_tag } Parsed wireguard config for peer ${ peer_id }:`, peer_config )
+    // const PostUp = `
+    //     PostUp = echo upsuccess 
+    // `.trim()
+    // const PostDown = `
+    //     PostDown = echo downsuccess
+    // `.trim()
+    // if( !peer_config.includes( PostUp ) ) peer_config = peer_config.replace( /Address =.*/, `$&\n${ PostUp }` )
+    // if( !peer_config.includes( PostDown ) ) peer_config = peer_config.replace( /Address =.*/, `$&\n${ PostDown }` )
+    // log.info( `${ log_tag } Parsed wireguard config for peer ${ peer_id }:`, peer_config )
+
+    // Generate a peer config that only has the wg properties and not the interface block
+    peer_config += `\n`
+    const wg_peer_config = `[Peer]\n${ peer_config.split( '[Peer]' )[1].trim() }`
+    const wg_config_path = `/tmp/wg_${ peer_id }.conf`
 
     // Formulate shell commands used for testing and cleanup
     const write_config_command = `
-        # Write the wireguard config to a temporary file
+        # Write the wireguard config to a temporary files
         printf "%s" "${ peer_config }" > ${ config_path } && \
-        # Chmod the file
+        printf "%s" "${ wg_peer_config }" > ${ wg_config_path } && \
+        # Chmod the files
         chmod 600 ${ config_path }
+        chmod 600 ${ wg_config_path }
     `
     const network_setup_command = `
 
-        # Pre connection debug trail
+        # === Pre connection debug trail ===
         ping -c1 -W1 ${ endpoint }  > /dev/null 2>&1 && echo "Endpoint ${ endpoint } is reachable" || echo "Endpoint ${ endpoint } is not reachable"
         curl -m 5 -s icanhazip.com
         ip route show
@@ -254,28 +282,46 @@ export async function validate_wireguard_config( { peer_config, peer_id } ) {
         ip rule
         ip link
 
-        # Create the interface
-        WG_DEBUG=1 wg-quick up ${ config_path }
+        # === CREATE WG INTERFACE ===
+        ip link add "${ interface_id }" type wireguard
+        wg setconf "${ interface_id }" ${ wg_config_path }
+        wg showconf "${ interface_id }"
 
-        # Add the routing table instead of in PostUp
-        ip rule add from ${ address } lookup ${ routing_table }
-        ip route add default dev ${ interface_id } table ${ routing_table } // interface does not exist if wg failed
-        ip rule add from ${ address } lookup ${ routing_table }
+        ip address add "${ address }" dev "${ interface_id }"
+        ip link set mtu "1280" dev "${ interface_id }"
+        ip link set up dev "${ interface_id }"
 
-        # Post connection debug trail
-        curl -m 5 -s --interface ${ interface_id } icanhazip.com
-        wg show
-        ip route show
-        ip addr show ${ interface_id }
+
+        # === POLICY ROUTING ===
+        ip rule add from "${ address.replace( '/32', '' ) }" lookup "${ routing_table }"
+        ip route add default dev "${ interface_id }" table "${ routing_table }"
+
+        echo "Interface ${ interface_id } created with address ${ address } and routing table ${ routing_table }"
+
+
+        # === Post connection debug trail ===
         ping -c1 -W1 ${ endpoint }  > /dev/null 2>&1 && echo "Endpoint ${ endpoint } is reachable" || echo "Endpoint ${ endpoint } is not reachable"
+        curl -m 5 -s icanhazip.com
+        ip route show
+        ip a
+        ip neigh
+        ip rule
+        ip link
+
+        
     `
     const curl_command = `curl -m ${ test_timeout_seconds } --interface ${ interface_id } -s ${ challenge_url }`
     const cleanup_command = `
-        wg-quick down ${ config_path }
-        ip route flush table ${ routing_table }
-        rm -f /tmp/${ config_path }
+        
+        # === CLEANUP PREVIOUS STATE ===
+        ip rule del from "${ address.replace( '/32', '' ) }" lookup "${ routing_table }" || echo "No need to delete rule"
+        ip route flush table "${ routing_table }" || echo "No need to flush table"
+        ip link del "${ interface_id }" || echo "No need to force delete interface"
+
+        rm -f ${ config_path }
+        rm -f ${ wg_config_path }
         ip addr flush dev ${ interface_id } || echo "No need to flush address"
-        ip link delete ${ interface_id } || echo "No need to force delete interface"
+
     `
 
 
