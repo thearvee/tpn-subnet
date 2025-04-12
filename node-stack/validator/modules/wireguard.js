@@ -299,9 +299,10 @@ export async function validate_wireguard_config( { peer_config, peer_id } ) {
 
 
         # === POLICY ROUTING ===
+        ip route add ${ endpoint } via ${ default_route } || echo "No need to add route"
         ip rule add from ${ address.replace( '/32', '' ) } lookup ${ routing_table }
+        ip route add ${ endpoint } via ${ default_route } table ${ routing_table }
         ip route add default dev ${ interface_id } table ${ routing_table }
-        ip route add ${ endpoint } via ${ default_route } table ${ routing_table }  # Direct traffic to the endpoint outside the tunnel
 
         echo "Interface ${ interface_id } created with address ${ address } and routing table ${ routing_table }"
 
@@ -313,7 +314,6 @@ export async function validate_wireguard_config( { peer_config, peer_id } ) {
         curl -m 5 -s --interface ${ interface_id } icanhazip.com
         ip route get ${ endpoint }
         ip route get ${ endpoint } from ${ address.replace( '/32', '' ) }
-        ip route get ${ endpoint } from ${ address.replace( '/32', '' ) } table ${ routing_table }
         ip route show
         ip a
         ip neigh
