@@ -28,7 +28,7 @@ export async function wait_for_ip_free( { ip_address, timeout_s=test_timeout_sec
     let ip_being_processed = cache( `ip_being_processed_${ ip_address }` )
 
     // Check if the ip address is already in use
-    const { stdout, stderr } = await run( `ip addr show | grep ${ ip_address } || true`, { silent: false, verbose: true } )
+    const { stdout, stderr } = await run( `ip addr show | grep ${ ip_address } || true`, { silent: false, verbose: true, log_tag } )
     let ip_taken = stdout?.includes( ip_address )
 
     // If ip not taken, return out
@@ -250,13 +250,16 @@ export async function validate_wireguard_config( { peer_config, peer_id } ) {
         curl -m 5 -s icanhazip.com
         ip route show
         ip a
+        ip neigh
+        ip rule
+        ip link
 
         # Create the interface
         WG_DEBUG=1 wg-quick up ${ config_path }
 
         # Add the routing table instead of in PostUp
         ip rule add from ${ address } lookup ${ routing_table }
-        ip route add default dev ${ interface_id } table ${ routing_table }
+        ip route add default dev ${ interface_id } table ${ routing_table } // interface does not exist if wg failed
         ip rule add from ${ address } lookup ${ routing_table }
 
         # Post connection debug trail
@@ -271,6 +274,7 @@ export async function validate_wireguard_config( { peer_config, peer_id } ) {
         wg-quick down ${ config_path }
         ip route flush table ${ routing_table }
         rm -f /tmp/${ config_path }
+        ip addr flush dev ${ interface_id } || echo "No need to flush address"
         ip link delete ${ interface_id } || echo "No need to force delete interface"
     `
 
@@ -311,14 +315,13 @@ export async function validate_wireguard_config( { peer_config, peer_id } ) {
         const network_setup_commands = split_ml_commands( network_setup_command )
 
         for( const command of network_setup_commands ) {
-            const { error, stderr, stdout } = await run( command, { silent: false, verbose: true, log_tag } )
-            if( error || stderr ) log.info( `${ log_tag } Error running command ${ command }: ${ error } ${ stderr }` )
+            await run( command, { silent: false, verbose: true, log_tag } )
         }
     
 
         // Run the curl command
         const { error, stderr, stdout } = await run( curl_command, { silent: false, verbose: true, log_tag } )
-        if( error || stderr ) throw new Error( `Error running curl command: ${ error } ${ stderr }` )
+        if( error || stderr ) throw new Error( `${ log_tag } Error running curl test for ${ peer_id }` )
         
         // Isolate the json
         const [ json ] = stdout.match( /{.*}/s ) || []
