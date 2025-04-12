@@ -249,9 +249,7 @@ export async function validate_wireguard_config( { peer_config, peer_id } ) {
     // Add a Table = off line if it doesn't exist, add it after the Address line
     if( !peer_config.includes( 'Table = off' ) ) peer_config = peer_config.replace( /Address =.*/, `$&\nTable = off` )
 
-    // Add a keepalive line if it does not exist, add it after the address line
-    if( !peer_config.includes( 'PersistentKeepalive = 25' ) ) peer_config = peer_config.replace( /Address =.*/, `$&\nPersistentKeepalive = 25` )
-    
+
     // Add PostUp and PostDown scripts
     // const PostUp = `
     //     PostUp = echo upsuccess 
@@ -269,7 +267,7 @@ export async function validate_wireguard_config( { peer_config, peer_id } ) {
     // Formulate shell commands used for testing and cleanup
     const write_config_command = `
         # Write the wireguard config to a temporary files
-        
+
         printf "%s" "${ peer_config }" > ${ config_path } && \
         chmod 600 ${ config_path } && \
 
