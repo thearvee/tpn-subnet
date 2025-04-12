@@ -166,7 +166,7 @@ export async function validate_wireguard_config( { peer_config, peer_id } ) {
     const config_path = `/tmp/${ interface_id }.conf`
     let { stdout: default_route } = await run( `ip route show default | awk '/^default/ {print $3}'`, { silent: false, log_tag } )
     default_route = default_route.trim()
-    const namespace_id = `ns_$${ interface_id }`
+    const namespace_id = `ns_${ interface_id }`
     log.info( `${ log_tag } Default route:`, default_route )
 
     // Get the endpoint host from the config
