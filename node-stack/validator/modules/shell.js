@@ -33,10 +33,13 @@ export async function run( command, { silent=false, verbose=false, log_tag=`[ ${
             if( verbose ) log.info( log_tag, { error, stdout, stderr } )
 
             // Log the output
-            if( stdout ) log.info( log_tag, `stdout:`, stdout.trim?.() || stdout )
-            if( stderr ) log.warn( log_tag, `stderr:`, stderr.trim?.() || stderr )
-            if( error && verbose ) log.warn( log_tag, `error:`, error.trim?.() || error )
-            if( error ) log.info( log_tag, `Error running ${ command }:`, error )
+            if( !verbose && stdout ) log.info( log_tag, `stdout:`, stdout.trim?.() || stdout )
+            if( !verbose && stderr ) log.warn( log_tag, `stderr:`, stderr.trim?.() || stderr )
+            if( !verbose && error && verbose ) log.warn( log_tag, `error:`, error.trim?.() || error )
+            if( !verbose && error ) log.info( log_tag, `Error running ${ command }:`, {
+                error,
+                type: typeof error,
+            } )
 
 
             // Resolve with data
