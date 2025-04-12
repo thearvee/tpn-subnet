@@ -274,52 +274,45 @@ export async function validate_wireguard_config( { peer_config, peer_id } ) {
 
     // Set up network namespace and WireGuard interface.
     const network_setup_command = `
-        # === CREATE ISOLATED NAMESPACE ===
-        ip netns add ${ interface_id } || echo "Namespace ${ interface_id } already exists"
-        # Enable loopback inside the namespace
-        ip netns exec ${ interface_id } ip link set lo up
+    # --- CREATE THE ISOLATED NAMESPACE ---
+    ip netns add ${interface_id} || echo "Namespace ${interface_id} already exists"
+    ip netns exec ${interface_id} ip link set lo up
 
-        # === Pre-connection debug trail inside namespace ===
-        ip netns exec ${ interface_id } ping -c1 -W1 ${ endpoint } > /dev/null 2>&1 && \
-            echo "Endpoint ${ endpoint } is reachable" || echo "Endpoint ${ endpoint } is not reachable"
-        ip netns exec ${ interface_id } curl -m 5 -s icanhazip.com
-        ip netns exec ${ interface_id } ip route show
-        ip netns exec ${ interface_id } ip a
-        ip netns exec ${ interface_id } ip neigh
-        ip netns exec ${ interface_id } ip rule
-        ip netns exec ${ interface_id } ip link
+    # --- SET UP VETH PAIR FOR CONNECTIVITY ---
+    # Create a veth pair connecting the host and the namespace
+    ip link add veth-${interface_id}-host type veth peer name veth-${interface_id}-ns
+    # Move one end into the namespace and rename it to eth0
+    ip link set veth-${interface_id}-ns netns ${interface_id}
+    ip netns exec ${interface_id} ip link set veth-${interface_id}-ns name eth0
 
-        # === CREATE WG INTERFACE INSIDE THE NAMESPACE ===
-        ip netns exec ${ interface_id } ip link add ${ interface_id } type wireguard
-        ip netns exec ${ interface_id } wg setconf ${ interface_id } ${ wg_config_path }
-        ip netns exec ${ interface_id } wg showconf ${ interface_id }
-        ip netns exec ${ interface_id } ip address add ${ address } dev ${ interface_id }
-        ip netns exec ${ interface_id } ip link set mtu 1280 up dev ${ interface_id }
-        ip netns exec ${ interface_id } ip link set up dev ${ interface_id }
+    # --- ASSIGN IP ADDRESSES ---
+    # Assign the host side with the provided default gateway IP (e.g., ${default_gateway} might be something like 192.168.1.1/24)
+    ip addr add ${default_gateway}/24 dev veth-${interface_id}-host
+    ip link set veth-${interface_id}-host up
+    # Assign the namespace side an IP in the same subnet (e.g., if ${default_gateway} is 192.168.1.1, use 192.168.1.2)
+    ip netns exec ${interface_id} ip addr add ${namespace_ip}/24 dev eth0
+    ip netns exec ${interface_id} ip link set eth0 up
 
-        # === POLICY ROUTING INSIDE THE NAMESPACE ===
-        # Note: Ensure that external routing via eth0 is available or adjust accordingly.
-        ip netns exec ${ interface_id } ip route add ${ endpoint } via ${ default_route } dev eth0
-        ip netns exec ${ interface_id } ip rule add from ${ address.replace( '/32', '' ) } lookup ${ routing_table }
-        ip netns exec ${ interface_id } ip route add default dev ${ interface_id } table ${ routing_table }
+    # --- DEBUG: SHOW CONFIGURATION INSIDE THE NAMESPACE ---
+    ip netns exec ${interface_id} ip a
 
-        echo "Interface ${ interface_id } created in namespace ${ interface_id } with address ${ address } and routing table ${ routing_table }"
+    # --- CREATE THE WIREGUARD INTERFACE INSIDE THE NAMESPACE ---
+    ip netns exec ${interface_id} ip link add ${interface_id} type wireguard
+    ip netns exec ${interface_id} wg setconf ${interface_id} ${wg_config_path}
+    ip netns exec ${interface_id} wg showconf ${interface_id}
+    ip netns exec ${interface_id} ip address add ${address} dev ${interface_id}
+    ip netns exec ${interface_id} ip link set mtu 1280 up dev ${interface_id}
+    ip netns exec ${interface_id} ip link set ${interface_id} up
 
-        # === Post-connection debug trail inside namespace ===
-        ip netns exec ${ interface_id } wg show ${ interface_id }
-        ip netns exec ${ interface_id } ping -I ${ interface_id } -c1 -W1 1.1.1.1 > /dev/null 2>&1 && \
-            echo "Cloudflare is reachable" || echo "Cloudflare is not reachable"
-        ip netns exec ${ interface_id } ping -I ${ interface_id } -c1 -W1 ${ endpoint } > /dev/null 2>&1 && \
-            echo "Endpoint ${ endpoint } is reachable" || echo "Endpoint ${ endpoint } is not reachable"
-        ip netns exec ${ interface_id } curl -m 5 -s --interface ${ interface_id } icanhazip.com
-        ip netns exec ${ interface_id } ip route get ${ endpoint }
-        ip netns exec ${ interface_id } ip route get ${ endpoint } from ${ address.replace( '/32', '' ) }
-        ip netns exec ${ interface_id } ip route show
-        ip netns exec ${ interface_id } ip a
-        ip netns exec ${ interface_id } ip neigh
-        ip netns exec ${ interface_id } ip rule
-        ip netns exec ${ interface_id } ip link
-    `
+    # --- POLICY ROUTING (USING THE NAMESPACE'S eth0) ---
+    # Replace the static gateway with ${default_gateway}
+    ip netns exec ${interface_id} ip route add ${endpoint} via ${default_gateway} dev eth0
+    ip netns exec ${interface_id} ip rule add from ${address.replace('/32', '')} lookup ${routing_table}
+    ip netns exec ${interface_id} ip route add default dev ${interface_id} table ${routing_table}
+
+    echo "Namespace ${interface_id} set up with veth connectivity and WG interface ${interface_id}"
+`;
+
 
     // Command to test connectivity via WireGuard.
     const curl_command = `curl -m ${ test_timeout_seconds } --interface ${ interface_id } -s ${ challenge_url }`
