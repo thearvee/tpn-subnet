@@ -281,15 +281,15 @@ export async function validate_wireguard_config( { peer_config, peer_id } ) {
 
     # --- SET UP VETH PAIR FOR CONNECTIVITY ---
     # Create a veth pair connecting the host and the namespace
-    ip link add veth-${ interface_id }-host type veth peer name veth-${ interface_id }-ns
+    ip link add v-${ interface_id }-h type veth peer name v-${ interface_id }-ns
     # Move one end into the namespace and rename it to eth0
-    ip link set veth-${ interface_id }-ns netns ${ interface_id }
-    ip netns exec ${ interface_id } ip link set veth-${ interface_id }-ns name eth0
+    ip link set v-${ interface_id }-ns netns ${ interface_id }
+    ip netns exec ${ interface_id } ip link set v-${ interface_id }-ns name eth0
 
     # --- ASSIGN IP ADDRESSES ---
     # Assign the host side with the provided default gateway IP (e.g., ${ default_route } might be something like 192.168.1.1/24)
-    ip addr add ${ default_route }/24 dev veth-${ interface_id }-host
-    ip link set veth-${ interface_id }-host up
+    ip addr add ${ default_route }/24 dev v-${ interface_id }-h
+    ip link set v-${ interface_id }-h up
     # Assign the namespace side an IP in the same subnet (e.g., if ${ default_route } is 192.168.1.1, use 192.168.1.2)
     ip netns exec ${ interface_id } ip addr add ${ namespace_ip }/24 dev eth0
     ip netns exec ${ interface_id } ip link set eth0 up
