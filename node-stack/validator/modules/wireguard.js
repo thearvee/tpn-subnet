@@ -302,12 +302,9 @@ export async function validate_wireguard_config( { peer_config, peer_id } ) {
 
 
         # === POLICY ROUTING ===
-        ip route add ${ endpoint } via ${ default_route }
+        ip route add ${ endpoint } via ${ default_route } dev eth0
         ip rule add from ${ address.replace( '/32', '' ) } lookup ${ routing_table }
-        #ip route add ${ endpoint } via ${ default_route } table ${ routing_table }
-        ip route add default via ${ default_route } table ${ routing_table }
-        ip route add ${ endpoint } via ${ default_route } table ${ routing_table }
-        ip route add ${ endpoint } via ${ default_route } dev eth0 table ${ routing_table }
+        ip route add default dev ${ interface_id } table ${ routing_table }
 
         echo "Interface ${ interface_id } created with address ${ address } and routing table ${ routing_table }"
 
