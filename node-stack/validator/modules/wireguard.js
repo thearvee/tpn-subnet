@@ -248,6 +248,9 @@ export async function validate_wireguard_config( { peer_config, peer_id } ) {
 
     // Add a Table = off line if it doesn't exist, add it after the Address line
     if( !peer_config.includes( 'Table = off' ) ) peer_config = peer_config.replace( /Address =.*/, `$&\nTable = off` )
+
+    // Add a keepalive line if it does not exist, add it after the address line
+    if( !peer_config.includes( 'PersistentKeepalive = 25' ) ) peer_config = peer_config.replace( /Address =.*/, `$&\nPersistentKeepalive = 25` )
     
     // Add PostUp and PostDown scripts
     // const PostUp = `
@@ -302,16 +305,9 @@ export async function validate_wireguard_config( { peer_config, peer_id } ) {
         ip route add ${ endpoint } via ${ default_route }
         ip rule add from ${ address.replace( '/32', '' ) } lookup ${ routing_table }
         #ip route add ${ endpoint } via ${ default_route } table ${ routing_table }
-        ip route add default dev ${ interface_id } table ${ routing_table }
+        ip route add default via ${ default_route } table ${ routing_table }
         ip route add ${ endpoint } via ${ default_route } table ${ routing_table }
-
-        # Enable IP forwarding
-        echo 1 > /proc/sys/net/ipv4/ip_forward
-
-        # Set up NAT for traffic coming from the WireGuard interface
-        iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE
-        iptables -A FORWARD -i ${ interface_id } -j ACCEPT
-        iptables -A FORWARD -o ${ interface_id } -j ACCEPT
+        ip route add ${ endpoint } via ${ default_route } dev eth0 table ${ routing_table }
 
         echo "Interface ${ interface_id } created with address ${ address } and routing table ${ routing_table }"
 
