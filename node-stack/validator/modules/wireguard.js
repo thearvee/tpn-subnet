@@ -291,7 +291,7 @@ export async function validate_wireguard_config( { peer_config, peer_id } ) {
 
 
     // Command to test connectivity via WireGuard.
-    const curl_command = `ip netns exec ${ namespace_id } -m ${ test_timeout_seconds } -s ${ challenge_url }`
+    const curl_command = `ip netns exec ${ namespace_id } curl -m ${ test_timeout_seconds } -s ${ challenge_url }`
 
     // Cleanup commands for the namespace and interfaces.
     const cleanup_command = `
