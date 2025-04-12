@@ -264,18 +264,13 @@ export async function validate_wireguard_config( { peer_config, peer_id } ) {
     // log.info( `${ log_tag } Parsed wireguard config for peer ${ peer_id }:`, peer_config )
 
     // Generate a peer config that only has the properties that wg accepts, 
-    const { stdout: wg_peer_config } = await run( `wg-quick strip ${ config_path }`, { verbose: true, log_tag } )
     const wg_config_path = `/tmp/wg_${ peer_id }.conf`
-    log.info( `${ log_tag } Parsed wireguard config for peer ${ peer_id }:`, {
-        peer_config,
-        wg_peer_config
-    } )
-
+    
     // Formulate shell commands used for testing and cleanup
     const write_config_command = `
         # Write the wireguard config to a temporary files
         printf "%s" "${ peer_config }" > ${ config_path } && \
-        printf "%s" "${ wg_peer_config }" > ${ wg_config_path } && \
+        wg-quick strip ${ config_path } > ${ wg_config_path } && \
         # Chmod the files
         chmod 600 ${ config_path }
         chmod 600 ${ wg_config_path }
