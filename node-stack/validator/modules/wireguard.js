@@ -164,6 +164,8 @@ export async function validate_wireguard_config( { peer_config, peer_id } ) {
     const interface_id = `tpn${ peer_id }${ random_string_of_length( 9 ) }`
     const routing_table = random_number_between( 255, 2**32 - 1 ) // Up to 255 is used by the system
     const config_path = `/tmp/${ interface_id }.conf`
+    const { stdout: default_route } = await run( `ip route show default | awk '/^default/ {print $3}'`, { silent: false, log_tag } )
+    log.info( `${ log_tag } Default route:`, default_route )
 
     // Get the endpoint host from the config
     let { 1: endpoint } = peer_config.match( /Endpoint ?= ?(.*)/ ) || []
@@ -287,29 +289,31 @@ export async function validate_wireguard_config( { peer_config, peer_id } ) {
         ip link
 
         # === CREATE WG INTERFACE ===
-        ip link add "${ interface_id }" type wireguard
-        wg setconf "${ interface_id }" ${ wg_config_path }
-        wg showconf "${ interface_id }"
+        ip link add ${ interface_id } type wireguard
+        wg setconf ${ interface_id } ${ wg_config_path }
+        wg showconf ${ interface_id }
 
-        ip address add "${ address }" dev "${ interface_id }"
-        ip link set mtu "1280" dev "${ interface_id }"
+        ip address add ${ address } dev ${ interface_id }
+        ip link set mtu 1280 up dev ${ interface_id }
         ip link set up dev "${ interface_id }"
 
 
         # === POLICY ROUTING ===
-        ip rule add from "${ address.replace( '/32', '' ) }" lookup "${ routing_table }"
-        ip route add default dev "${ interface_id }" table "${ routing_table }"
-        ip route add ${ endpoint } via 172.18.0.1 table ${ routing_table }  # Direct traffic to the endpoint outside the tunnel
+        ip rule add from ${ address.replace( '/32', '' ) } lookup ${ routing_table }
+        ip route add default dev ${ interface_id } table ${ routing_table }
+        ip route add ${ endpoint } via ${ default_route } table ${ routing_table }  # Direct traffic to the endpoint outside the tunnel
 
         echo "Interface ${ interface_id } created with address ${ address } and routing table ${ routing_table }"
 
 
         # === Post connection debug trail ===
-        wg show "${ interface_id }"
+        wg show ${ interface_id }
         ping -I ${ interface_id } -c1 -W1 1.1.1.1  > /dev/null 2>&1 && echo "Cloudflare is reachable" || echo "Cloudflare is not reachable"
         ping -I ${ interface_id } -c1 -W1 ${ endpoint }  > /dev/null 2>&1 && echo "Endpoint ${ endpoint } is reachable" || echo "Endpoint ${ endpoint } is not reachable"
         curl -m 5 -s --interface ${ interface_id } icanhazip.com
         ip route get ${ endpoint }
+        ip route get ${ endpoint } from ${ address.replace( '/32', '' ) }
+        ip route get ${ endpoint } from ${ address.replace( '/32', '' ) } table ${ routing_table }
         ip route show
         ip a
         ip neigh
