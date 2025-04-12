@@ -260,76 +260,79 @@ export async function validate_wireguard_config( { peer_config, peer_id } ) {
     // if( !peer_config.includes( PostUp ) ) peer_config = peer_config.replace( /Address =.*/, `$&\n${ PostUp }` )
     // if( !peer_config.includes( PostDown ) ) peer_config = peer_config.replace( /Address =.*/, `$&\n${ PostDown }` )
     // log.info( `${ log_tag } Parsed wireguard config for peer ${ peer_id }:`, peer_config )
-
-    // Generate a peer config that only has the properties that wg accepts, 
+    // Path for the WireGuard configuration file.
     const wg_config_path = `/tmp/wg_${ peer_id }.conf`
-    
-    // Formulate shell commands used for testing and cleanup
-    const write_config_command = `
-        # Write the wireguard config to a temporary files
 
+    // Write the config file and set permissions.
+    const write_config_command = `
+        # Write the WireGuard config to a temporary file
         printf "%s" "${ peer_config }" > ${ config_path } && \
         chmod 600 ${ config_path } && \
-
         wg-quick strip ${ config_path } > ${ wg_config_path } && \
         chmod 600 ${ wg_config_path }
     `
+
+    // Set up network namespace and WireGuard interface.
     const network_setup_command = `
+        # === CREATE ISOLATED NAMESPACE ===
+        ip netns add ${ interface_id } || echo "Namespace ${ interface_id } already exists"
+        # Enable loopback inside the namespace
+        ip netns exec ${ interface_id } ip link set lo up
 
-        # === Pre connection debug trail ===
-        ping -c1 -W1 ${ endpoint }  > /dev/null 2>&1 && echo "Endpoint ${ endpoint } is reachable" || echo "Endpoint ${ endpoint } is not reachable"
-        curl -m 5 -s icanhazip.com
-        ip route show
-        ip a
-        ip neigh
-        ip rule
-        ip link
+        # === Pre-connection debug trail inside namespace ===
+        ip netns exec ${ interface_id } ping -c1 -W1 ${ endpoint } > /dev/null 2>&1 && \
+            echo "Endpoint ${ endpoint } is reachable" || echo "Endpoint ${ endpoint } is not reachable"
+        ip netns exec ${ interface_id } curl -m 5 -s icanhazip.com
+        ip netns exec ${ interface_id } ip route show
+        ip netns exec ${ interface_id } ip a
+        ip netns exec ${ interface_id } ip neigh
+        ip netns exec ${ interface_id } ip rule
+        ip netns exec ${ interface_id } ip link
 
-        # === CREATE WG INTERFACE ===
-        ip link add ${ interface_id } type wireguard
-        wg setconf ${ interface_id } ${ wg_config_path }
-        wg showconf ${ interface_id }
+        # === CREATE WG INTERFACE INSIDE THE NAMESPACE ===
+        ip netns exec ${ interface_id } ip link add ${ interface_id } type wireguard
+        ip netns exec ${ interface_id } wg setconf ${ interface_id } ${ wg_config_path }
+        ip netns exec ${ interface_id } wg showconf ${ interface_id }
+        ip netns exec ${ interface_id } ip address add ${ address } dev ${ interface_id }
+        ip netns exec ${ interface_id } ip link set mtu 1280 up dev ${ interface_id }
+        ip netns exec ${ interface_id } ip link set up dev ${ interface_id }
 
-        ip address add ${ address } dev ${ interface_id }
-        ip link set mtu 1280 up dev ${ interface_id }
-        ip link set up dev "${ interface_id }"
+        # === POLICY ROUTING INSIDE THE NAMESPACE ===
+        # Note: Ensure that external routing via eth0 is available or adjust accordingly.
+        ip netns exec ${ interface_id } ip route add ${ endpoint } via ${ default_route } dev eth0
+        ip netns exec ${ interface_id } ip rule add from ${ address.replace( '/32', '' ) } lookup ${ routing_table }
+        ip netns exec ${ interface_id } ip route add default dev ${ interface_id } table ${ routing_table }
 
+        echo "Interface ${ interface_id } created in namespace ${ interface_id } with address ${ address } and routing table ${ routing_table }"
 
-        # === POLICY ROUTING ===
-        ip route add ${ endpoint } via ${ default_route } dev eth0
-        ip rule add from ${ address.replace( '/32', '' ) } lookup ${ routing_table }
-        ip route add default dev ${ interface_id } table ${ routing_table }
-
-        echo "Interface ${ interface_id } created with address ${ address } and routing table ${ routing_table }"
-
-
-        # === Post connection debug trail ===
-        wg show ${ interface_id }
-        ping -I ${ interface_id } -c1 -W1 1.1.1.1  > /dev/null 2>&1 && echo "Cloudflare is reachable" || echo "Cloudflare is not reachable"
-        ping -I ${ interface_id } -c1 -W1 ${ endpoint }  > /dev/null 2>&1 && echo "Endpoint ${ endpoint } is reachable" || echo "Endpoint ${ endpoint } is not reachable"
-        curl -m 5 -s --interface ${ interface_id } icanhazip.com
-        ip route get ${ endpoint }
-        ip route get ${ endpoint } from ${ address.replace( '/32', '' ) }
-        ip route show
-        ip a
-        ip neigh
-        ip rule
-        ip link
-
-        
+        # === Post-connection debug trail inside namespace ===
+        ip netns exec ${ interface_id } wg show ${ interface_id }
+        ip netns exec ${ interface_id } ping -I ${ interface_id } -c1 -W1 1.1.1.1 > /dev/null 2>&1 && \
+            echo "Cloudflare is reachable" || echo "Cloudflare is not reachable"
+        ip netns exec ${ interface_id } ping -I ${ interface_id } -c1 -W1 ${ endpoint } > /dev/null 2>&1 && \
+            echo "Endpoint ${ endpoint } is reachable" || echo "Endpoint ${ endpoint } is not reachable"
+        ip netns exec ${ interface_id } curl -m 5 -s --interface ${ interface_id } icanhazip.com
+        ip netns exec ${ interface_id } ip route get ${ endpoint }
+        ip netns exec ${ interface_id } ip route get ${ endpoint } from ${ address.replace( '/32', '' ) }
+        ip netns exec ${ interface_id } ip route show
+        ip netns exec ${ interface_id } ip a
+        ip netns exec ${ interface_id } ip neigh
+        ip netns exec ${ interface_id } ip rule
+        ip netns exec ${ interface_id } ip link
     `
-    const curl_command = `curl -m ${ test_timeout_seconds } --interface ${ interface_id } -s ${ challenge_url }`
-    const cleanup_command = `
-        
-        # === CLEANUP PREVIOUS STATE ===
-        ip rule del from "${ address.replace( '/32', '' ) }" lookup "${ routing_table }" || echo "No need to delete rule"
-        ip route flush table "${ routing_table }" || echo "No need to flush table"
-        ip link del "${ interface_id }" || echo "No need to force delete interface"
 
+    // Command to test connectivity via WireGuard.
+    const curl_command = `curl -m ${ test_timeout_seconds } --interface ${ interface_id } -s ${ challenge_url }`
+
+    // Cleanup commands for the namespace and interfaces.
+    const cleanup_command = `
+        # === CLEANUP PREVIOUS STATE INSIDE THE NAMESPACE ===
+        ip netns exec ${ interface_id } ip rule del from "${ address.replace( '/32', '' ) }" lookup "${ routing_table }" || echo "No rule to delete"
+        ip netns exec ${ interface_id } ip route flush table "${ routing_table }" || echo "No table to flush"
+        ip netns exec ${ interface_id } ip link del "${ interface_id }" || echo "No interface to delete"
         rm -f ${ config_path }
         rm -f ${ wg_config_path }
-        ip addr flush dev ${ interface_id } || echo "No need to flush address"
-
+        ip netns del ${ interface_id } || echo "Namespace ${ interface_id } deleted"
     `
 
 
