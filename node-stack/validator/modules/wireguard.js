@@ -249,11 +249,12 @@ export async function validate_wireguard_config( { peer_config, peer_id } ) {
         ping -c1 -W1 ${ endpoint }  > /dev/null 2>&1 && echo "Endpoint ${ endpoint } is reachable" || echo "Endpoint ${ endpoint } is not reachable"
         curl -m 5 -s icanhazip.com
         ip route show
+        ip a
 
         # Create the interface
         WG_DEBUG=1 wg-quick up ${ config_path }
 
-        # Add the routing table
+        # Add the routing table instead of in PostUp
         ip rule add from ${ address } lookup ${ routing_table }
         ip route add default dev ${ interface_id } table ${ routing_table }
         ip rule add from ${ address } lookup ${ routing_table }
@@ -310,7 +311,7 @@ export async function validate_wireguard_config( { peer_config, peer_id } ) {
         const network_setup_commands = split_ml_commands( network_setup_command )
 
         for( const command of network_setup_commands ) {
-            const { error, stderr, stdout } = await run( command, { log_tag } )
+            const { error, stderr, stdout } = await run( command, { silent: false, verbose: true, log_tag } )
             if( error || stderr ) log.info( `${ log_tag } Error running command ${ command }: ${ error } ${ stderr }` )
         }
     
