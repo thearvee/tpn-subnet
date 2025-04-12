@@ -263,8 +263,8 @@ export async function validate_wireguard_config( { peer_config, peer_id } ) {
     // if( !peer_config.includes( PostDown ) ) peer_config = peer_config.replace( /Address =.*/, `$&\n${ PostDown }` )
     // log.info( `${ log_tag } Parsed wireguard config for peer ${ peer_id }:`, peer_config )
 
-    // Generate a peer config that only has the wg properties and not the interface block
-    const wg_peer_config = `[Peer]\n${ peer_config.split( '[Peer]' )[1].replace( '[Interface]', '' ).trim() }\n`
+    // Generate a peer config that only has the properties that wg accepts, 
+    const { stdout: wg_peer_config } = await run( `wg-quick strip ${ config_path }`, { verbose: true, log_tag } )
     const wg_config_path = `/tmp/wg_${ peer_id }.conf`
     log.info( `${ log_tag } Parsed wireguard config for peer ${ peer_id }:`, {
         peer_config,
