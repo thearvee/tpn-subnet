@@ -20,7 +20,7 @@ export async function run( command, { silent=false, verbose=false, log_tag=`[ ${
     return new Promise( ( resolve ) => {
 
 
-        if( !silent ) log.info( log_tag, `exec:`, command )
+        if( !silent && !verbose ) log.info( log_tag, `exec:`, command )
         exec( command, ( error, stdout, stderr ) => {
 
             if( !stderr?.length ) stderr = null
@@ -30,16 +30,12 @@ export async function run( command, { silent=false, verbose=false, log_tag=`[ ${
             if( silent ) return resolve( { error, stdout, stderr } )
             
             // If verbose, log all
-            if( verbose ) log.info( log_tag, { error, stdout, stderr } )
+            if( verbose ) log.info( log_tag, { command, error, stdout, stderr } )
 
             // Log the output
             if( !verbose && stdout ) log.info( log_tag, `stdout:`, stdout.trim?.() || stdout )
             if( !verbose && stderr ) log.warn( log_tag, `stderr:`, stderr.trim?.() || stderr )
-            if( !verbose && error && verbose ) log.warn( log_tag, `error:`, error.trim?.() || error )
-            if( !verbose && error ) log.info( log_tag, `Error running ${ command }:`, {
-                error,
-                type: typeof error,
-            } )
+            if( !verbose && error && !stderr ) log.info( log_tag, `Error running ${ command }:`, error )
 
 
             // Resolve with data
