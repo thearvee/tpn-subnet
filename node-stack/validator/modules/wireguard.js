@@ -269,10 +269,11 @@ export async function validate_wireguard_config( { peer_config, peer_id } ) {
     // Formulate shell commands used for testing and cleanup
     const write_config_command = `
         # Write the wireguard config to a temporary files
+        
         printf "%s" "${ peer_config }" > ${ config_path } && \
+        chmod 600 ${ config_path } && \
+
         wg-quick strip ${ config_path } > ${ wg_config_path } && \
-        # Chmod the files
-        chmod 600 ${ config_path }
         chmod 600 ${ wg_config_path }
     `
     const network_setup_command = `
