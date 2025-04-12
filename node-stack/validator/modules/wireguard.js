@@ -301,6 +301,7 @@ export async function validate_wireguard_config( { peer_config, peer_id } ) {
 
         # === Post connection debug trail ===
         wg show "${ interface_id }"
+        ping -I ${ interface_id } -c1 -W1 1.1.1.1  > /dev/null 2>&1 && echo "Cloudflare is reachable" || echo "Cloudflare is not reachable"
         ping -I ${ interface_id } -c1 -W1 ${ endpoint }  > /dev/null 2>&1 && echo "Endpoint ${ endpoint } is reachable" || echo "Endpoint ${ endpoint } is not reachable"
         curl -m 5 -s --interface ${ interface_id } icanhazip.com
         ip route get ${ endpoint }
