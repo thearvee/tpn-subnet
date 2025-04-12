@@ -275,6 +275,8 @@ export async function validate_wireguard_config( { peer_config, peer_id } ) {
 
     // Set up network namespace and WireGuard interface.
     const network_setup_command = `
+
+        curl -m 5 -s icanhazip.com
         ip netns add ${ namespace_id }
         ip netns list
         ip -n ${ namespace_id } link set lo up
@@ -286,6 +288,7 @@ export async function validate_wireguard_config( { peer_config, peer_id } ) {
         ip -n ${ namespace_id } link set ${ interface_id } up
         ip -n ${ namespace_id } route add default dev ${ interface_id }
         mkdir -p /etc/netns/${ namespace_id }/ && echo "nameserver 1.1.1.1" > /etc/netns/${ namespace_id }/resolv.conf
+        ip netns exec ${ namespace_id } curl -m 5 -s icanhazip.com
 
     `
 
@@ -295,14 +298,11 @@ export async function validate_wireguard_config( { peer_config, peer_id } ) {
 
     // Cleanup commands for the namespace and interfaces.
     const cleanup_command = `
-    # === CLEANUP PREVIOUS STATE INSIDE THE NAMESPACE ===
-    ip netns exec ${ interface_id } ip rule del from "${ address.replace( '/32', '' ) }" lookup "${ routing_table }" || echo "No rule to delete"
-    ip netns exec ${ interface_id } ip route flush table "${ routing_table }" || echo "No table to flush"
-    ip netns exec ${ interface_id } ip link del "${ interface_id }" || echo "No interface to delete"
-    rm -f ${ config_path }
-    rm -f ${ wg_config_path }
-    ip netns del ${ interface_id } || echo "Namespace ${ interface_id } deleted"
-`
+        ip netns del ${ namespace_id } || echo "Namespace ${ namespace_id } does not exist"
+        ip link del ${ interface_id } || echo "Interface ${ interface_id } does not exist"
+        rm -f ${ config_path } || echo "Config file ${ config_path } does not exist"
+        rm -f ${ wg_config_path } || echo "Config file ${ wg_config_path } does not exist"
+    `
 
 
     // Formulate required functions
