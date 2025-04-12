@@ -166,6 +166,7 @@ export async function validate_wireguard_config( { peer_config, peer_id } ) {
     const config_path = `/tmp/${ interface_id }.conf`
     let { stdout: default_route } = await run( `ip route show default | awk '/^default/ {print $3}'`, { silent: false, log_tag } )
     default_route = default_route.trim()
+    const namespace_ip = default_route.split( '.' ).slice( 0, -1 ).join( '.' ) + `.${ random_number_between( 2, 254 ) }`
     log.info( `${ log_tag } Default route:`, default_route )
 
     // Get the endpoint host from the config
@@ -265,53 +266,53 @@ export async function validate_wireguard_config( { peer_config, peer_id } ) {
 
     // Write the config file and set permissions.
     const write_config_command = `
-        # Write the WireGuard config to a temporary file
-        printf "%s" "${ peer_config }" > ${ config_path } && \
-        chmod 600 ${ config_path } && \
-        wg-quick strip ${ config_path } > ${ wg_config_path } && \
-        chmod 600 ${ wg_config_path }
-    `
+    # Write the WireGuard config to a temporary file
+    printf "%s" "${ peer_config }" > ${ config_path } && \
+    chmod 600 ${ config_path } && \
+    wg-quick strip ${ config_path } > ${ wg_config_path } && \
+    chmod 600 ${ wg_config_path }
+`
 
     // Set up network namespace and WireGuard interface.
     const network_setup_command = `
     # --- CREATE THE ISOLATED NAMESPACE ---
-    ip netns add ${interface_id} || echo "Namespace ${interface_id} already exists"
-    ip netns exec ${interface_id} ip link set lo up
+    ip netns add ${ interface_id } || echo "Namespace ${ interface_id } already exists"
+    ip netns exec ${ interface_id } ip link set lo up
 
     # --- SET UP VETH PAIR FOR CONNECTIVITY ---
     # Create a veth pair connecting the host and the namespace
-    ip link add veth-${interface_id}-host type veth peer name veth-${interface_id}-ns
+    ip link add veth-${ interface_id }-host type veth peer name veth-${ interface_id }-ns
     # Move one end into the namespace and rename it to eth0
-    ip link set veth-${interface_id}-ns netns ${interface_id}
-    ip netns exec ${interface_id} ip link set veth-${interface_id}-ns name eth0
+    ip link set veth-${ interface_id }-ns netns ${ interface_id }
+    ip netns exec ${ interface_id } ip link set veth-${ interface_id }-ns name eth0
 
     # --- ASSIGN IP ADDRESSES ---
-    # Assign the host side with the provided default gateway IP (e.g., ${default_gateway} might be something like 192.168.1.1/24)
-    ip addr add ${default_gateway}/24 dev veth-${interface_id}-host
-    ip link set veth-${interface_id}-host up
-    # Assign the namespace side an IP in the same subnet (e.g., if ${default_gateway} is 192.168.1.1, use 192.168.1.2)
-    ip netns exec ${interface_id} ip addr add ${namespace_ip}/24 dev eth0
-    ip netns exec ${interface_id} ip link set eth0 up
+    # Assign the host side with the provided default gateway IP (e.g., ${ default_route } might be something like 192.168.1.1/24)
+    ip addr add ${ default_route }/24 dev veth-${ interface_id }-host
+    ip link set veth-${ interface_id }-host up
+    # Assign the namespace side an IP in the same subnet (e.g., if ${ default_route } is 192.168.1.1, use 192.168.1.2)
+    ip netns exec ${ interface_id } ip addr add ${ namespace_ip }/24 dev eth0
+    ip netns exec ${ interface_id } ip link set eth0 up
 
     # --- DEBUG: SHOW CONFIGURATION INSIDE THE NAMESPACE ---
-    ip netns exec ${interface_id} ip a
+    ip netns exec ${ interface_id } ip a
 
     # --- CREATE THE WIREGUARD INTERFACE INSIDE THE NAMESPACE ---
-    ip netns exec ${interface_id} ip link add ${interface_id} type wireguard
-    ip netns exec ${interface_id} wg setconf ${interface_id} ${wg_config_path}
-    ip netns exec ${interface_id} wg showconf ${interface_id}
-    ip netns exec ${interface_id} ip address add ${address} dev ${interface_id}
-    ip netns exec ${interface_id} ip link set mtu 1280 up dev ${interface_id}
-    ip netns exec ${interface_id} ip link set ${interface_id} up
+    ip netns exec ${ interface_id } ip link add ${ interface_id } type wireguard
+    ip netns exec ${ interface_id } wg setconf ${ interface_id } ${ wg_config_path }
+    ip netns exec ${ interface_id } wg showconf ${ interface_id }
+    ip netns exec ${ interface_id } ip address add ${ address } dev ${ interface_id }
+    ip netns exec ${ interface_id } ip link set mtu 1280 up dev ${ interface_id }
+    ip netns exec ${ interface_id } ip link set ${ interface_id } up
 
     # --- POLICY ROUTING (USING THE NAMESPACE'S eth0) ---
-    # Replace the static gateway with ${default_gateway}
-    ip netns exec ${interface_id} ip route add ${endpoint} via ${default_gateway} dev eth0
-    ip netns exec ${interface_id} ip rule add from ${address.replace('/32', '')} lookup ${routing_table}
-    ip netns exec ${interface_id} ip route add default dev ${interface_id} table ${routing_table}
+    # Replace the static gateway with ${ default_route }
+    ip netns exec ${ interface_id } ip route add ${ endpoint } via ${ default_route } dev eth0
+    ip netns exec ${ interface_id } ip rule add from ${ address.replace( '/32', '' ) } lookup ${ routing_table }
+    ip netns exec ${ interface_id } ip route add default dev ${ interface_id } table ${ routing_table }
 
-    echo "Namespace ${interface_id} set up with veth connectivity and WG interface ${interface_id}"
-`;
+    echo "Namespace ${ interface_id } set up with veth connectivity and WG interface ${ interface_id }"
+`
 
 
     // Command to test connectivity via WireGuard.
@@ -319,14 +320,14 @@ export async function validate_wireguard_config( { peer_config, peer_id } ) {
 
     // Cleanup commands for the namespace and interfaces.
     const cleanup_command = `
-        # === CLEANUP PREVIOUS STATE INSIDE THE NAMESPACE ===
-        ip netns exec ${ interface_id } ip rule del from "${ address.replace( '/32', '' ) }" lookup "${ routing_table }" || echo "No rule to delete"
-        ip netns exec ${ interface_id } ip route flush table "${ routing_table }" || echo "No table to flush"
-        ip netns exec ${ interface_id } ip link del "${ interface_id }" || echo "No interface to delete"
-        rm -f ${ config_path }
-        rm -f ${ wg_config_path }
-        ip netns del ${ interface_id } || echo "Namespace ${ interface_id } deleted"
-    `
+    # === CLEANUP PREVIOUS STATE INSIDE THE NAMESPACE ===
+    ip netns exec ${ interface_id } ip rule del from "${ address.replace( '/32', '' ) }" lookup "${ routing_table }" || echo "No rule to delete"
+    ip netns exec ${ interface_id } ip route flush table "${ routing_table }" || echo "No table to flush"
+    ip netns exec ${ interface_id } ip link del "${ interface_id }" || echo "No interface to delete"
+    rm -f ${ config_path }
+    rm -f ${ wg_config_path }
+    ip netns del ${ interface_id } || echo "Namespace ${ interface_id } deleted"
+`
 
 
     // Formulate required functions
