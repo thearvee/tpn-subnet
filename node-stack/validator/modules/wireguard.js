@@ -227,12 +227,10 @@ export async function validate_wireguard_config( { peer_config, peer_id } ) {
     
     // Add PostUp and PostDown scripts
     const PostUp = `
-        PostUp = ip rule add from ${ address } lookup ${ routing_table }; \
-        ip route add default dev ${ interface_id } table ${ routing_table }; \
-        ip rule add from ${ address } lookup ${ routing_table }; 
+        PostUp = echo upsuccess 
     `.trim()
     const PostDown = `
-        PostDown = ip route flush table ${ routing_table };
+        PostDown = echo downsuccess
     `.trim()
     if( !peer_config.includes( PostUp ) ) peer_config = peer_config.replace( /Address =.*/, `$&\n${ PostUp }` )
     if( !peer_config.includes( PostDown ) ) peer_config = peer_config.replace( /Address =.*/, `$&\n${ PostDown }` )
@@ -246,10 +244,21 @@ export async function validate_wireguard_config( { peer_config, peer_id } ) {
         chmod 600 ${ config_path }
     `
     const network_setup_command = `
+
+        # Pre connection debug trail
         ping -c1 -W1 ${ endpoint }  > /dev/null 2>&1 && echo "Endpoint ${ endpoint } is reachable" || echo "Endpoint ${ endpoint } is not reachable"
         curl -m 5 -s icanhazip.com
         ip route show
+
+        # Create the interface
         WG_DEBUG=1 wg-quick up ${ config_path }
+
+        # Add the routing table
+        ip rule add from ${ address } lookup ${ routing_table }
+        ip route add default dev ${ interface_id } table ${ routing_table }
+        ip rule add from ${ address } lookup ${ routing_table }
+
+        # Post connection debug trail
         curl -m 5 -s --interface ${ interface_id } icanhazip.com
         wg show
         ip route show
@@ -258,8 +267,8 @@ export async function validate_wireguard_config( { peer_config, peer_id } ) {
     `
     const curl_command = `curl -m ${ test_timeout_seconds } --interface ${ interface_id } -s ${ challenge_url }`
     const cleanup_command = `
-        ip route flush table ${ routing_table }
         wg-quick down ${ config_path }
+        ip route flush table ${ routing_table }
         rm -f /tmp/${ config_path }
         ip link delete ${ interface_id } || echo "No need to force delete interface"
     `
@@ -327,7 +336,7 @@ export async function validate_wireguard_config( { peer_config, peer_id } ) {
     try {
 
         // Do pre-emptive cleanup in case a previous run messed up
-        log.info( `\n ${ log_tag } 🧹 Running pre-cleanup commands for peer ${ peer_id }}` )
+        log.info( `\n ${ log_tag } 🧹 Running pre-cleanup commands for peer ${ peer_id }` )
         await run_cleanup( { silent: true, log_tag } )
 
         // Solve the challenge from the miner ip
