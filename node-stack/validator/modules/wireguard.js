@@ -279,7 +279,7 @@ export async function validate_wireguard_config( { peer_config, peer_id } ) {
         ip netns list
         ip -n ${ namespace_id } link set lo up
         ip link add ${ interface_id } type wireguard
-        ip link set tun0 netns ${ namespace_id }
+        ip link set ${ interface_id } netns ${ namespace_id }
         ip netns exec ${ namespace_id } wg setconf ${ interface_id } ${ wg_config_path }
 
         ip -n ${ namespace_id } a add ${ address } dev ${ interface_id }
