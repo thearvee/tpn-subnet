@@ -261,8 +261,7 @@ export async function validate_wireguard_config( { peer_config, peer_id } ) {
     // log.info( `${ log_tag } Parsed wireguard config for peer ${ peer_id }:`, peer_config )
 
     // Generate a peer config that only has the wg properties and not the interface block
-    peer_config += `\n`
-    const wg_peer_config = `[Peer]\n${ peer_config.split( '[Peer]' )[1].trim() }`
+    const wg_peer_config = `[Peer]\n${ peer_config.split( '[Peer]' )[1].replace( '[Interface]', '' ).trim() }\n`
     const wg_config_path = `/tmp/wg_${ peer_id }.conf`
     log.info( `${ log_tag } Parsed wireguard config for peer ${ peer_id }:`, {
         peer_config,
