@@ -164,7 +164,8 @@ export async function validate_wireguard_config( { peer_config, peer_id } ) {
     const interface_id = `tpn${ peer_id }${ random_string_of_length( 9 ) }`
     const routing_table = random_number_between( 255, 2**32 - 1 ) // Up to 255 is used by the system
     const config_path = `/tmp/${ interface_id }.conf`
-    const { stdout: default_route } = await run( `ip route show default | awk '/^default/ {print $3}'`, { silent: false, log_tag } )
+    let { stdout: default_route } = await run( `ip route show default | awk '/^default/ {print $3}'`, { silent: false, log_tag } )
+    default_route = default_route.trim()
     log.info( `${ log_tag } Default route:`, default_route )
 
     // Get the endpoint host from the config
@@ -310,8 +311,8 @@ export async function validate_wireguard_config( { peer_config, peer_id } ) {
 
         # Set up NAT for traffic coming from the WireGuard interface
         iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE
-        iptables -A FORWARD -i ${interface_id} -j ACCEPT
-        iptables -A FORWARD -o ${interface_id} -j ACCEPT
+        iptables -A FORWARD -i ${ interface_id } -j ACCEPT
+        iptables -A FORWARD -o ${ interface_id } -j ACCEPT
 
         echo "Interface ${ interface_id } created with address ${ address } and routing table ${ routing_table }"
 
