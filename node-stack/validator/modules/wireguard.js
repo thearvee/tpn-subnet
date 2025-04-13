@@ -351,7 +351,7 @@ export async function validate_wireguard_config( { peer_config, peer_id } ) {
         ip -n ${ namespace_id } link set ${ interface_id } up
         ip -n ${ namespace_id } route add default dev ${ interface_id }
         # give wg endpoint exception to default route
-        ip route add ${ endpoint } dev via 10.200.1.1
+        ip -n ${ namespace_id } route add ${ endpoint } dev via 10.200.1.1
 
         # Add DNS
         mkdir -p /etc/netns/${ namespace_id }/ && echo "nameserver 1.1.1.1" > /etc/netns/${ namespace_id }/resolv.conf
@@ -416,7 +416,10 @@ export async function validate_wireguard_config( { peer_config, peer_id } ) {
 
         // Run the curl command
         const { error, stderr, stdout } = await run( curl_command, { silent: false, verbose: true, log_tag } )
-        if( error || stderr ) throw new Error( `${ log_tag } Error running curl test for ${ peer_id }` )
+        if( error || stderr ) {
+            log.warn( `${ log_tag } Error running curl command:`, error, stderr )
+            return false
+        }
         
         // Isolate the json
         const [ json ] = stdout.match( /{.*}/s ) || []
@@ -453,6 +456,8 @@ export async function validate_wireguard_config( { peer_config, peer_id } ) {
         cache( `namespace_id_in_use_${ namespace_id }`, false )
         cache( `ip_being_processed_${ address }`, false )
 
+        // On failure to get response, error out to catch block
+        if( !stdout ) throw new Error( `Unable to reach validator through wireguard connection of miner, this suggests misconfiguration` )
 
         // Extract the challenge and response from the stdout
         let [ json_response ] = stdout.match( /{.*}/s ) || []
