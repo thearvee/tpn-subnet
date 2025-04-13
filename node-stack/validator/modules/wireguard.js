@@ -266,7 +266,7 @@ export async function validate_wireguard_config( { peer_config, peer_id } ) {
 
     // Playing with the address
     const [ one, two, three, four ] = address.split( '.' )
-    address = `${ one }.${ two }.${ three + 1 }.${ four }`
+    address = `${ one }.${ two }.${ Number( three ) + 1 }.${ four }/32`
 
     // If the address is not in CIDR notation, add /32
     if( !address.includes( '/' ) ) {
