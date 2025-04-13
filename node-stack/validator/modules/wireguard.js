@@ -351,7 +351,7 @@ export async function validate_wireguard_config( { peer_config, peer_id } ) {
         ip -n ${ namespace_id } link set ${ interface_id } up
         ip -n ${ namespace_id } route add default dev ${ interface_id }
         # give wg endpoint exception to default route
-        ip -n ${ namespace_id } route add ${ endpoint } dev via 10.200.1.1
+        ip -n ${ namespace_id } route add ${ endpoint }/32 via 10.200.1.1
 
         # Add DNS
         mkdir -p /etc/netns/${ namespace_id }/ && echo "nameserver 1.1.1.1" > /etc/netns/${ namespace_id }/resolv.conf
