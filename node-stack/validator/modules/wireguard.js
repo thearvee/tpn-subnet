@@ -162,7 +162,7 @@ export async function validate_wireguard_config( { peer_config, peer_id } ) {
 
     // Run specific variables
     let interface_id = `tpn${ peer_id }${ random_string_of_length( 5 ) }`
-    let routing_table = random_number_between( 255, 2**32 - 1 ) // Up to 255 is used by the system
+    let veth_id = random_string_of_length( 5 )
     const config_path = `/tmp/${ interface_id }.conf`
     let { stdout: default_route } = await run( `ip route show default | awk '/^default/ {print $3}'`, { silent: false, log_tag } )
     default_route = default_route.trim()
@@ -171,25 +171,25 @@ export async function validate_wireguard_config( { peer_config, peer_id } ) {
 
     // Make sure there are no duplicates
     let interface_id_in_use = cache( `interface_id_in_use_${ interface_id }` )
-    let routing_table_in_use = cache( `routing_table_in_use_${ routing_table }` )
+    let veth_id_in_use = cache( `veth_id_in_use_${ veth_id }` )
     let namespace_id_in_use = cache( `namespace_id_in_use_${ namespace_id }` )
-    while( interface_id_in_use || routing_table_in_use || namespace_id_in_use ) {
+    while( interface_id_in_use || veth_id_in_use || namespace_id_in_use ) {
         log.info( `${ log_tag } Collision in ids found: `, {
             interface_id_in_use,
-            routing_table_in_use,
+            veth_id_in_use,
             namespace_id_in_use
         } )
         if( interface_id_in_use ) interface_id = `tpn${ peer_id }${ random_string_of_length( 5 ) }`
-        if( routing_table_in_use ) routing_table = random_number_between( 255, 2**32 - 1 )
+        if( veth_id_in_use ) veth_id = random_number_between( 255, 2**32 - 1 )
         if( namespace_id_in_use ) namespace_id = `ns_${ interface_id }`
         interface_id_in_use = cache( `interface_id_in_use_${ interface_id }` )
-        routing_table_in_use = cache( `routing_table_in_use_${ routing_table }` )
+        veth_id_in_use = cache( `veth_id_in_use_${ veth_id }` )
         namespace_id_in_use = cache( `namespace_id_in_use_${ namespace_id }` )
     }
 
     // Mark the ids as in use
     cache( `interface_id_in_use_${ interface_id }`, true )
-    cache( `routing_table_in_use_${ routing_table }`, true )
+    cache( `veth_id_in_use_${ veth_id }`, true )
     cache( `namespace_id_in_use_${ namespace_id }`, true )
 
     // Get the endpoint host from the config
@@ -233,7 +233,7 @@ export async function validate_wireguard_config( { peer_config, peer_id } ) {
         peer_presharedkey,
         peer_allowedips,
         interface_id,
-        routing_table
+        veth_id
     } )
 
     // If endpoint or address are missing, error
@@ -316,6 +316,22 @@ export async function validate_wireguard_config( { peer_config, peer_id } ) {
         # Create wireguard interface and move it to namespace
         ip -n ${ namespace_id } link add ${ interface_id } type wireguard
         # ip link set ${ interface_id } netns ${ namespace_id }
+
+        # veth pairing of the isolated interface
+        ip link add veth${ veth_id }h type veth peer name veth${ veth_id }n
+        ip link set veth${ veth_id }n netns ${ namespace_id }
+        # host side veth cofig
+        ip addr add 10.0.0.1/24 dev veth${ veth_id }h
+        ip link set veth${ veth_id }h up
+        # namespace side veth config
+        ip -n ${ namespace_id } addr add 10.0.0.2/24 dev veth${ veth_id }n
+        ip -n ${ namespace_id } link set veth${ veth_id }n up
+        # Default route via host veth
+        ip -n ${ namespace_id } route add deault via 10.0.0.1
+        # enable iptables nat
+        sysctl -w net.ipv4.ip_forward=1
+        iptables -t nat -A POSTROUTING -s 10.0.0.0/24 -o veth${ veth_id }h -j MASQUERADE
+
 
         # Before setting things, check properties and routes of the interface
         ip -n ${ namespace_id } addr
@@ -430,7 +446,7 @@ export async function validate_wireguard_config( { peer_config, peer_id } ) {
         // Mark ids and ip as free again
         log.info( `${ log_tag } Marking ids and ip ${ address } as free again` )
         cache( `interface_id_in_use_${ interface_id }`, false )
-        cache( `routing_table_in_use_${ routing_table }`, false )
+        cache( `veth_id_in_use_${ veth_id }`, false )
         cache( `namespace_id_in_use_${ namespace_id }`, false )
         cache( `ip_being_processed_${ address }`, false )
 
