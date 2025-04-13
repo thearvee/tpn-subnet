@@ -327,7 +327,7 @@ export async function validate_wireguard_config( { peer_config, peer_id } ) {
         ip -n ${ namespace_id } addr add 10.0.0.2/24 dev veth${ veth_id }n
         ip -n ${ namespace_id } link set veth${ veth_id }n up
         # Default route via host veth
-        ip -n ${ namespace_id } route add deault via 10.0.0.1
+        ip -n ${ namespace_id } route add default via 10.0.0.1
         # enable iptables nat
         sysctl -w net.ipv4.ip_forward=1
         iptables -t nat -A POSTROUTING -s 10.0.0.0/24 -o veth${ veth_id }h -j MASQUERADE
