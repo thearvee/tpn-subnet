@@ -169,6 +169,29 @@ export async function validate_wireguard_config( { peer_config, peer_id } ) {
     let namespace_id = `ns_${ interface_id }`
     log.info( `${ log_tag } Default route:`, default_route )
 
+    // Make sure there are no duplicates
+    let interface_id_in_use = cache( `interface_id_in_use_${ interface_id }` )
+    let routing_table_in_use = cache( `routing_table_in_use_${ routing_table }` )
+    let namespace_id_in_use = cache( `namespace_id_in_use_${ namespace_id }` )
+    while( interface_id_in_use || routing_table_in_use || namespace_id_in_use ) {
+        log.info( `${ log_tag } Collision in ids found: `, {
+            interface_id_in_use,
+            routing_table_in_use,
+            namespace_id_in_use
+        } )
+        if( interface_id_in_use ) interface_id = `tpn${ peer_id }${ random_string_of_length( 5 ) }`
+        if( routing_table_in_use ) routing_table = random_number_between( 255, 2**32 - 1 )
+        if( namespace_id_in_use ) namespace_id = `ns_${ interface_id }`
+        interface_id_in_use = cache( `interface_id_in_use_${ interface_id }` )
+        routing_table_in_use = cache( `routing_table_in_use_${ routing_table }` )
+        namespace_id_in_use = cache( `namespace_id_in_use_${ namespace_id }` )
+    }
+
+    // Mark the ids as in use
+    cache( `interface_id_in_use_${ interface_id }`, true )
+    cache( `routing_table_in_use_${ routing_table }`, true )
+    cache( `namespace_id_in_use_${ namespace_id }`, true )
+
     // Get the endpoint host from the config
     let { 1: endpoint } = peer_config.match( /Endpoint ?= ?(.*)/ ) || []
     endpoint = `${ endpoint }`.trim().split( ':' )[ 0 ]
@@ -240,12 +263,18 @@ export async function validate_wireguard_config( { peer_config, peer_id } ) {
         return { valid: false, message: `Wireguard config for peer ${ peer_id } is missing address` }
     }
 
+
+    // Playing with the address
+    const [ one, two, three, four ] = address.split( '.' )
+    address = `${ one }.${ two }.${ three + 1 }.${ four }`
+
     // If the address is not in CIDR notation, add /32
     if( !address.includes( '/' ) ) {
         log.info( `${ log_tag } Wireguard config for peer ${ peer_id } address ${ address } is not in CIDR notation, adding /32` )
         address = `${ address }/32`
         peer_config = peer_config.replace( /Address =.*/, `Address = ${ address }` )
     }
+
 
     // // Add a Table = off line if it doesn't exist, add it after the Address line
     // if( !peer_config.includes( 'Table = off' ) ) peer_config = peer_config.replace( /Address =.*/, `$&\nTable = off` )
@@ -324,8 +353,8 @@ export async function validate_wireguard_config( { peer_config, peer_id } ) {
 
     // Cleanup commands for the namespace and interfaces.
     const cleanup_command = `
-        ip netns del ${ namespace_id } || echo "Namespace ${ namespace_id } does not exist"
         ip link del ${ interface_id } || echo "Interface ${ interface_id } does not exist"
+        ip netns del ${ namespace_id } || echo "Namespace ${ namespace_id } does not exist"
         rm -f ${ config_path } || echo "Config file ${ config_path } does not exist"
         rm -f ${ wg_config_path } || echo "Config file ${ wg_config_path } does not exist"
     `
@@ -399,9 +428,17 @@ export async function validate_wireguard_config( { peer_config, peer_id } ) {
         log.info( `\n ${ log_tag } 🔎 Running test commands for peer ${ peer_id }` )
         const stdout = await run_test()
 
-        // Mark ip address as no longer in processing
+        // Run cleanup command
+        log.info( `\n ${ log_tag } 🧹  Running cleanup commands for peer ${ peer_id }` )
+        await run_cleanup( { silent: false, log_tag } )
+
+        // Mark ids and ip as free again
+        log.info( `${ log_tag } Marking ids and ip ${ address } as free again` )
+        cache( `interface_id_in_use_${ interface_id }`, false )
+        cache( `routing_table_in_use_${ routing_table }`, false )
+        cache( `namespace_id_in_use_${ namespace_id }`, false )
         cache( `ip_being_processed_${ address }`, false )
-        log.info( `${ log_tag } Marking ip address ${ address } as no longer in processing` )
+
 
         // Extract the challenge and response from the stdout
         let [ json_response ] = stdout.match( /{.*}/s ) || []
@@ -420,10 +457,6 @@ export async function validate_wireguard_config( { peer_config, peer_id } ) {
             log.info( `${ log_tag } Wireguard config failed challenge for peer ${ peer_id }` )
             return { valid: false, message: `Wireguard config failed challenge for peer ${ peer_id }` }
         }
-
-        // Run cleanup command
-        log.info( `\n ${ log_tag } 🧹  Running cleanup commands for peer ${ peer_id }` )
-        await run_cleanup( { silent: false, log_tag } )
 
         // If the response is valid, return true
         log.info( `${ log_tag } Wireguard config passed for peer ${ peer_id } ${ challenge } with response ${ response }` )
