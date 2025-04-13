@@ -4,7 +4,8 @@ import { run } from "./shell.js"
 import { base_url } from "./url.js"
 
 // Timeout used for curl commands
-const test_timeout_seconds = 60
+const { CI_MODE } = process.env
+const test_timeout_seconds = CI_MODE ? 10 : 30
 
 // Split multi-line commands into an array of commands
 const split_ml_commands = commands => commands.split( '\n' ).map( c => c.replace( /#.*$/gm, '' ) ).filter( c => c.trim() ).map( c => c.trim() )
@@ -161,13 +162,42 @@ export async function validate_wireguard_config( { peer_config, peer_id } ) {
     // }
 
     // Run specific variables
-    const interface_id = `tpn${ peer_id }${ random_string_of_length( 5 ) }`
-    const routing_table = random_number_between( 255, 2**32 - 1 ) // Up to 255 is used by the system
+    let interface_id = `tpn${ peer_id }${ random_string_of_length( 5 ) }`
+    let veth_id = random_string_of_length( 5 )
+    let veth_subnet_prefix = `10.200.${ random_number_between( 1, 254 ) }`
     const config_path = `/tmp/${ interface_id }.conf`
     let { stdout: default_route } = await run( `ip route show default | awk '/^default/ {print $3}'`, { silent: false, log_tag } )
     default_route = default_route.trim()
-    const namespace_id = `ns_${ interface_id }`
+    let namespace_id = `ns_${ interface_id }`
     log.info( `${ log_tag } Default route:`, default_route )
+
+    // Make sure there are no duplicates
+    let interface_id_in_use = cache( `interface_id_in_use_${ interface_id }` )
+    let veth_id_in_use = cache( `veth_id_in_use_${ veth_id }` )
+    let namespace_id_in_use = cache( `namespace_id_in_use_${ namespace_id }` )
+    let veth_subnet_prefix_in_use = cache( `veth_subnet_prefix_in_use_${ veth_subnet_prefix }` )
+    while( interface_id_in_use || veth_id_in_use || namespace_id_in_use || veth_subnet_prefix_in_use ) {
+        log.info( `${ log_tag } Collision in ids found: `, {
+            interface_id_in_use,
+            veth_id_in_use,
+            namespace_id_in_use,
+            veth_subnet_prefix_in_use
+        } )
+        if( interface_id_in_use ) interface_id = `tpn${ peer_id }${ random_string_of_length( 5 ) }`
+        if( veth_id_in_use ) veth_id = random_string_of_length( 5 )
+        if( namespace_id_in_use ) namespace_id = `ns_${ interface_id }`
+        if( veth_subnet_prefix_in_use ) veth_subnet_prefix = `10.200.${ random_number_between( 1, 254 ) }`
+        interface_id_in_use = cache( `interface_id_in_use_${ interface_id }` )
+        veth_id_in_use = cache( `veth_id_in_use_${ veth_id }` )
+        namespace_id_in_use = cache( `namespace_id_in_use_${ namespace_id }` )
+        veth_subnet_prefix_in_use = cache( `veth_subnet_prefix_in_use_${ veth_subnet_prefix }` )
+    }
+
+    // Mark the ids as in use
+    cache( `interface_id_in_use_${ interface_id }`, true )
+    cache( `veth_id_in_use_${ veth_id }`, true )
+    cache( `namespace_id_in_use_${ namespace_id }`, true )
+    cache( `veth_subnet_prefix_in_use_${ veth_subnet_prefix }`, true )
 
     // Get the endpoint host from the config
     let { 1: endpoint } = peer_config.match( /Endpoint ?= ?(.*)/ ) || []
@@ -210,7 +240,7 @@ export async function validate_wireguard_config( { peer_config, peer_id } ) {
         peer_presharedkey,
         peer_allowedips,
         interface_id,
-        routing_table
+        veth_id
     } )
 
     // If endpoint or address are missing, error
@@ -247,8 +277,9 @@ export async function validate_wireguard_config( { peer_config, peer_id } ) {
         peer_config = peer_config.replace( /Address =.*/, `Address = ${ address }` )
     }
 
-    // Add a Table = off line if it doesn't exist, add it after the Address line
-    if( !peer_config.includes( 'Table = off' ) ) peer_config = peer_config.replace( /Address =.*/, `$&\nTable = off` )
+
+    // // Add a Table = off line if it doesn't exist, add it after the Address line
+    // if( !peer_config.includes( 'Table = off' ) ) peer_config = peer_config.replace( /Address =.*/, `$&\nTable = off` )
 
 
     // Add PostUp and PostDown scripts
@@ -266,29 +297,71 @@ export async function validate_wireguard_config( { peer_config, peer_id } ) {
 
     // Write the config file and set permissions.
     const write_config_command = `
-    # Write the WireGuard config to a temporary file
-    printf "%s" "${ peer_config }" > ${ config_path } && \
-    chmod 600 ${ config_path } && \
-    wg-quick strip ${ config_path } > ${ wg_config_path } && \
-    chmod 600 ${ wg_config_path }
-`
+        # Write the WireGuard config to a temporary file
+        printf "%s" "${ peer_config }" > ${ config_path } && \
+        chmod 600 ${ config_path } && \
+        wg-quick strip ${ config_path } > ${ wg_config_path } && \
+        chmod 600 ${ wg_config_path }
+        # Log the config files
+        tail -n +1 -v ${ config_path } && \
+        tail -n +1 -v ${ wg_config_path }
+    `
 
     // Set up network namespace and WireGuard interface.
     const network_setup_command = `
 
+        # Check current ip
         curl -m 5 -s icanhazip.com
+
+        # Add namespace
         ip netns add ${ namespace_id }
         ip netns list
-        ip -n ${ namespace_id } link set lo up
-        ip link add ${ interface_id } type wireguard
-        ip link set ${ interface_id } netns ${ namespace_id }
-        ip netns exec ${ namespace_id } wg setconf ${ interface_id } ${ wg_config_path }
 
+        # Create loopback interface
+        ip -n ${ namespace_id } link set lo up
+
+        # Create wireguard interface and move it to namespace
+        ip -n ${ namespace_id } link add ${ interface_id } type wireguard
+        # ip link set ${ interface_id } netns ${ namespace_id }
+
+        # veth pairing of the isolated interface
+        ip link add veth${ veth_id }n type veth peer name veth${ veth_id }h
+        ip link set veth${ veth_id }n netns ${ namespace_id }
+        # host side veth cofig
+        ip addr add ${ veth_subnet_prefix }.1/24 dev veth${ veth_id }h
+        ip link set veth${ veth_id }h up
+        # namespace side veth config
+        ip -n ${ namespace_id } addr add ${ veth_subnet_prefix }.2/24 dev veth${ veth_id }n
+        ip -n ${ namespace_id } link set veth${ veth_id }n up
+        # enable iptables nat
+        sysctl -w net.ipv4.ip_forward=1
+        iptables -t nat -A POSTROUTING -s ${ veth_subnet_prefix }.0/24 -o eth0 -j MASQUERADE
+
+
+        # Before setting things, check properties and routes of the interface
+        ip -n ${ namespace_id } addr
+        ip -n ${ namespace_id } link show ${ interface_id }
+        ip -n ${ namespace_id } route show
+
+        # Apply wireguard config to interface
+        ip netns exec ${ namespace_id } wg setconf ${ interface_id } ${ wg_config_path }
+        ip netns exec ${ namespace_id } wg showconf ${ interface_id }
+
+        # Pre routing, check what addresses are inside the namespace
+        ip -n ${ namespace_id } addr
+
+        # Add routing table
         ip -n ${ namespace_id } a add ${ address } dev ${ interface_id }
         ip -n ${ namespace_id } link set ${ interface_id } up
         ip -n ${ namespace_id } route add default dev ${ interface_id }
+        # give wg endpoint exception to default route
+        ip -n ${ namespace_id } route add ${ endpoint }/32 via ${ veth_subnet_prefix }.1
+
+        # Add DNS
         mkdir -p /etc/netns/${ namespace_id }/ && echo "nameserver 1.1.1.1" > /etc/netns/${ namespace_id }/resolv.conf
-        ip netns exec ${ namespace_id } curl -m 5 -s icanhazip.com
+
+        # Check ip address
+        curl -m 5 -s icanhazip.com && ip netns exec ${ namespace_id } curl -m 5 -s icanhazip.com
 
     `
 
@@ -298,8 +371,11 @@ export async function validate_wireguard_config( { peer_config, peer_id } ) {
 
     // Cleanup commands for the namespace and interfaces.
     const cleanup_command = `
-        ip netns del ${ namespace_id } || echo "Namespace ${ namespace_id } does not exist"
+        ip link del veth${ veth_id }h || echo "Veth ${ veth_id }h does not exist"
+        ip link del veth${ veth_id }n || echo "Veth ${ veth_id }n does not exist"
         ip link del ${ interface_id } || echo "Interface ${ interface_id } does not exist"
+        ip netns del ${ namespace_id } || echo "Namespace ${ namespace_id } does not exist"
+        iptables -t nat -D POSTROUTING -s ${ veth_subnet_prefix }.0/24 -o eth0 -j MASQUERADE || echo "iptables rule does not exist"
         rm -f ${ config_path } || echo "Config file ${ config_path } does not exist"
         rm -f ${ wg_config_path } || echo "Config file ${ wg_config_path } does not exist"
     `
@@ -347,7 +423,10 @@ export async function validate_wireguard_config( { peer_config, peer_id } ) {
 
         // Run the curl command
         const { error, stderr, stdout } = await run( curl_command, { silent: false, verbose: true, log_tag } )
-        if( error || stderr ) throw new Error( `${ log_tag } Error running curl test for ${ peer_id }` )
+        if( error || stderr ) {
+            log.warn( `${ log_tag } Error running curl command:`, error, stderr )
+            return false
+        }
         
         // Isolate the json
         const [ json ] = stdout.match( /{.*}/s ) || []
@@ -373,9 +452,20 @@ export async function validate_wireguard_config( { peer_config, peer_id } ) {
         log.info( `\n ${ log_tag } 🔎 Running test commands for peer ${ peer_id }` )
         const stdout = await run_test()
 
-        // Mark ip address as no longer in processing
+        // Run cleanup command
+        log.info( `\n ${ log_tag } 🧹  Running cleanup commands for peer ${ peer_id }` )
+        await run_cleanup( { silent: false, log_tag } )
+
+        // Mark ids and ip as free again
+        log.info( `${ log_tag } Marking ids and ip ${ address } as free again` )
+        cache( `interface_id_in_use_${ interface_id }`, false )
+        cache( `veth_id_in_use_${ veth_id }`, false )
+        cache( `namespace_id_in_use_${ namespace_id }`, false )
+        cache( `veth_subnet_prefix_in_use_${ veth_subnet_prefix }`, false )
         cache( `ip_being_processed_${ address }`, false )
-        log.info( `${ log_tag } Marking ip address ${ address } as no longer in processing` )
+
+        // On failure to get response, error out to catch block
+        if( !stdout ) throw new Error( `Unable to reach validator through wireguard connection of miner, this suggests misconfiguration` )
 
         // Extract the challenge and response from the stdout
         let [ json_response ] = stdout.match( /{.*}/s ) || []
@@ -394,10 +484,6 @@ export async function validate_wireguard_config( { peer_config, peer_id } ) {
             log.info( `${ log_tag } Wireguard config failed challenge for peer ${ peer_id }` )
             return { valid: false, message: `Wireguard config failed challenge for peer ${ peer_id }` }
         }
-
-        // Run cleanup command
-        log.info( `\n ${ log_tag } 🧹  Running cleanup commands for peer ${ peer_id }` )
-        await run_cleanup( { silent: false, log_tag } )
 
         // If the response is valid, return true
         log.info( `${ log_tag } Wireguard config passed for peer ${ peer_id } ${ challenge } with response ${ response }` )
