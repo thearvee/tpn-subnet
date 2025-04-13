@@ -318,19 +318,19 @@ export async function validate_wireguard_config( { peer_config, peer_id } ) {
         # ip link set ${ interface_id } netns ${ namespace_id }
 
         # veth pairing of the isolated interface
-        ip link add veth${ veth_id }h type veth peer name veth${ veth_id }n
+        ip link add veth${ veth_id }n type veth peer name veth${ veth_id }h
         ip link set veth${ veth_id }n netns ${ namespace_id }
         # host side veth cofig
-        ip addr add 10.0.0.1/24 dev veth${ veth_id }h
+        ip addr add 10.200.1.1/24 dev veth${ veth_id }h
         ip link set veth${ veth_id }h up
         # namespace side veth config
-        ip -n ${ namespace_id } addr add 10.0.0.2/24 dev veth${ veth_id }n
+        ip -n ${ namespace_id } addr add 10.200.1.2/24 dev veth${ veth_id }n
         ip -n ${ namespace_id } link set veth${ veth_id }n up
         # Default route via host veth
-        ip -n ${ namespace_id } route add default via 10.0.0.1
+        ip -n ${ namespace_id } route add default via 10.200.0.1
         # enable iptables nat
         sysctl -w net.ipv4.ip_forward=1
-        iptables -t nat -A POSTROUTING -s 10.0.0.0/24 -o veth${ veth_id }h -j MASQUERADE
+        iptables -t nat -A POSTROUTING -s 10.200.1.0/24 -o eth0 -j MASQUERADE
 
 
         # Before setting things, check properties and routes of the interface
