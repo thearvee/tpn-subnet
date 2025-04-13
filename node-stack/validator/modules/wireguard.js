@@ -161,12 +161,12 @@ export async function validate_wireguard_config( { peer_config, peer_id } ) {
     // }
 
     // Run specific variables
-    const interface_id = `tpn${ peer_id }${ random_string_of_length( 5 ) }`
-    const routing_table = random_number_between( 255, 2**32 - 1 ) // Up to 255 is used by the system
+    let interface_id = `tpn${ peer_id }${ random_string_of_length( 5 ) }`
+    let routing_table = random_number_between( 255, 2**32 - 1 ) // Up to 255 is used by the system
     const config_path = `/tmp/${ interface_id }.conf`
     let { stdout: default_route } = await run( `ip route show default | awk '/^default/ {print $3}'`, { silent: false, log_tag } )
     default_route = default_route.trim()
-    const namespace_id = `ns_${ interface_id }`
+    let namespace_id = `ns_${ interface_id }`
     log.info( `${ log_tag } Default route:`, default_route )
 
     // Get the endpoint host from the config
@@ -247,8 +247,8 @@ export async function validate_wireguard_config( { peer_config, peer_id } ) {
         peer_config = peer_config.replace( /Address =.*/, `Address = ${ address }` )
     }
 
-    // Add a Table = off line if it doesn't exist, add it after the Address line
-    if( !peer_config.includes( 'Table = off' ) ) peer_config = peer_config.replace( /Address =.*/, `$&\nTable = off` )
+    // // Add a Table = off line if it doesn't exist, add it after the Address line
+    // if( !peer_config.includes( 'Table = off' ) ) peer_config = peer_config.replace( /Address =.*/, `$&\nTable = off` )
 
 
     // Add PostUp and PostDown scripts
@@ -266,29 +266,55 @@ export async function validate_wireguard_config( { peer_config, peer_id } ) {
 
     // Write the config file and set permissions.
     const write_config_command = `
-    # Write the WireGuard config to a temporary file
-    printf "%s" "${ peer_config }" > ${ config_path } && \
-    chmod 600 ${ config_path } && \
-    wg-quick strip ${ config_path } > ${ wg_config_path } && \
-    chmod 600 ${ wg_config_path }
-`
+        # Write the WireGuard config to a temporary file
+        printf "%s" "${ peer_config }" > ${ config_path } && \
+        chmod 600 ${ config_path } && \
+        wg-quick strip ${ config_path } > ${ wg_config_path } && \
+        chmod 600 ${ wg_config_path }
+        # Log the config files
+        tail -n +1 -v ${ config_path } && \
+        tail -n +1 -v ${ wg_config_path }
+    `
 
     // Set up network namespace and WireGuard interface.
     const network_setup_command = `
 
+        # Check current ip
         curl -m 5 -s icanhazip.com
+
+        # Add namespace
         ip netns add ${ namespace_id }
         ip netns list
+
+        # Create loopback interface
         ip -n ${ namespace_id } link set lo up
+
+        # Create wireguard interface and move it to namespace
         ip link add ${ interface_id } type wireguard
         ip link set ${ interface_id } netns ${ namespace_id }
-        ip netns exec ${ namespace_id } wg setconf ${ interface_id } ${ wg_config_path }
 
+        # Before setting things, check properties and routes of the interface
+        ip -n ${ namespace_id } addr
+        ip -n ${ namespace_id } link show ${ interface_id }
+        ip -n ${ namespace_id } route show
+
+        # Apply wireguard config to interface
+        ip netns exec ${ namespace_id } wg setconf ${ interface_id } ${ wg_config_path }
+        ip netns exec ${ namespace_id } wg showconf ${ interface_id }
+
+        # Pre routing, check what addresses are inside the namespace
+        ip -n ${ namespace_id } addr
+
+        # Add routing table
         ip -n ${ namespace_id } a add ${ address } dev ${ interface_id }
         ip -n ${ namespace_id } link set ${ interface_id } up
         ip -n ${ namespace_id } route add default dev ${ interface_id }
+
+        # Add DNS
         mkdir -p /etc/netns/${ namespace_id }/ && echo "nameserver 1.1.1.1" > /etc/netns/${ namespace_id }/resolv.conf
-        ip netns exec ${ namespace_id } curl -m 5 -s icanhazip.com
+
+        # Check ip address
+        curl -m 5 -s icanhazip.com && ip netns exec ${ namespace_id } curl -m 5 -s icanhazip.com
 
     `
 
