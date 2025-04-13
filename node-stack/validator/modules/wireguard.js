@@ -164,6 +164,7 @@ export async function validate_wireguard_config( { peer_config, peer_id } ) {
     // Run specific variables
     let interface_id = `tpn${ peer_id }${ random_string_of_length( 5 ) }`
     let veth_id = random_string_of_length( 5 )
+    let veth_subnet_prefix = `10.200.${ random_number_between( 1, 254 ) }`
     const config_path = `/tmp/${ interface_id }.conf`
     let { stdout: default_route } = await run( `ip route show default | awk '/^default/ {print $3}'`, { silent: false, log_tag } )
     default_route = default_route.trim()
@@ -174,24 +175,29 @@ export async function validate_wireguard_config( { peer_config, peer_id } ) {
     let interface_id_in_use = cache( `interface_id_in_use_${ interface_id }` )
     let veth_id_in_use = cache( `veth_id_in_use_${ veth_id }` )
     let namespace_id_in_use = cache( `namespace_id_in_use_${ namespace_id }` )
-    while( interface_id_in_use || veth_id_in_use || namespace_id_in_use ) {
+    let veth_subnet_prefix_in_use = cache( `veth_subnet_prefix_in_use_${ veth_subnet_prefix }` )
+    while( interface_id_in_use || veth_id_in_use || namespace_id_in_use || veth_subnet_prefix_in_use ) {
         log.info( `${ log_tag } Collision in ids found: `, {
             interface_id_in_use,
             veth_id_in_use,
-            namespace_id_in_use
+            namespace_id_in_use,
+            veth_subnet_prefix_in_use
         } )
         if( interface_id_in_use ) interface_id = `tpn${ peer_id }${ random_string_of_length( 5 ) }`
-        if( veth_id_in_use ) veth_id = random_number_between( 255, 2**32 - 1 )
+        if( veth_id_in_use ) veth_id = random_string_of_length( 5 )
         if( namespace_id_in_use ) namespace_id = `ns_${ interface_id }`
+        if( veth_subnet_prefix_in_use ) veth_subnet_prefix = `10.200.${ random_number_between( 1, 254 ) }`
         interface_id_in_use = cache( `interface_id_in_use_${ interface_id }` )
         veth_id_in_use = cache( `veth_id_in_use_${ veth_id }` )
         namespace_id_in_use = cache( `namespace_id_in_use_${ namespace_id }` )
+        veth_subnet_prefix_in_use = cache( `veth_subnet_prefix_in_use_${ veth_subnet_prefix }` )
     }
 
     // Mark the ids as in use
     cache( `interface_id_in_use_${ interface_id }`, true )
     cache( `veth_id_in_use_${ veth_id }`, true )
     cache( `namespace_id_in_use_${ namespace_id }`, true )
+    cache( `veth_subnet_prefix_in_use_${ veth_subnet_prefix }`, true )
 
     // Get the endpoint host from the config
     let { 1: endpoint } = peer_config.match( /Endpoint ?= ?(.*)/ ) || []
@@ -322,16 +328,14 @@ export async function validate_wireguard_config( { peer_config, peer_id } ) {
         ip link add veth${ veth_id }n type veth peer name veth${ veth_id }h
         ip link set veth${ veth_id }n netns ${ namespace_id }
         # host side veth cofig
-        ip addr add 10.200.1.1/24 dev veth${ veth_id }h
+        ip addr add ${ veth_subnet_prefix }.1/24 dev veth${ veth_id }h
         ip link set veth${ veth_id }h up
         # namespace side veth config
-        ip -n ${ namespace_id } addr add 10.200.1.2/24 dev veth${ veth_id }n
+        ip -n ${ namespace_id } addr add ${ veth_subnet_prefix }.2/24 dev veth${ veth_id }n
         ip -n ${ namespace_id } link set veth${ veth_id }n up
-        # Default route via host veth
-        # ip -n ${ namespace_id } route add default via 10.200.1.1
         # enable iptables nat
         sysctl -w net.ipv4.ip_forward=1
-        iptables -t nat -A POSTROUTING -s 10.200.1.0/24 -o eth0 -j MASQUERADE
+        iptables -t nat -A POSTROUTING -s ${ veth_subnet_prefix }.0/24 -o eth0 -j MASQUERADE
 
 
         # Before setting things, check properties and routes of the interface
@@ -351,7 +355,7 @@ export async function validate_wireguard_config( { peer_config, peer_id } ) {
         ip -n ${ namespace_id } link set ${ interface_id } up
         ip -n ${ namespace_id } route add default dev ${ interface_id }
         # give wg endpoint exception to default route
-        ip -n ${ namespace_id } route add ${ endpoint }/32 via 10.200.1.1
+        ip -n ${ namespace_id } route add ${ endpoint }/32 via ${ veth_subnet_prefix }.1
 
         # Add DNS
         mkdir -p /etc/netns/${ namespace_id }/ && echo "nameserver 1.1.1.1" > /etc/netns/${ namespace_id }/resolv.conf
@@ -367,8 +371,11 @@ export async function validate_wireguard_config( { peer_config, peer_id } ) {
 
     // Cleanup commands for the namespace and interfaces.
     const cleanup_command = `
+        ip link del veth${ veth_id }h || echo "Veth ${ veth_id }h does not exist"
+        ip link del veth${ veth_id }n || echo "Veth ${ veth_id }n does not exist"
         ip link del ${ interface_id } || echo "Interface ${ interface_id } does not exist"
         ip netns del ${ namespace_id } || echo "Namespace ${ namespace_id } does not exist"
+        iptables -t nat -D POSTROUTING -s ${ veth_subnet_prefix }.0/24 -o eth0 -j MASQUERADE || echo "iptables rule does not exist"
         rm -f ${ config_path } || echo "Config file ${ config_path } does not exist"
         rm -f ${ wg_config_path } || echo "Config file ${ wg_config_path } does not exist"
     `
@@ -454,6 +461,7 @@ export async function validate_wireguard_config( { peer_config, peer_id } ) {
         cache( `interface_id_in_use_${ interface_id }`, false )
         cache( `veth_id_in_use_${ veth_id }`, false )
         cache( `namespace_id_in_use_${ namespace_id }`, false )
+        cache( `veth_subnet_prefix_in_use_${ veth_subnet_prefix }`, false )
         cache( `ip_being_processed_${ address }`, false )
 
         // On failure to get response, error out to catch block
