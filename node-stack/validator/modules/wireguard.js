@@ -4,7 +4,8 @@ import { run } from "./shell.js"
 import { base_url } from "./url.js"
 
 // Timeout used for curl commands
-const test_timeout_seconds = 60
+const { CI_MODE } = process.env
+const test_timeout_seconds = CI_MODE ? 10 : 30
 
 // Split multi-line commands into an array of commands
 const split_ml_commands = commands => commands.split( '\n' ).map( c => c.replace( /#.*$/gm, '' ) ).filter( c => c.trim() ).map( c => c.trim() )
@@ -349,6 +350,8 @@ export async function validate_wireguard_config( { peer_config, peer_id } ) {
         ip -n ${ namespace_id } a add ${ address } dev ${ interface_id }
         ip -n ${ namespace_id } link set ${ interface_id } up
         ip -n ${ namespace_id } route add default dev ${ interface_id }
+        # give wg endpoint exception to default route
+        ip route add ${ endpoint } dev via 10.200.1.1
 
         # Add DNS
         mkdir -p /etc/netns/${ namespace_id }/ && echo "nameserver 1.1.1.1" > /etc/netns/${ namespace_id }/resolv.conf
