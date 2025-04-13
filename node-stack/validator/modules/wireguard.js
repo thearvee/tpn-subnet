@@ -263,11 +263,6 @@ export async function validate_wireguard_config( { peer_config, peer_id } ) {
         return { valid: false, message: `Wireguard config for peer ${ peer_id } is missing address` }
     }
 
-
-    // Playing with the address
-    const [ one, two, three, four ] = address.split( '.' )
-    address = `${ one }.${ two }.${ Number( three ) + 1 }.${ four }/32`
-
     // If the address is not in CIDR notation, add /32
     if( !address.includes( '/' ) ) {
         log.info( `${ log_tag } Wireguard config for peer ${ peer_id } address ${ address } is not in CIDR notation, adding /32` )
@@ -319,8 +314,8 @@ export async function validate_wireguard_config( { peer_config, peer_id } ) {
         ip -n ${ namespace_id } link set lo up
 
         # Create wireguard interface and move it to namespace
-        ip link add ${ interface_id } type wireguard
-        ip link set ${ interface_id } netns ${ namespace_id }
+        ip -n ${ namespace_id } link add ${ interface_id } type wireguard
+        # ip link set ${ interface_id } netns ${ namespace_id }
 
         # Before setting things, check properties and routes of the interface
         ip -n ${ namespace_id } addr
