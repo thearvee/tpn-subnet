@@ -50,6 +50,11 @@ async def forward(self):
         time.sleep(10)
         return
 
+    # Map the challenges and sequentially add the miner uids from miner_uids
+    for uid, challenge in zip(miner_uids, challenges):
+        challenge.challenge_url = challenge.challenge_url + f"?miner_uid={uid}"
+    bt.logging.info(f"Annotated challenges: {challenges}")
+
     # Create concurrent queries, one for each challenge-miner pair
     async_queries = [
         self.dendrite(

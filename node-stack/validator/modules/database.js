@@ -37,6 +37,7 @@ export async function init_tables() {
         CREATE TABLE IF NOT EXISTS challenges (
             challenge TEXT PRIMARY KEY,
             response TEXT,
+            miner_uid TEXT,
             created BIGINT,
             solved BIGINT
         )
@@ -50,6 +51,21 @@ export async function init_tables() {
             updated BIGINT
         )
     ` )
+
+    // Create table for scores
+    await pool.query( `
+        CREATE TABLE IF NOT EXISTS scores (
+            challenge TEXT,
+            correct BOOLEAN,
+            score BIGINT,
+            speed_score BIGINT,
+            uniqueness_score BIGINT,
+            country_uniqueness_score BIGINT,
+            solved_at BIGINT
+        )
+    ` )
+
+    log.info( 'Tables initialized' )
 }
 
 export async function save_ip_address_and_return_ip_stats( { ip_address, country } ) {
@@ -108,18 +124,18 @@ export async function set_timestamp( { label, timestamp } ) {
     log.info( 'Timestamp set:', { label, timestamp } )
 }
 
-export async function save_challenge_response( { challenge, response } ) {
+export async function save_challenge_response( { challenge, response, miner_uid } ) {
     // Save the challenge response; errors if challenge already exists
     await pool.query(
-        `INSERT INTO challenges (challenge, response, created) VALUES ($1, $2, $3)`,
-        [ challenge, response, Date.now() ]
+        `INSERT INTO challenges (challenge, response, miner_uid, created) VALUES ($1, $2, $3)`,
+        [ challenge, response, miner_uid, Date.now() ]
     )
-    return { challenge, response }
+    return { challenge, response, miner_uid }
 }
 
 export async function get_challenge_response( { challenge } ) {
     // Retrieve challenge response and creation time
-    const query = `SELECT response, created FROM challenges WHERE challenge = $1 LIMIT 1`
+    const query = `SELECT response, miner_uid, created FROM challenges WHERE challenge = $1 LIMIT 1`
     log.info( 'Querying for challenge response:', query, [ challenge ] )
     const result = await pool.query(
         query,
@@ -128,10 +144,11 @@ export async function get_challenge_response( { challenge } ) {
     return result.rows.length > 0 ? result.rows[0] : {}
 }
 
-export async function mark_challenge_solved( { challenge } ) {
+export async function mark_challenge_solved( { challenge, read_only=false } ) {
+
     const now = Date.now()
     // Update the solved field if it hasn't been set yet
-    await pool.query(
+    if( !read_only ) await pool.query(
         `UPDATE challenges SET solved = $1 WHERE challenge = $2 AND solved IS NULL`,
         [ now, challenge ]
     )
@@ -165,5 +182,55 @@ export async function get_miner_stats() {
     }, {} )
 
     return cache( cache_key, country_counts, 60_000 )
+
+}
+
+export async function save_challenge_response_score( { correct, challenge, score, speed_score, uniqueness_score, country_uniqueness_score, solved_at } ) {
+
+    // Save score
+    await pool.query(
+        `INSERT INTO scores (challenge, correct, score, speed_score, uniqueness_score, country_uniqueness_score, solved_at) VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+        [ challenge, correct, score, speed_score, uniqueness_score, country_uniqueness_score, solved_at ]
+    )
+    log.info( 'Score saved:', { challenge, correct, score, speed_score, uniqueness_score, country_uniqueness_score, solved_at } )
+
+    return { correct, score, speed_score, uniqueness_score, country_uniqueness_score, solved_at }
+
+}
+
+export async function get_challenge_response_score( { challenge } ) {
+    // Retrieve the score for the given challenge
+    const result = await pool.query(
+        `SELECT correct, score, speed_score, uniqueness_score, country_uniqueness_score, solved_at FROM scores WHERE challenge = $1 LIMIT 1 ORDER BY solved_at ASC`,
+        [ challenge ]
+    )
+
+    const default_values = {
+        correct: false,
+        score: 0,
+        speed_score: 0,
+        uniqueness_score: 0,
+        country_uniqueness_score: 0,
+        solved_at: 0
+    }
+    return result.rows.length > 0 ? result.rows[0] : default_values
+
+}
+
+
+export async function get_ips_by_country( { geo } ) {
+
+    // Get all ip addresses with a country that are not stale
+    const ms_to_stale = 1000 * 60 * 60
+    const stale_timestamp = Date.now() - ms_to_stale
+
+    // Get nonstale ips, sort by timestamp where more recent is higher
+    const result = await pool.query(
+        `SELECT ip_address FROM ip_addresses ${ geo ? `WHERE country = $1` : `` } AND updated > $2 ORDER BY updated DESC`,
+        [ geo, stale_timestamp ]
+    )
+    const ips = result.rows.map( row => row.ip_address )
+
+    return ips
 
 }

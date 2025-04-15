@@ -9,7 +9,7 @@ import { log } from 'mentie'
  * @function generate_challenge
  * @returns {Promise<String>} The generated challenge.
  */
-export async function generate_challenge() {
+export async function generate_challenge( { miner_uid }={} ) {
 
     // Generate new challenge id
     const challenge = uuidv4()
@@ -18,7 +18,7 @@ export async function generate_challenge() {
     const response = uuidv4()
 
     // Save the challenge and response to the database
-    await save_challenge_response( { challenge, response } )
+    await save_challenge_response( { challenge, response, miner_uid } )
 
     return challenge
 
@@ -36,7 +36,7 @@ export async function generate_challenge() {
  * @returns {number} response.ms_to_solve - The time it took to solve the challenge.
  * @returns {number} response.solved_at - The timestamp when the challenge was solved.
  */
-export async function solve_challenge( { challenge, response } ) {
+export async function solve_challenge( { challenge, response, read_only=false } ) {
 
     const solution = await get_challenge_response( { challenge } )
 
@@ -48,7 +48,7 @@ export async function solve_challenge( { challenge, response } ) {
 
     // If the response is correct, return the time it took to solve
     log.info( `Challenge ${ challenge } submitted correct response: ${ response }` )
-    const solved_at = await mark_challenge_solved( { challenge } )
+    const solved_at = await mark_challenge_solved( { challenge, read_only } )
     const ms_to_solve = solved_at - solution.created
     return { correct: true, ms_to_solve, solved_at }
 
