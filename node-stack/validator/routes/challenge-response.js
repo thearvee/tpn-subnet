@@ -18,10 +18,10 @@ router.get( "/new", async ( req, res ) => {
 
         // Generate a new challenge
         const challenge = await generate_challenge( { miner_uid } )
-        log.info( `New challenge generated for miner uid ${ miner_uid }:`, { challenge } )
 
         // Formulate public challenge URL
         const challenge_url = `${ base_url }/challenge/${ challenge }`
+        log.info( `New challenge url generated: ${ challenge_url }` )
 
         return res.json( { challenge, challenge_url } )
 
@@ -68,14 +68,14 @@ router.get( "/:challenge/:response?", async ( req, res ) => {
 
             const cached_value = cache( `challenge_solution_${ challenge }` )
             if( cached_value ) {
-                log.info( `Returning cached value (no response provided) for challenge ${ challenge }: `, cached_value )
+                log.info( `[GET] Returning cached value (no response provided) for challenge ${ challenge }: `, cached_value )
                 return res.json( { response: cached_value.response } )
             }
 
             const challenge_response = await get_challenge_response( { challenge } )
             if( !cached_value && challenge_response.response ) cache( `challenge_solution_${ challenge }`, challenge_response )
 
-            log.info( `Returning challenge response for challenge ${ challenge }: `, challenge_response )
+            log.info( `[GET] Returning challenge response for challenge ${ challenge }: `, challenge_response )
             return res.json( { response: challenge_response.response } )
 
         }
@@ -83,15 +83,15 @@ router.get( "/:challenge/:response?", async ( req, res ) => {
         // Check for cached value
         const cached_value = cache( `solution_score_${ challenge }` )
         if( cached_value ) {
-            log.info( `Returning cached value for solution ${ challenge }` )
+            log.info( `[GET] Returning cached value for solution ${ challenge }` )
             return res.json( cached_value )
         }
 
         // Check for solved value
-        log.info( `Checking for scored response in database for ${ challenge }` )
+        log.info( `[GET] Checking for scored response in database for ${ challenge }` )
         const scored_response = await get_challenge_response_score( { challenge } )
         if( scored_response && !scored_response.error ) {
-            log.info( `Returning scored value for solution ${ challenge }` )
+            log.info( `[GET] Returning scored value for solution ${ challenge }` )
             cache( `solution_score_${ challenge }`, scored_response )
             return res.json( scored_response )
         }
@@ -104,14 +104,14 @@ router.get( "/:challenge/:response?", async ( req, res ) => {
 
         // If correct, score the request
         const { uniqueness_score, country_uniqueness_score } = await score_request_uniqueness( req )
-        log.info( `Uniqueness score for ${ challenge }: ${ uniqueness_score }` )
+        log.info( `[GET] Uniqueness score for ${ challenge }: ${ uniqueness_score }` )
         if( uniqueness_score === undefined && !CI_MODE ) {
             log.info( `Uniqueness score is undefined, returning error` )
             return res.status( 200 ).json( { error: 'Nice try', score: 0, correct: false } )
         }
 
         // Calculate the score
-        log.info( `Time to solve ${ challenge }: ${ ms_to_solve } (${ solved_at })` )
+        log.info( `[GET] Time to solve ${ challenge }: ${ ms_to_solve } (${ solved_at })` )
         const { score, speed_score } = calculate_score( { uniqueness_score, ms_to_solve } )
 
         // Formulate and cache response
@@ -155,12 +155,12 @@ router.post( "/:challenge/:response", async ( req, res ) => {
 
         // Validate existence of wireguard config fields
         if( !peer_config || !peer_id || !peer_slots || !expires_at ) {
-            log.info( `Bad challenge/response ${ challenge }/${ response } with body:`, req.body )
+            log.info( `[POST] Bad challenge/response ${ challenge }/${ response } with body:`, req.body )
             return res.status( 200 ).json( { error: 'Missing wireguard config fields', score: 0, correct: false } )
         }
 
         // Validate the challenge solution
-        log.info( `Validating challenge solution for ${ challenge }/${ response }` )
+        log.info( `[POST] Validating challenge solution for ${ challenge }/${ response }` )
         const { correct, ms_to_solve, solved_at } = await solve_challenge( { challenge, response } )
 
         // If not correct, return false
@@ -169,14 +169,14 @@ router.post( "/:challenge/:response", async ( req, res ) => {
         // If correct, score the request
         const { uniqueness_score, country_uniqueness_score } = await score_request_uniqueness( req )
         if( uniqueness_score === undefined ) {
-            log.info( `Uniqueness score is undefined, returning error` )
+            log.info( `[POST] Uniqueness score is undefined, returning error` )
             return res.status( 200 ).json( { error: 'Nice try', correct: false, score: 0 } )
         }
 
         // Upon solution success, test the wireguard config
         const { valid: wireguard_valid, message='Unknown error validating wireguard config' } = await validate_wireguard_config( { peer_config, peer_id } )
         if( !wireguard_valid ) {
-            log.info( `Wireguard config for peer ${ peer_id } failed challenge` )
+            log.info( `[POST] Wireguard config for peer ${ peer_id } failed challenge` )
             return res.json( { message, correct: false, score: 0 } )
         }
 

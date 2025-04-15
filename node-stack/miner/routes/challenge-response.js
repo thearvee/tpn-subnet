@@ -27,7 +27,9 @@ router.post( '/', async ( req, res ) => {
         log.info( `Generated wireguard config:`, wireguard_config )
 
         // Call the challenge-response API with the wireguard config in POST body
-        const solution_url = `${ url }/${ response }`
+        let solution_url = new URL( url )
+        solution_url.pathname = `${ solution_url.replace( /\/$/, '' ) }/${ response }`
+        solution_url = solution_url.toString()
         log.info( `Calling solution and offering vpn config to validator: ${ solution_url }` )
         const solution_res = await fetch( solution_url, { 
             method: 'POST', 
