@@ -46,7 +46,7 @@ router.get( "/:challenge/:response?", async ( req, res ) => {
         log.info( `Score requested for challenge ${ challenge }/${ response }` )
 
         // If only the challenge is provided, return the response
-        if( !response ) return res.json( { error: `This endpoint is to get scores, not solve challenges` } )
+        if( !response ) log.warn( `Challenge ${ challenge } requested without response` )
 
         // Check for cached value
         const cached_value = cache( `solution_score_${ challenge }` )

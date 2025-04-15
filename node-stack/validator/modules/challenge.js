@@ -9,7 +9,7 @@ import { log } from 'mentie'
  * @function generate_challenge
  * @returns {Promise<String>} The generated challenge.
  */
-export async function generate_challenge( { miner_uid }={} ) {
+export async function generate_challenge( { miner_uid='unknown' }={} ) {
 
     // Generate new challenge id
     const challenge = uuidv4()
