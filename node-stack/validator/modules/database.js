@@ -25,8 +25,24 @@ export async function init_tables() {
         await pool.query( `DROP TABLE IF EXISTS scores` )
     }
 
-    // Remove tables across breaking changes
-    await pool.query( `DROP TABLE IF EXISTS challenges` )
+    /* //////////////////////
+    // Backwards incompatibility
+    ////////////////////// */
+
+    // Check if the challenges database has a miner_uid column, if not, add it
+    const result = await pool.query( `
+        SELECT column_name
+        FROM information_schema.columns
+        WHERE table_name='challenges' AND column_name='miner_uid'
+    ` )
+    if( result.rows.length == 0 ) {
+        log.info( 'Adding miner_uid column to challenges table' )
+        await pool.query( `ALTER TABLE challenges ADD COLUMN miner_uid TEXT` )
+    }
+
+    /* //////////////////////
+    // Create tables if they don't exist
+    ////////////////////// */
 
     // Create table for timestamps
     await pool.query( `
