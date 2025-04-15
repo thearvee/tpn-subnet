@@ -15,13 +15,20 @@ const pool = new Pool( {
 
 export async function init_tables() {
 
+
     // In dev, delete old table
     if( CI_MODE ) {
         log.info( 'Dropping old table, in CI mode' )
         await pool.query( `DROP TABLE IF EXISTS timestamps` )
         await pool.query( `DROP TABLE IF EXISTS challenges` )
         await pool.query( `DROP TABLE IF EXISTS ip_addresses` )
+        await pool.query( `DROP TABLE IF EXISTS scores` )
     }
+
+
+    /* //////////////////////
+    // Create tables if they don't exist
+    ////////////////////// */
 
     // Create table for timestamps
     await pool.query( `
@@ -64,6 +71,21 @@ export async function init_tables() {
             solved_at BIGINT
         )
     ` )
+
+    /* //////////////////////
+    // Backwards iompatibility
+    ////////////////////// */
+
+    // Check if the challenges database has a miner_uid column, if not, add it
+    const result = await pool.query( `
+        SELECT column_name
+        FROM information_schema.columns
+        WHERE table_name='challenges' AND column_name='miner_uid'
+    ` )
+    if( result.rows.length == 0 ) {
+        log.info( 'Adding miner_uid column to challenges table' )
+        await pool.query( `ALTER TABLE challenges ADD COLUMN miner_uid TEXT` )
+    }
 
     log.info( 'Tables initialized' )
 }
@@ -124,16 +146,17 @@ export async function set_timestamp( { label, timestamp } ) {
     log.info( 'Timestamp set:', { label, timestamp } )
 }
 
-export async function save_challenge_response( { challenge, response, miner_uid } ) {
+export async function save_challenge_response( { challenge, response, miner_uid='unknown' } ) {
     // Save the challenge response; errors if challenge already exists
     await pool.query(
-        `INSERT INTO challenges (challenge, response, miner_uid, created) VALUES ($1, $2, $3)`,
+        `INSERT INTO challenges (challenge, response, miner_uid, created) VALUES ($1, $2, $3, $4)`,
         [ challenge, response, miner_uid, Date.now() ]
     )
     return { challenge, response, miner_uid }
 }
 
 export async function get_challenge_response( { challenge } ) {
+    
     // Retrieve challenge response and creation time
     const query = `SELECT response, miner_uid, created FROM challenges WHERE challenge = $1 LIMIT 1`
     log.info( 'Querying for challenge response:', query, [ challenge ] )
@@ -141,6 +164,7 @@ export async function get_challenge_response( { challenge } ) {
         query,
         [ challenge ]
     )
+    log.info( 'Query result:', result.rows )
     return result.rows.length > 0 ? result.rows[0] : {}
 }
 
@@ -185,9 +209,16 @@ export async function get_miner_stats() {
 
 }
 
-export async function save_challenge_response_score( { correct, challenge, score, speed_score, uniqueness_score, country_uniqueness_score, solved_at } ) {
+export async function save_challenge_response_score( { correct, challenge, score, speed_score, uniqueness_score, country_uniqueness_score, solved_at }={} ) {
+
+    // Round all numbers to nearest integer
+    score = Math.round( score )
+    speed_score = Math.round( speed_score )
+    uniqueness_score = Math.round( uniqueness_score )
+    country_uniqueness_score = Math.round( country_uniqueness_score )
 
     // Save score
+    log.info( 'Saving score:', { correct, challenge, score, speed_score, uniqueness_score, country_uniqueness_score, solved_at } )
     await pool.query(
         `INSERT INTO scores (challenge, correct, score, speed_score, uniqueness_score, country_uniqueness_score, solved_at) VALUES ($1, $2, $3, $4, $5, $6, $7)`,
         [ challenge, correct, score, speed_score, uniqueness_score, country_uniqueness_score, solved_at ]
@@ -199,11 +230,14 @@ export async function save_challenge_response_score( { correct, challenge, score
 }
 
 export async function get_challenge_response_score( { challenge } ) {
+
     // Retrieve the score for the given challenge
+    log.info( `Querying for challenge response score ${ challenge }` )
     const result = await pool.query(
-        `SELECT correct, score, speed_score, uniqueness_score, country_uniqueness_score, solved_at FROM scores WHERE challenge = $1 LIMIT 1 ORDER BY solved_at ASC`,
+        `SELECT correct, score, speed_score, uniqueness_score, country_uniqueness_score, solved_at FROM scores WHERE challenge = $1 ORDER BY solved_at ASC LIMIT 1`,
         [ challenge ]
     )
+    log.info( `Query result for challenge response score ${ challenge }:`, result.rows )
 
     const default_values = {
         correct: false,
@@ -211,7 +245,8 @@ export async function get_challenge_response_score( { challenge } ) {
         speed_score: 0,
         uniqueness_score: 0,
         country_uniqueness_score: 0,
-        solved_at: 0
+        solved_at: 0,
+        error: 'No score found'
     }
     return result.rows.length > 0 ? result.rows[0] : default_values
 
@@ -226,7 +261,7 @@ export async function get_ips_by_country( { geo } ) {
 
     // Get nonstale ips, sort by timestamp where more recent is higher
     const result = await pool.query(
-        `SELECT ip_address FROM ip_addresses ${ geo ? `WHERE country = $1` : `` } AND updated > $2 ORDER BY updated DESC`,
+        `SELECT ip_address FROM ip_addresses ${ geo ? `WHERE country = $1 AND` : `` } updated > $2 ORDER BY updated DESC`,
         [ geo, stale_timestamp ]
     )
     const ips = result.rows.map( row => row.ip_address )

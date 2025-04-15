@@ -9,13 +9,16 @@ import { log } from 'mentie'
  * @function generate_challenge
  * @returns {Promise<String>} The generated challenge.
  */
-export async function generate_challenge( { miner_uid }={} ) {
+export async function generate_challenge( { miner_uid='unknown' }={} ) {
 
     // Generate new challenge id
     const challenge = uuidv4()
 
     // Generate new response value
     const response = uuidv4()
+
+    // Log generation
+    log.info( `Generated new challenge/response pair: ${ challenge }/${ response }` )
 
     // Save the challenge and response to the database
     await save_challenge_response( { challenge, response, miner_uid } )
