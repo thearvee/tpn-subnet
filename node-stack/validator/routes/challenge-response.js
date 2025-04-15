@@ -67,13 +67,42 @@ router.get( "/:challenge/:response?", async ( req, res ) => {
             return res.json( cached_value )
         }
 
-        // Get score from database
-        const data = await get_challenge_response_score( { challenge } )
+        // Check for solved value
+        const scored_response = await get_challenge_response_score( { challenge } )
+        if( scored_response ) {
+            log.info( `Returning scored value for solution ${ challenge }` )
+            cache( `solution_score_${ challenge }`, scored_response )
+            return res.json( scored_response )
+        }
 
-        // Cache it
-        if( data ) cache( `solution_score_${ challenge }`, data, 60 * 60 * 24 )
-        log.info( `Returning score for ${ challenge }:`, data )
-        if( !data ) return res.status( 200 ).json( { error: `Challenge not found`, score: 0 } )
+        // Validate the response
+        const { correct, ms_to_solve, solved_at } = await solve_challenge( { challenge, response } )
+
+        // If not correct, return false
+        if( !correct ) return res.json( { correct } )
+
+        // If correct, score the request
+        const { uniqueness_score, country_uniqueness_score } = await score_request_uniqueness( req )
+        log.info( `Uniqueness score for ${ challenge }: ${ uniqueness_score }` )
+        if( uniqueness_score === undefined && !CI_MODE ) {
+            log.info( `Uniqueness score is undefined, returning error` )
+            return res.status( 200 ).json( { error: 'Nice try', score: 0, correct: false } )
+        }
+
+        // Score based on delay, with a grace period, and a punishment per ms above it
+        log.info( `Time to solve ${ challenge }: ${ ms_to_solve } (${ solved_at })` )
+        const s_to_solve = ms_to_solve / 1000
+        const penalty = Math.min( 100, 2 ** s_to_solve - 1 )
+        const speed_score = Math.sqrt( 100 - penalty )
+
+        // Uniqeness score, minus maximum speed score, plus speed score
+        const score = Math.max( Math.round( uniqueness_score - 10 + speed_score ), 0 )
+
+        // Formulate and cache response
+        const data = { correct, score, speed_score, uniqueness_score, country_uniqueness_score, solved_at }
+        await save_challenge_response_score( { correct, challenge, score, speed_score, uniqueness_score, country_uniqueness_score, solved_at } )
+        log.info( `[GET] Challenge ${ challenge } solved with score ${ score }` )
+        cache( `solution_score_${ challenge }`, data )
 
         return res.json( data )
 
@@ -151,7 +180,7 @@ router.post( "/:challenge/:response", async ( req, res ) => {
         
         // Save score to database
         await save_challenge_response_score( { correct, challenge, score, speed_score, uniqueness_score, country_uniqueness_score, solved_at } )
-        log.info( `Challenge ${ challenge } solved with score ${ score }` )
+        log.info( `[POST] Challenge ${ challenge } solved with score ${ score }` )
 
         return res.json( data )
 
