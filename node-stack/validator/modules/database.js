@@ -204,6 +204,7 @@ export async function save_challenge_response_score( { correct, challenge, score
 }
 
 export async function get_challenge_response_score( { challenge } ) {
+
     // Retrieve the score for the given challenge
     const result = await pool.query(
         `SELECT correct, score, speed_score, uniqueness_score, country_uniqueness_score, solved_at FROM scores WHERE challenge = $1 ORDER BY solved_at ASC LIMIT 1`,
@@ -216,7 +217,8 @@ export async function get_challenge_response_score( { challenge } ) {
         speed_score: 0,
         uniqueness_score: 0,
         country_uniqueness_score: 0,
-        solved_at: 0
+        solved_at: 0,
+        error: 'No score found'
     }
     return result.rows.length > 0 ? result.rows[0] : default_values
 

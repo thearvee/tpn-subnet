@@ -44,7 +44,7 @@ router.get( "/:challenge/:response?", async ( req, res ) => {
         // Extract challenge and response from request
         const { miner_uid } = req.query
         const { challenge, response } = req.params
-        log.info( `Score requested for challenge ${ challenge }/${ response } by ${ miner_uid ? 'validator' : 'miner' }` )
+        log.info( `[GET] Challenge/response ${ challenge }/${ response } called by ${ miner_uid ? 'validator' : 'miner' }` )
 
         // If only the challenge is provided, return the response
         if( !response ) {
@@ -53,7 +53,7 @@ router.get( "/:challenge/:response?", async ( req, res ) => {
             if( cached_value ) return res.json( { response: cached_value.response } )
 
             const challenge_response = await get_challenge_response( { challenge } )
-            if( !cached_value ) cache( `challenge_solution_${ challenge }`, challenge_response )
+            if( !cached_value && challenge_response.response ) cache( `challenge_solution_${ challenge }`, challenge_response )
 
             log.info( `Returning challenge response for challenge ${ challenge }: `, challenge_response )
             return res.json( { response: challenge_response.response } )
@@ -69,7 +69,7 @@ router.get( "/:challenge/:response?", async ( req, res ) => {
 
         // Check for solved value
         const scored_response = await get_challenge_response_score( { challenge } )
-        if( scored_response ) {
+        if( scored_response && !scored_response.error ) {
             log.info( `Returning scored value for solution ${ challenge }` )
             cache( `solution_score_${ challenge }`, scored_response )
             return res.json( scored_response )
