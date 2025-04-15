@@ -42,8 +42,9 @@ router.get( "/:challenge/:response?", async ( req, res ) => {
     const handle_route = async () => {
 
         // Extract challenge and response from request
+        const { miner_uid } = req.query
         const { challenge, response } = req.params
-        log.info( `Score requested for challenge ${ challenge }/${ response }` )
+        log.info( `Score requested for challenge ${ challenge }/${ response }?miner_uid=${ miner_uid }` )
 
         // If only the challenge is provided, return the response
         if( !response ) log.warn( `Challenge ${ challenge } requested without response` )
