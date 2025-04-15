@@ -4,7 +4,7 @@ import { score_request_uniqueness } from "../modules/scoring.js"
 import { cache, log, make_retryable } from "mentie"
 import { base_url } from "../modules/url.js"
 import { validate_wireguard_config } from "../modules/wireguard.js"
-import { get_challenge_response_score, save_challenge_response_score } from "../modules/database.js"
+import { get_challenge_response, get_challenge_response_score, save_challenge_response_score } from "../modules/database.js"
 export const router = Router()
 const { CI_MODE } = process.env
 
@@ -14,11 +14,11 @@ router.get( "/new", async ( req, res ) => {
     try {
 
         // Get miner uid from get query
-        const { miner_uid } = req.query
+        const { miner_uid='unknown' } = req.query
 
         // Generate a new challenge
         const challenge = await generate_challenge( { miner_uid } )
-        log.info( `New challenge generated for ${ miner_uid }:`, { challenge } )
+        log.info( `New challenge generated for miner uid ${ miner_uid }:`, { challenge } )
 
         // Formulate public challenge URL
         const challenge_url = `${ base_url }/challenge/${ challenge }`
@@ -34,7 +34,7 @@ router.get( "/new", async ( req, res ) => {
 
 } )
 
-// Challenge route to get but not solve challenge/responses
+// Challenge route, used by validator when validating challenge/responses through wireguard connection
 // :challenge only - return the response for the challenge
 // :challenge and :response - validate the response and return the score
 router.get( "/:challenge/:response?", async ( req, res ) => {
@@ -44,10 +44,21 @@ router.get( "/:challenge/:response?", async ( req, res ) => {
         // Extract challenge and response from request
         const { miner_uid } = req.query
         const { challenge, response } = req.params
-        log.info( `Score requested for challenge ${ challenge }/${ response }?miner_uid=${ miner_uid }` )
+        log.info( `Score requested for challenge ${ challenge }/${ response } by ${ miner_uid ? 'validator' : 'miner' }` )
 
         // If only the challenge is provided, return the response
-        if( !response ) log.warn( `Challenge ${ challenge } requested without response` )
+        if( !response ) {
+
+            const cached_value = cache( `challenge_solution_${ challenge }` )
+            if( cached_value ) return res.json( { response: cached_value.response } )
+
+            const challenge_response = await get_challenge_response( { challenge } )
+            if( !cached_value ) cache( `challenge_solution_${ challenge }`, challenge_response )
+
+            log.info( `Returning challenge response for challenge ${ challenge }: `, challenge_response )
+            return res.json( { response: challenge_response.response } )
+
+        }
 
         // Check for cached value
         const cached_value = cache( `solution_score_${ challenge }` )

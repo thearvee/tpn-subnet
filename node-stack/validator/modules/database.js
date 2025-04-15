@@ -190,7 +190,7 @@ export async function get_miner_stats() {
 
 }
 
-export async function save_challenge_response_score( { correct, challenge, score, speed_score, uniqueness_score, country_uniqueness_score, solved_at } ) {
+export async function save_challenge_response_score( { correct, challenge, score, speed_score, uniqueness_score, country_uniqueness_score, solved_at }={} ) {
 
     // Save score
     await pool.query(
