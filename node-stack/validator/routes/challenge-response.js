@@ -34,6 +34,23 @@ router.get( "/new", async ( req, res ) => {
 
 } )
 
+// Scoring helper
+const calculate_score = ( { uniqueness_score, ms_to_solve } ) => {
+
+    // Score based on delay, with a grace period, and a punishment per ms above it
+    const s_to_solve = ms_to_solve / 1000
+    const grace_secs = 45
+    const penalty = Math.min( 100, 1.1 ** ( grace_secs - s_to_solve ) )
+    const speed_score = Math.sqrt( 100 - penalty )
+    
+    // Uniqeness score, minus maximum speed score, plus speed score
+    const score = Math.max( Math.round( uniqueness_score - 10 + speed_score ), 0 )
+
+            
+    return { score, speed_score }
+
+}
+
 // Challenge route, used by validator when validating challenge/responses through wireguard connection
 // :challenge only - return the response for the challenge
 // :challenge and :response - validate the response and return the score
@@ -44,13 +61,16 @@ router.get( "/:challenge/:response?", async ( req, res ) => {
         // Extract challenge and response from request
         const { miner_uid } = req.query
         const { challenge, response } = req.params
-        log.info( `[GET] Challenge/response ${ challenge }/${ response } called by ${ miner_uid ? 'validator' : 'miner' }` )
+        log.info( `[GET] Challenge/response ${ challenge }/${ response || '' } called by ${ miner_uid ? 'validator' : 'miner' }` )
 
         // If only the challenge is provided, return the response
         if( !response ) {
 
             const cached_value = cache( `challenge_solution_${ challenge }` )
-            if( cached_value ) return res.json( { response: cached_value.response } )
+            if( cached_value ) {
+                log.info( `Returning cached value (no response provided) for challenge ${ challenge }: `, cached_value )
+                return res.json( { response: cached_value.response } )
+            }
 
             const challenge_response = await get_challenge_response( { challenge } )
             if( !cached_value && challenge_response.response ) cache( `challenge_solution_${ challenge }`, challenge_response )
@@ -68,6 +88,7 @@ router.get( "/:challenge/:response?", async ( req, res ) => {
         }
 
         // Check for solved value
+        log.info( `Checking for scored response in database for ${ challenge }` )
         const scored_response = await get_challenge_response_score( { challenge } )
         if( scored_response && !scored_response.error ) {
             log.info( `Returning scored value for solution ${ challenge }` )
@@ -89,14 +110,9 @@ router.get( "/:challenge/:response?", async ( req, res ) => {
             return res.status( 200 ).json( { error: 'Nice try', score: 0, correct: false } )
         }
 
-        // Score based on delay, with a grace period, and a punishment per ms above it
+        // Calculate the score
         log.info( `Time to solve ${ challenge }: ${ ms_to_solve } (${ solved_at })` )
-        const s_to_solve = ms_to_solve / 1000
-        const penalty = Math.min( 100, 2 ** s_to_solve - 1 )
-        const speed_score = Math.sqrt( 100 - penalty )
-
-        // Uniqeness score, minus maximum speed score, plus speed score
-        const score = Math.max( Math.round( uniqueness_score - 10 + speed_score ), 0 )
+        const { score, speed_score } = calculate_score( { uniqueness_score, ms_to_solve } )
 
         // Formulate and cache response
         const data = { correct, score, speed_score, uniqueness_score, country_uniqueness_score, solved_at }
@@ -164,15 +180,10 @@ router.post( "/:challenge/:response", async ( req, res ) => {
             return res.json( { message, correct: false, score: 0 } )
         }
 
-        // Score based on delay, with a grace period, and a punishment per ms above it
-        log.info( `Time to solve ${ challenge }: ${ ms_to_solve } (${ solved_at })` )
-        const s_to_solve = ms_to_solve / 1000
-        const grace_secs = 45
-        const penalty = Math.min( 100, 1.1 ** ( grace_secs - s_to_solve ) )
-        const speed_score = Math.sqrt( 100 - penalty )
 
-        // Uniqeness score, minus maximum speed score, plus speed score
-        const score = Math.max( Math.round( uniqueness_score - 10 + speed_score ), 0 )
+        // Calculate the score
+        log.info( `Time to solve ${ challenge }: ${ ms_to_solve } (${ solved_at })` )
+        const { score, speed_score } = calculate_score( { uniqueness_score, ms_to_solve } )
 
         // Formulate and cache response
         const data = { correct, score, speed_score, uniqueness_score, country_uniqueness_score, solved_at }
