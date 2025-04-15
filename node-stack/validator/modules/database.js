@@ -129,10 +129,10 @@ export async function set_timestamp( { label, timestamp } ) {
     log.info( 'Timestamp set:', { label, timestamp } )
 }
 
-export async function save_challenge_response( { challenge, response, miner_uid } ) {
+export async function save_challenge_response( { challenge, response, miner_uid='unknown' } ) {
     // Save the challenge response; errors if challenge already exists
     await pool.query(
-        `INSERT INTO challenges (challenge, response, miner_uid, created) VALUES ($1, $2, $3)`,
+        `INSERT INTO challenges (challenge, response, miner_uid, created) VALUES ($1, $2, $3, $4)`,
         [ challenge, response, miner_uid, Date.now() ]
     )
     return { challenge, response, miner_uid }
