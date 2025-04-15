@@ -211,6 +211,12 @@ export async function get_miner_stats() {
 
 export async function save_challenge_response_score( { correct, challenge, score, speed_score, uniqueness_score, country_uniqueness_score, solved_at }={} ) {
 
+    // Round all numbers to nearest integer
+    score = Math.round( score )
+    speed_score = Math.round( speed_score )
+    uniqueness_score = Math.round( uniqueness_score )
+    country_uniqueness_score = Math.round( country_uniqueness_score )
+
     // Save score
     log.info( 'Saving score:', { correct, challenge, score, speed_score, uniqueness_score, country_uniqueness_score, solved_at } )
     await pool.query(
