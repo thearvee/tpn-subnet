@@ -15,13 +15,18 @@ const pool = new Pool( {
 
 export async function init_tables() {
 
+
     // In dev, delete old table
     if( CI_MODE ) {
         log.info( 'Dropping old table, in CI mode' )
         await pool.query( `DROP TABLE IF EXISTS timestamps` )
         await pool.query( `DROP TABLE IF EXISTS challenges` )
         await pool.query( `DROP TABLE IF EXISTS ip_addresses` )
+        await pool.query( `DROP TABLE IF EXISTS scores` )
     }
+
+    // Remove tables across breaking changes
+    await pool.query( `DROP TABLE IF EXISTS challenges` )
 
     // Create table for timestamps
     await pool.query( `
