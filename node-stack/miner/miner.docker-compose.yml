@@ -57,12 +57,30 @@ services:
       - SERVERPORT=51820
       - PEERS=${WIREGUARD_PEER_COUNT:-250}
       - LOG_CONFS=false
+      - FORCE_BLOCK_CONFIG_GENERATION=true # this prevents the container from generating config files, so the other container does it
     volumes:
       - ./wireguard:/config
     ports:
       - 51820:51820/udp
     sysctls:
       - net.ipv4.conf.all.src_valid_mark=1
+    restart: unless-stopped
+
+  wireguard_config_builder:
+    image: taofuprotocol/wireguard:latest
+    build:
+      context: .
+      dockerfile: Dockerfile.wireguard
+    container_name: wireguard_config_builder
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Etc/UTC
+      - SERVERPORT=51820
+      - PEERS=${WIREGUARD_PEER_COUNT:-250}
+      - LOG_CONFS=false
+    volumes:
+      - ./wireguard:/config
     restart: unless-stopped
 
   watchtower:
