@@ -253,16 +253,19 @@ export async function get_challenge_response_score( { challenge } ) {
 }
 
 
-export async function get_ips_by_country( { geo } ) {
+export async function get_ips_by_country( { geo }={} ) {
 
     // Get all ip addresses with a country that are not stale
     const ms_to_stale = 1000 * 60 * 60
     const stale_timestamp = Date.now() - ms_to_stale
 
     // Get nonstale ips, sort by timestamp where more recent is higher
+    let query = `SELECT ip_address FROM ip_addresses updated > $1 ORDER BY updated DESC`
+    if( geo ) query = `SELECT ip_address FROM ip_addresses WHERE country = $1 AND updated > $2 ORDER BY updated DESC`
+    log.info( `Querying for IPs by country: ${ geo }: `, query )
     const result = await pool.query(
-        `SELECT ip_address FROM ip_addresses ${ geo ? `WHERE country = $1 AND` : `` } updated > $2 ORDER BY updated DESC`,
-        [ geo, stale_timestamp ]
+        query,
+        geo ? [ geo, stale_timestamp ] : [ stale_timestamp ]
     )
     const ips = result.rows.map( row => row.ip_address )
 

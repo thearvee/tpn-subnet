@@ -1,8 +1,32 @@
 import { Router } from "express"
 export const router = Router()
-import { log, require_props } from "mentie"
-import { get_ips_by_country } from "../modules/database.js"
+import { cache, log, require_props } from "mentie"
+import { get_ips_by_country, get_miner_stats } from "../modules/database.js"
 import fetch from "node-fetch"
+
+router.get( "/config/countries", async ( req, res ) => {
+
+    try {
+
+        // Check if we have cached data
+        let country_codes = cache(  'country_code_stats' )
+        if( country_codes ) return res.json( country_codes )
+
+        // Cache stats
+        const stats = await get_miner_stats()
+        country_codes = Object.keys( stats )
+        log.info( `country_code_stats`, country_codes, 60_000 )
+
+        return res.json( [ country_codes ] )
+        
+    } catch ( e ) {
+
+        log.error( e )
+        return res.status( 500 ).json( { error: e.message } )
+
+    }
+
+} )
 
 router.get( '/config/new', async ( req, res ) => {
 
@@ -15,6 +39,7 @@ router.get( '/config/new', async ( req, res ) => {
         // Validate request parameters
         const required_properties = [ 'geo', 'lease_minutes' ]
         require_props( req.query, required_properties )
+        log.info( `Request properties validated` )
 
         // Validate lease
         const lease_min = .5
@@ -90,6 +115,7 @@ router.get( '/config/new', async ( req, res ) => {
 
     } catch ( e ) {
 
+        log.info( `Error requesting config:`, e.message )
         return res.status( 400 ).json( { error: e.message } )
 
     }
