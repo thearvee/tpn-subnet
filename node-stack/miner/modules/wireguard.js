@@ -180,7 +180,7 @@ export async function get_valid_wireguard_config( { validator=false, lease_minut
         log.info( 'Read file: ', file )
         return file
     }
-    const retryable_read = make_retryable( read_config, {
+    const retryable_read = await make_retryable( read_config, {
         retry_times: 2,
         cooldown_in_s: 5,
         logger: log.info

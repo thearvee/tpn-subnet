@@ -46,7 +46,7 @@ router.get( '/new', async ( req, res ) => {
         const { CI_MODE } = process.env
         const retry_times = CI_MODE ? 1 : 2
         const retryable_handler = await make_retryable( handle_route, { retry_times, cooldown_in_s: 2, cooldown_entropy: true } )
-        await retryable_handler()
+        return retryable_handler()
 
     } catch ( error ) {
         log.error( `Error in wireguard /new: ${ error }` )
