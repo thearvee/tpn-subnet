@@ -42,7 +42,7 @@ async def forward(self):
     bt.logging.info(f"Miner uids: {miner_uids}")
     
     # Generate k challenges
-    challenges = await generate_challenges(k=len(miner_uids), validator_server_url=self.validator_server_url)
+    challenges = await generate_challenges(miner_uids=miner_uids, validator_server_url=self.validator_server_url)
     bt.logging.info(f"Generated challenge: {challenges}")
     
     if challenges is None:
@@ -51,9 +51,9 @@ async def forward(self):
         return
 
     # Map the challenges and sequentially add the miner uids from miner_uids
-    for uid, challenge in zip(miner_uids, challenges):
-        challenge.challenge_url = challenge.challenge_url + f"?miner_uid={uid}"
-    bt.logging.info(f"Annotated challenges: {challenges}")
+    # for uid, challenge in zip(miner_uids, challenges):
+    #     challenge.challenge_url = challenge.challenge_url + f"?miner_uid={uid}"
+    # bt.logging.info(f"Annotated challenges: {challenges}")
 
     # Create concurrent queries, one for each challenge-miner pair
     async_queries = [

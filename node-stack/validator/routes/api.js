@@ -22,6 +22,12 @@ router.get( '/config/new', async ( req, res ) => {
             throw new Error( `Lease must be between ${ lease_min } and ${ lease_max } minutes, you supplied ${ lease_minutes }` )
         }
 
+        // Dummy response
+        const live = false
+        if( !live ) {
+            return res.json( { error: 'Endpoint not yet enabled, it will be soon', your_inputs: { geo, lease_minutes } } )
+        }
+
         // Get the miner ips for this country code
         const ips = await get_ips_by_country( { geo } )
         log.info( `Got ${ ips.length } ips for country:`, geo )
@@ -29,7 +35,17 @@ router.get( '/config/new', async ( req, res ) => {
         // If there are no ips, return an error
         if( ips.length == 0 ) return res.status( 404 ).json( { error: `No ips found for country: ${ geo }` } )
 
-        
+        // Request configs from these miners until one succeeds
+        let config = null
+        for( const ip of ips ) {
+
+            // Create the config url
+            const config_url = `http://${ ip }:3000/wireguard/new?lease_minutes=${ lease_minutes }&geo=${ geo }`
+            log.info( `Requesting config from:`, config_url )
+
+
+        }
+
 
 
     } catch ( e ) {
