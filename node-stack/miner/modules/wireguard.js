@@ -173,7 +173,14 @@ export async function get_valid_wireguard_config( { validator=false, lease_minut
     
     // Read the peer config file
     log.info( `Reading peer${ peer_id } config file` )
-    const retryable_read = make_retryable( async () => fs.readFile( `./wireguard/peer${ peer_id }/peer${ peer_id }.conf`, 'utf8' ), {
+    const read_config = async () => {
+        const peer_path = `./wireguard/peer${ peer_id }/peer${ peer_id }.conf`
+        log.info( `Reading file at path: ${ peer_path }` )
+        const file = await fs.readFile( peer_path, 'utf8' )
+        log.info( 'Read file: ', file )
+        return file
+    }
+    const retryable_read = make_retryable( read_config, {
         retry_times: 2,
         cooldown_in_s: 5,
         logger: log.info
