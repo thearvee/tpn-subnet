@@ -9,7 +9,7 @@ router.get( '/config/new', async ( req, res ) => {
     try {
 
         // Get request parameters
-        const { geo, lease_minutes } = req.query
+        let { geo, lease_minutes } = req.query
         log.info( `Request received for new config:`, { geo, lease_minutes } )
 
         // Validate request parameters
@@ -17,11 +17,14 @@ router.get( '/config/new', async ( req, res ) => {
         require_props( req.query, required_properties )
 
         // Validate lease
-        const lease_min = 5
+        const lease_min = .5
         const lease_max = 60
         if( lease_minutes < lease_min || lease_minutes > lease_max ) {
             throw new Error( `Lease must be between ${ lease_min } and ${ lease_max } minutes, you supplied ${ lease_minutes }` )
         }
+
+        // If geo was set to 'any', set it to null
+        if( geo == 'any' ) geo = null
 
         // Dummy response
         const live = true
