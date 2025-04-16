@@ -138,7 +138,7 @@ export async function restart_wg_container() {
  * Retrieves a valid WireGuard configuration.
  *
  * @param {Object} options - The options for the WireGuard configuration.
- * @param {Object} [options.validator] - Validator data object, null if not a validator request. If set, only the validator-reserved configs are returned. These are kept clear so the miner is never saturated with user requests and can't prove service to a validator.
+ * @param {Object} [options.validator=false] - Whether this request came from a validator. Used to determine the starting ID for the lease.
  * @param {number} [options.lease_minutes=60] - The lease duration in minutes.
  * @returns {Promise<Object>} A promise that resolves to an object containing the WireGuard configuration.
  * @returns {string} return.peer_config - The WireGuard peer configuration.
@@ -146,7 +146,7 @@ export async function restart_wg_container() {
  * @returns {number} return.peer_slots - The number of WireGuard peer slots.
  * @returns {number} return.expires_at - The expiration timestamp of the lease.
  */
-export async function get_valid_wireguard_config( { validator, lease_minutes=60 } ) {
+export async function get_valid_wireguard_config( { validator=false, lease_minutes=60 } ) {
 
     // Check if wireguard server is ready
     const wg_ready = await wireguard_server_ready()
@@ -158,10 +158,12 @@ export async function get_valid_wireguard_config( { validator, lease_minutes=60 
 
     // Formulate config parameters
     const expires_at = Date.now() + lease_minutes * 60_000
+    let safe_start = validator_count() + 1
+    if( safe_start < peer_slots ) safe_start = 1
     const config_parameters = {
         expires_at,
         end_id: peer_slots,
-        start_id: validator ? 1 : validator_count() + 1,
+        start_id: validator ? 1 : safe_start,
     }
     
     // Get a valid wireguard config slot
