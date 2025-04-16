@@ -1,7 +1,7 @@
 import { Router } from "express"
 export const router = Router()
 import { log, require_props } from "mentie"
-import { get_ips_by_country } from "../modules/database"
+import { get_ips_by_country } from "../modules/database.js"
 import fetch from "node-fetch"
 
 router.get( '/config/new', async ( req, res ) => {
