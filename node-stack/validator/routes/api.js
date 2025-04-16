@@ -71,7 +71,8 @@ router.get( '/config/new', async ( req, res ) => {
             log.info( `Requesting config from miner:`, ip )
 
             // Sanetise potential ipv6 mapping of ipv4 address
-            ip = ip.replace( '::ffff:', '' )
+            if( ip?.startsWith( '::ffff:' ) ) ip = ip?.replace( '::ffff:', '' )
+
 
             // Create the config url
             let config_url = new URL( `http://${ ip }:3000/wireguard/new` )
@@ -85,8 +86,15 @@ router.get( '/config/new', async ( req, res ) => {
 
             try {
 
-                // Get the config file from the miner
-                response = await fetch( config_url )
+                // Request with timeout
+                const timeout = 5_000
+                const controller = new AbortController()
+                const timeout_id = setTimeout( () => {
+                    controller.abort()
+                }, timeout )
+                response = await fetch( config_url, { signal: controller.signal } )
+                clearTimeout( timeout_id )
+
                 const json = await response.clone().json()
                 log.info( `Response from ${ ip }:`, json )
 

@@ -22,7 +22,7 @@ export async function score_request_uniqueness( request, disable_rate_limit=fals
     let unspoofable_ip = connection.remoteAddress || socket.remoteAddress
 
     // Sanetise potential ipv6 mapping of ipv4 address
-    unspoofable_ip = unspoofable_ip?.replace( '::ffff:', '' )
+    if( unspoofable_ip?.startsWith( '::ffff:' ) ) unspoofable_ip = unspoofable_ip?.replace( '::ffff:', '' )
 
     // Log out the ip address of the request
     if( unspoofable_ip ) log.info( `Request from ${ unspoofable_ip }` )
