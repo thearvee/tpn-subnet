@@ -268,6 +268,7 @@ export async function get_ips_by_country( { geo }={} ) {
         geo ? [ geo, stale_timestamp ] : [ stale_timestamp ]
     )
     const ips = result.rows.map( row => row.ip_address )
+    log.info( `Query result for IPs by country ${ geo }:`, ips )
 
     return ips
 
