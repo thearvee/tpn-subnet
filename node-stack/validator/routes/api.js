@@ -44,25 +44,33 @@ router.get( '/config/new', async ( req, res ) => {
         for( const ip of ips ) {
 
             // Create the config url
-            let config_url = new URL( `http://${ ip }:3000/wireguard/new?` )
+            let config_url = new URL( `http://${ ip }:3000/wireguard/new` )
             config_url.searchParams.set( 'lease_minutes', lease_minutes )
             config_url.searchParams.set( 'geo', geo )
             config_url = config_url.toString()
             log.info( `Requesting config from:`, config_url )
 
+            // Response holder for trycatch management
+            let response = undefined
+
             try {
 
-                const response = await fetch( config_url )
-                const json = await response.json()
+                // Get the config file from the miner
+                response = await fetch( config_url )
+                const json = await response.clone().json()
                 log.info( `Response from ${ ip }:`, json )
 
                 // Get relevant properties
                 const { peer_config, expires_at } = json
                 if( peer_config && expires_at ) config = { peer_config, expires_at }
 
+                // If we have a config, exit the for loop
+                if( config ) break
+
             } catch ( e ) {
 
-                log.info( `Error requesting config from ${ ip }:`, e )
+                const text_response = await response?.clone()?.text()?.catch( e => e.message )
+                log.info( `Error requesting config from ${ ip }: ${ e.message }. Response body:`, text_response )
                 continue
 
             }
