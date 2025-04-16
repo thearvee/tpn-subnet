@@ -43,6 +43,8 @@ router.get( '/config/new', async ( req, res ) => {
         let config = null
         for( const ip of ips ) {
 
+            log.info( `Requesting config from miner:`, ip )
+
             // Create the config url
             let config_url = new URL( `http://${ ip }:3000/wireguard/new` )
             config_url.searchParams.set( 'lease_minutes', lease_minutes )
