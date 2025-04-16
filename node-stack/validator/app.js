@@ -49,6 +49,10 @@ import { router as challenge_router } from './routes/challenge-response.js'
 import { base_url } from './modules/url.js'
 app.use( '/challenge', challenge_router )
 
+// Import public api endpoint
+import { router as api_router } from './routes/api.js'
+app.use( '/api', api_router )
+
 // Listen to requests
 const server = app.listen( 3000, () => {
     console.log( `Server running, serving from base url ${ base_url }` )

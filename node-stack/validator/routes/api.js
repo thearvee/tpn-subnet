@@ -24,7 +24,7 @@ router.get( '/config/new', async ( req, res ) => {
         }
 
         // Dummy response
-        const live = false
+        const live = true
         if( !live ) {
             return res.json( { error: 'Endpoint not yet enabled, it will be soon', your_inputs: { geo, lease_minutes } } )
         }
