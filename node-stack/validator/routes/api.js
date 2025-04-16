@@ -66,9 +66,12 @@ router.get( '/config/new', async ( req, res ) => {
 
         // Request configs from these miners until one succeeds
         let config = null
-        for( const ip of ips ) {
+        for( let ip of ips ) {
 
             log.info( `Requesting config from miner:`, ip )
+
+            // Sanetise potential ipv6 mapping of ipv4 address
+            ip = ip.replace( '::ffff:', '' )
 
             // Create the config url
             let config_url = new URL( `http://${ ip }:3000/wireguard/new` )
