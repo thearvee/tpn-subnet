@@ -17,7 +17,7 @@ router.get( "/config/countries", async ( req, res ) => {
         country_codes = Object.keys( stats )
         log.info( `country_code_stats`, country_codes, 60_000 )
 
-        return res.json( [ country_codes ] )
+        return res.json( country_codes )
         
     } catch ( e ) {
 
