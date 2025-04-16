@@ -20,7 +20,7 @@ router.get( "/new", async ( req, res ) => {
         const challenge = await generate_challenge( { miner_uid } )
 
         // Formulate public challenge URL
-        const challenge_url = `${ base_url }/challenge/${ challenge }`
+        const challenge_url = `${ base_url }/challenge/${ challenge }?miner_uid=${ miner_uid }`
         log.info( `New challenge url generated: ${ challenge_url }` )
 
         return res.json( { challenge, challenge_url } )
@@ -76,7 +76,7 @@ router.get( "/:challenge/:response?", async ( req, res ) => {
             if( !cached_value && challenge_response.response ) cache( `challenge_solution_${ challenge }`, challenge_response )
 
             log.info( `[GET] Returning challenge response for challenge ${ challenge }: `, challenge_response )
-            return res.json( { response: challenge_response.response } )
+            return res.json( { ...challenge_response } )
 
         }
 
@@ -115,7 +115,7 @@ router.get( "/:challenge/:response?", async ( req, res ) => {
         const { score, speed_score } = calculate_score( { uniqueness_score, ms_to_solve } )
 
         // Formulate and cache response
-        const data = { correct, score, speed_score, uniqueness_score, country_uniqueness_score, solved_at }
+        const data = { correct, score, speed_score, uniqueness_score, country_uniqueness_score, solved_at, miner_uid }
         await save_challenge_response_score( { correct, challenge, score, speed_score, uniqueness_score, country_uniqueness_score, solved_at } )
         log.info( `[GET] Challenge ${ challenge } solved with score ${ score }` )
         cache( `solution_score_${ challenge }`, data )
@@ -146,6 +146,7 @@ router.post( "/:challenge/:response", async ( req, res ) => {
 
 
         // Extract challenge and response from request
+        const { miner_uid } = req.query
         const { challenge, response } = req.params
         if( !challenge || !response ) return res.status( 400 ).json( { error: 'Missing challenge or response' } )
 
@@ -182,11 +183,11 @@ router.post( "/:challenge/:response", async ( req, res ) => {
 
 
         // Calculate the score
-        log.info( `Time to solve ${ challenge }: ${ ms_to_solve } (${ solved_at })` )
+        log.info( `Time for miner ${ miner_uid } to solve ${ challenge }: ${ ms_to_solve } (${ solved_at })` )
         const { score, speed_score } = calculate_score( { uniqueness_score, ms_to_solve } )
 
         // Formulate and cache response
-        const data = { correct, score, speed_score, uniqueness_score, country_uniqueness_score, solved_at }
+        const data = { correct, score, speed_score, uniqueness_score, country_uniqueness_score, solved_at, miner_uid }
         cache( `solution_score_${ challenge }`, data )
         
         // Save score to database

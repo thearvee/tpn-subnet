@@ -3,24 +3,22 @@ import aiohttp
 from sybil.protocol import Challenge
 from typing import List
 
+# Fetch a challenge from a given URL
 async def fetch(url):
     async with aiohttp.ClientSession() as session:
         async with session.get(url) as response:
             return await response.json()
 
-
-async def generate_challenges(k:int, validator_server_url:str)->List[Challenge]:
+# Generate one challenge per miner_uid, appending ?miner_uid=<uid> to each request
+async def generate_challenges(miner_uids: List[int], validator_server_url: str) -> List[Challenge]:
     try:
-        challenges = []
-        # Create k concurrent tasks to fetch challenges
         tasks = []
-        for _ in range(k):
-            tasks.append(fetch(f"{validator_server_url}/challenge/new"))
+        for uid in miner_uids:
+            url = f"{validator_server_url}/challenge/new?miner_uid={uid}"
+            tasks.append(fetch(url))
         
-        # Wait for all challenge responses
         responses = await asyncio.gather(*tasks)
         
-        # Convert responses to Challenge objects
         challenges = [
             Challenge(
                 challenge=response["challenge"],
