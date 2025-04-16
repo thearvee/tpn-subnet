@@ -260,12 +260,13 @@ export async function get_ips_by_country( { geo }={} ) {
     const stale_timestamp = Date.now() - ms_to_stale
 
     // Get nonstale ips, sort by timestamp where more recent is higher
-    let query = `SELECT ip_address FROM ip_addresses updated > $1 ORDER BY updated DESC`
+    let query = `SELECT ip_address FROM ip_addresses WHERE updated > $1 ORDER BY updated DESC`
     if( geo ) query = `SELECT ip_address FROM ip_addresses WHERE country = $1 AND updated > $2 ORDER BY updated DESC`
-    log.info( `Querying for IPs by country: ${ geo }: `, query )
+    const variables = geo ? [ geo, stale_timestamp ] : [ stale_timestamp ]
+    log.info( `Querying for IPs by country: ${ geo }: `, query, variables )
     const result = await pool.query(
         query,
-        geo ? [ geo, stale_timestamp ] : [ stale_timestamp ]
+        variables
     )
     const ips = result.rows.map( row => row.ip_address )
     log.info( `Query result for IPs by country ${ geo }:`, ips )
