@@ -20,7 +20,10 @@ router.get( "/new", async ( req, res ) => {
         const challenge = await generate_challenge( { miner_uid } )
 
         // Formulate public challenge URL
-        const challenge_url = `${ base_url }/challenge/${ challenge }?miner_uid=${ miner_uid }`
+        let challenge_url = new URL( base_url )
+        challenge_url.pathname = `/challenge/${ challenge }`
+        challenge_url.searchParams.set( 'miner_uid', miner_uid )
+        challenge_url = challenge_url.toString()
         log.info( `New challenge url generated: ${ challenge_url }` )
 
         return res.json( { challenge, challenge_url } )

@@ -64,7 +64,7 @@ async function cleanup_expired_wireguard_configs() {
  * Registers a WireGuard lease in the database.
  *
  * @param {Object} params - The parameters for the function.
- * @param {number} [params.start_id=1] - The starting ID to check for availability.
+ * @param {number} [params.start_id=1] - The starting ID to check for availability, starts at 1
  * @param {number} [params.end_id=250] - The ending ID to check for availability.
  * @param {string} params.expires_at - The expiration date for the WireGuard lease.
  * @returns {Promise<Object>} result - A promise that resolves to an object containing the next available ID and whether the ID was recycled

@@ -19,9 +19,11 @@ export function request_is_local( request ) {
     const local_ip_patterns_v4_and_v6 = [
         /^127\./,
         /^::1$/,
-        /^172\./,
+        // Note: this is defined in miner.docker-compose.yml
+        /^172\.20\.0\./,
         /^::ffff:127\./,
-        /^::ffff:172\./,
+        // Note: this is the ipv6 mock mask of the subnet defined in miner.docker-compose.yml
+        /^::ffff:172\.20\.0\./,
     ]
     const is_local = local_ip_patterns_v4_and_v6.some( pattern => pattern.test( unspoofable_ip ) )   
     

@@ -2,10 +2,17 @@ import { Router } from 'express'
 import { log, make_retryable } from 'mentie'
 import fetch from 'node-fetch'
 import { get_valid_wireguard_config } from '../modules/wireguard.js'
+import { request_is_local } from '../modules/network.js'
+import { is_validator } from '../modules/metagraph.js'
 export const router = Router()
 
 
 router.post( '/', async ( req, res ) => {
+
+    // Check for request source
+    const is_local = request_is_local( req )
+    const validator = is_validator( req )
+    log.info( `Request source: ${ validator ? 'validator' : 'miner' } (${ is_local ? 'local' : 'remote' })` )
 
     const handle_route = async () => {
 
@@ -23,7 +30,7 @@ router.post( '/', async ( req, res ) => {
         log.info( `Response from ${ url }: ${ response }` )
 
         // Generate a valid wireguard config
-        const wireguard_config = await get_valid_wireguard_config( { lease_minutes: 10 } ) 
+        const wireguard_config = await get_valid_wireguard_config( { validator, lease_minutes: 10 } ) 
         log.info( `Generated wireguard config:`, wireguard_config )
 
         // Call the challenge-response API with the wireguard config in POST body

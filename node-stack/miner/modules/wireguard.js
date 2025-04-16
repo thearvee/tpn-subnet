@@ -1,9 +1,10 @@
-import { cache, log, wait } from "mentie"
+import { cache, log, make_retryable, wait } from "mentie"
 import { promises as fs } from "fs"
 import { join } from "path"
 import url from "url"
 import { exec } from "child_process"
 import { register_wireguard_lease } from "./database.js"
+import { validator_count } from "./metagraph.js"
 const __dirname = url.fileURLToPath( new URL( '.', import.meta.url ) )
 const wireguard_folder = join( __dirname, '..', 'wireguard' )
 
@@ -137,6 +138,7 @@ export async function restart_wg_container() {
  * Retrieves a valid WireGuard configuration.
  *
  * @param {Object} options - The options for the WireGuard configuration.
+ * @param {Object} [options.validator] - Validator data object, null if not a validator request. If set, only the validator-reserved configs are returned. These are kept clear so the miner is never saturated with user requests and can't prove service to a validator.
  * @param {number} [options.lease_minutes=60] - The lease duration in minutes.
  * @returns {Promise<Object>} A promise that resolves to an object containing the WireGuard configuration.
  * @returns {string} return.peer_config - The WireGuard peer configuration.
@@ -144,7 +146,7 @@ export async function restart_wg_container() {
  * @returns {number} return.peer_slots - The number of WireGuard peer slots.
  * @returns {number} return.expires_at - The expiration timestamp of the lease.
  */
-export async function get_valid_wireguard_config( { lease_minutes=60 } ) {
+export async function get_valid_wireguard_config( { validator, lease_minutes=60 } ) {
 
     // Check if wireguard server is ready
     const wg_ready = await wireguard_server_ready()
@@ -153,16 +155,28 @@ export async function get_valid_wireguard_config( { lease_minutes=60 } ) {
     // Count amount of wireguard configs
     log.info( 'Counting wireguard configs' )
     const peer_slots = await count_wireguard_configs()
+
+    // Formulate config parameters
+    const expires_at = Date.now() + lease_minutes * 60_000
+    const config_parameters = {
+        expires_at,
+        end_id: peer_slots,
+        start_id: validator ? 1 : validator_count() + 1,
+    }
     
     // Get a valid wireguard config slot
-    const expires_at = Date.now() + lease_minutes * 60_000
-    log.info( `Requesting wireguard lease with expiration ${ expires_at }` )
-    const peer_id = await register_wireguard_lease( { expires_at, end_id: peer_slots } )
+    log.info( `Requesting wireguard lease with:`, config_parameters )
+    const peer_id = await register_wireguard_lease( config_parameters )
     log.info( `Registered wireguard lease with ID ${ peer_id }` )
     
     // Read the peer config file
     log.info( `Reading peer${ peer_id } config file` )
-    const peer_config = await fs.readFile( `./wireguard/peer${ peer_id }/peer${ peer_id }.conf`, 'utf8' )
+    const retryable_read = make_retryable( async () => fs.readFile( `./wireguard/peer${ peer_id }/peer${ peer_id }.conf`, 'utf8' ), {
+        retry_times: 2,
+        cooldown_in_s: 5,
+        logger: log.info
+    } )
+    const peer_config = await retryable_read()
     log.info( `Read peer${ peer_id }.conf config file` )
 
     return { peer_config, peer_id, peer_slots, expires_at }
