@@ -33,7 +33,7 @@ router.get( '/config/new', async ( req, res ) => {
     try {
 
         // Get request parameters
-        let { geo, lease_minutes, timeout_ms=5_000 } = req.query
+        let { geo, lease_minutes, format='json', timeout_ms=5_000 } = req.query
         log.info( `Request received for new config:`, { geo, lease_minutes } )
 
         // Validate request parameters
@@ -120,7 +120,8 @@ router.get( '/config/new', async ( req, res ) => {
         log.info( `Config found for ${ geo }:`, config )
 
         // Return the config to the requester
-        return res.json( { ...config } )
+        if( format == 'json' ) return res.json( { ...config } )
+        return res.send( config.peer_config )
 
 
     } catch ( e ) {
