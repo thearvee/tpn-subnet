@@ -19,6 +19,14 @@ fi
 docker compose -f node-stack/miner/miner.docker-compose.yml pull
 
 # Restart the miner docker container
+if [ "$REPO_UP_TO_DATE" -eq 0 ]; then
+    echo "Repository has changes, force restarting docker process..."
+    docker compose -f node-stack/miner/miner.docker-compose.yml down
+    echo "Pruning unused images and networks..."
+    docker image prune -f || echo "Failed to prune unused images and networks."
+else
+    echo "No changes in the repository, no need to force restart docker."
+fi
 docker compose -f node-stack/miner/miner.docker-compose.yml up -d
 
 # Restart the pm2 process
