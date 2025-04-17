@@ -97,6 +97,8 @@ export async function init_tables() {
 
 export async function save_ip_address_and_return_ip_stats( { ip_address, country } ) {
 
+    log.info( `Saving IP address ${ ip_address } with country ${ country }` )
+
     // Count all non-stale IP addresses
     const ipCountResult = await pool.query(
         `SELECT COUNT(*) AS count FROM ip_addresses WHERE updated > $1`,
