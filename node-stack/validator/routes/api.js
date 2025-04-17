@@ -75,7 +75,7 @@ router.get( '/config/new', async ( req, res ) => {
 
 
             // Create the config url
-            let config_url = new URL( `http://${ ip }:3000/wireguard/new` )
+            let config_url = new URL( `http://${ ip }:3001/wireguard/new` )
             config_url.searchParams.set( 'lease_minutes', lease_minutes )
             config_url.searchParams.set( 'geo', geo )
             config_url = config_url.toString()
@@ -116,7 +116,7 @@ router.get( '/config/new', async ( req, res ) => {
         }
 
         // If no config was found, return an error 
-        if( !config ) return res.status( 404 ).json( { error: `No config found for country: ${ geo }` } )
+        if( !config ) return res.status( 404 ).json( { error: `No config found for country: ${ geo } (${ ips.length } miners)` } )
         log.info( `Config found for ${ geo }:`, config )
 
         // Return the config to the requester
