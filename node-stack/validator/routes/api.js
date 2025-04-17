@@ -71,7 +71,7 @@ router.get( '/config/new', async ( req, res ) => {
             log.info( `Requesting config from miner:`, ip )
 
             // Sanetise potential ipv6 mapping of ipv4 address
-            if( ip?.startsWith( '::ffff:' ) ) ip = ip?.replace( '::ffff:', '' )
+            if( ip?.trim()?.startsWith( '::ffff:' ) ) ip = ip?.replace( '::ffff:', '' )
 
 
             // Create the config url
