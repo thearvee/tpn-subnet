@@ -13,6 +13,11 @@ const pool = new Pool( {
     port: POSTGRES_PORT
 } )
 
+// Stale setting for database queries
+const epoch_minutes = 72
+const ms_to_stale = 60_000 * ( epoch_minutes * 2 )
+const stale_timestamp = Date.now() - ms_to_stale
+
 export async function init_tables() {
 
 
@@ -91,8 +96,8 @@ export async function init_tables() {
 }
 
 export async function save_ip_address_and_return_ip_stats( { ip_address, country } ) {
-    const ms_to_stale = 1000 * 60 * 30
-    const stale_timestamp = Date.now() - ms_to_stale
+
+    log.info( `Saving IP address ${ ip_address } with country ${ country }` )
 
     // Count all non-stale IP addresses
     const ipCountResult = await pool.query(
@@ -148,6 +153,7 @@ export async function set_timestamp( { label, timestamp } ) {
 
 export async function save_challenge_response( { challenge, response, miner_uid='unknown' } ) {
     // Save the challenge response; errors if challenge already exists
+    log.info( 'Saving challenge response:', { challenge, response, miner_uid } )
     await pool.query(
         `INSERT INTO challenges (challenge, response, miner_uid, created) VALUES ($1, $2, $3, $4)`,
         [ challenge, response, miner_uid, Date.now() ]
@@ -192,18 +198,18 @@ export async function get_miner_stats() {
     if( cached_value ) return cached_value
 
     // Get all ip addresses with a country that are not stale
-    const ms_to_stale = 1000 * 60 * 60
-    const stale_timestamp = Date.now() - ms_to_stale
     const result = await pool.query(
         `SELECT country FROM ip_addresses WHERE updated > $1`,
         [ stale_timestamp ]
     )
 
     // Reduce this to a per-country count
+    log.info( `Received ${ result.rows.length } ip addresses, collating by country` )
     const country_counts = result.rows.reduce( ( acc, { country } ) => {
         acc[country] = ( acc[country] || 0 ) + 1
         return acc
     }, {} )
+    log.info( `Country counts:`, country_counts )
 
     return cache( cache_key, country_counts, 60_000 )
 
@@ -253,18 +259,19 @@ export async function get_challenge_response_score( { challenge } ) {
 }
 
 
-export async function get_ips_by_country( { geo } ) {
-
-    // Get all ip addresses with a country that are not stale
-    const ms_to_stale = 1000 * 60 * 60
-    const stale_timestamp = Date.now() - ms_to_stale
+export async function get_ips_by_country( { geo }={} ) {
 
     // Get nonstale ips, sort by timestamp where more recent is higher
+    let query = `SELECT ip_address FROM ip_addresses WHERE updated > $1 ORDER BY updated DESC`
+    if( geo ) query = `SELECT ip_address FROM ip_addresses WHERE country = $1 AND updated > $2 ORDER BY updated DESC`
+    const variables = geo ? [ geo, stale_timestamp ] : [ stale_timestamp ]
+    log.info( `Querying for IPs by country: ${ geo }: `, query, variables )
     const result = await pool.query(
-        `SELECT ip_address FROM ip_addresses ${ geo ? `WHERE country = $1 AND` : `` } updated > $2 ORDER BY updated DESC`,
-        [ geo, stale_timestamp ]
+        query,
+        variables
     )
     const ips = result.rows.map( row => row.ip_address )
+    log.info( `Query result for IPs by country ${ geo }:`, ips )
 
     return ips
 

@@ -21,6 +21,9 @@ export async function score_request_uniqueness( request, disable_rate_limit=fals
     let spoofable_ip = request_ip || ips[0] || request.get( 'x-forwarded-for' )
     let unspoofable_ip = connection.remoteAddress || socket.remoteAddress
 
+    // Sanetise potential ipv6 mapping of ipv4 address
+    if( unspoofable_ip?.startsWith( '::ffff:' ) ) unspoofable_ip = unspoofable_ip?.replace( '::ffff:', '' )
+
     // Log out the ip address of the request
     if( unspoofable_ip ) log.info( `Request from ${ unspoofable_ip }` )
     if( !unspoofable_ip ) {
@@ -53,15 +56,19 @@ export async function score_request_uniqueness( request, disable_rate_limit=fals
     cache( `last_seen_${ unspoofable_ip }`, Date.now(), cooldown_minutes * 2 * 60 * 1000 )
     
     // Get the connection type and save ip to db
-    const [ is_dc, { ip_pct_same_country=0 } ] = await Promise.all( [
+    const [ is_dc, { ip_pct_same_country=0, country_count=0, ip_count } ] = await Promise.all( [
         is_data_center( unspoofable_ip ),
         save_ip_address_and_return_ip_stats( { ip_address: unspoofable_ip, country } )
     ] )
-    log.info( `Call stats: `, { is_dc, ip_pct_same_country } )
+    log.info( `Call stats: `, { is_dc, ip_pct_same_country, country_count, ip_count } )
     
     // Calcluate the score of the request, datacenters get half scores
     const datacenter_penalty = 0.9
-    const country_uniqueness_score = ( 100 - ip_pct_same_country ) * ( is_dc ? datacenter_penalty : 1 )
+    let country_uniqueness_score = ( 100 - ip_pct_same_country ) * ( is_dc ? datacenter_penalty : 1 )
+    if( country_count == 1 ) {
+        log.info( `There is only one country in the database, force-setting country uniqueness to 100, details: `, { country_count, ip_count, ip_pct_same_country } )
+        country_uniqueness_score = 100
+    }
     log.info( `Country uniqueness: ${ country_uniqueness_score }` )
 
     // Curve score with a power function where 100 stays 100, but lower numbers get more extreme
