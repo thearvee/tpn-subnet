@@ -1,7 +1,9 @@
 // Set up environment
 import 'dotenv/config'
 import { log } from 'mentie'
-log.info( `Starting server with env`, process.env )
+import { readFile } from 'fs/promises'
+const { version } = JSON.parse( await readFile( new URL( './package.json', import.meta.url ) ) )
+log.info( `Starting TPN miner with version ${ version } and env`, process.env )
 
 // Initialise database
 import { init_tables } from './modules/database.js'
@@ -14,7 +16,9 @@ import { app } from './routes/server.js'
 log.info( `Setting up routes` )
 
 // Identify self on /
-app.get( '/', ( req, res ) => res.send( 'Challenge-response server' ) )
+app.get( '/', ( req, res ) => {
+    res.send( `I am a TPN Network miner component running v${ version }` )
+} )
 
 // Import challenge/response router
 import { router as challenge_response_router } from './routes/challenge-response.js'
