@@ -33,7 +33,7 @@ router.get( '/config/new', async ( req, res ) => {
     try {
 
         // Get request parameters
-        let { geo, lease_minutes } = req.query
+        let { geo, lease_minutes, timeout_ms=5_000 } = req.query
         log.info( `Request received for new config:`, { geo, lease_minutes } )
 
         // Validate request parameters
@@ -87,11 +87,10 @@ router.get( '/config/new', async ( req, res ) => {
             try {
 
                 // Request with timeout
-                const timeout = 5_000
                 const controller = new AbortController()
                 const timeout_id = setTimeout( () => {
                     controller.abort()
-                }, timeout )
+                }, timeout_ms )
                 response = await fetch( config_url, { signal: controller.signal } )
                 clearTimeout( timeout_id )
 
