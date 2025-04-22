@@ -1,4 +1,4 @@
-import { cache, log } from 'mentie'
+import { log } from 'mentie'
 import { save_ip_address_and_return_ip_stats } from './database.js'
 import { is_data_center } from './ip2location.js'
 const { CI_MODE } = process.env
@@ -12,9 +12,11 @@ const { CI_MODE } = process.env
  * @param {Object} request.connection - The connection object of the request.
  * @param {Object} request.socket - The socket object of the request.
  * @param {Function} request.get - Function to get headers from the request.
+ * @param {Object} options - Options for the function.
+ * @param {boolean} [options.save_ip=true] - Whether to save the IP address to the database.
  * @returns {Promise<Object|undefined>} - Returns an object containing the uniqueness score and country uniqueness score if successful, otherwise undefined.
  */
-export async function score_request_uniqueness( request, disable_rate_limit=false ) {
+export async function score_request_uniqueness( request, { save_ip=false }={} ) {
 
     // Get the ip of the originating request
     let { ip: request_ip, ips, connection, socket } = request
@@ -43,22 +45,10 @@ export async function score_request_uniqueness( request, disable_rate_limit=fals
         return { uniqueness_score: undefined }
     }
 
-    // TEMPOTARY rate limit until neuron code filters duplicate ips
-    const last_seen = cache( `last_seen_${ unspoofable_ip }` )
-    const cooldown_minutes = .1
-    const minutes_since_seen = ( Date.now() - last_seen ) / 1000 / 60
-    if( !disable_rate_limit && last_seen && minutes_since_seen < cooldown_minutes ) {
-        log.info( `Request from ${ unspoofable_ip } seen ${ minutes_since_seen } minutes ago, scoring as 0` )
-        return { uniqueness_score: 0 }
-    }
-
-    // Save last seen ip to cache
-    cache( `last_seen_${ unspoofable_ip }`, Date.now(), cooldown_minutes * 2 * 60 * 1000 )
-    
     // Get the connection type and save ip to db
-    const [ is_dc, { ip_pct_same_country=0, country_count=0, ip_count } ] = await Promise.all( [
+    const [ is_dc, { ip_pct_same_country=0, country_count=0, ip_count, ips_in_same_country } ] = await Promise.all( [
         is_data_center( unspoofable_ip ),
-        save_ip_address_and_return_ip_stats( { ip_address: unspoofable_ip, country } )
+        save_ip_address_and_return_ip_stats( { ip_address: unspoofable_ip, country, save_ip } )
     ] )
     log.info( `Call stats: `, { is_dc, ip_pct_same_country, country_count, ip_count } )
     
@@ -77,7 +67,13 @@ export async function score_request_uniqueness( request, disable_rate_limit=fals
     log.info( `Powered score: ${ powered_score }` )
 
     // Return the score of the request
-    return { uniqueness_score: powered_score, country_uniqueness_score }
+    return { uniqueness_score: powered_score, country_uniqueness_score, details: {
+        is_dc,
+        ip_pct_same_country,
+        country_count,
+        ip_count,
+        ips_in_same_country
+    } }
 
 }
 // Datacenter name patterns (including educated guesses)

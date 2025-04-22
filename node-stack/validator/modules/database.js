@@ -14,8 +14,10 @@ const pool = new Pool( {
 } )
 
 // Stale setting for database queries
-const epoch_minutes = 72
-const ms_to_stale = 60_000 * ( epoch_minutes * 2 )
+const epoch_length_in_blocks = 100
+const block_time = 12
+const epoch_seconds = epoch_length_in_blocks * block_time
+const ms_to_stale = 1_000 * epoch_seconds
 const stale_timestamp = Date.now() - ms_to_stale
 
 export async function init_tables() {
@@ -95,25 +97,26 @@ export async function init_tables() {
     log.info( 'Tables initialized' )
 }
 
-export async function save_ip_address_and_return_ip_stats( { ip_address, country } ) {
+export async function save_ip_address_and_return_ip_stats( { ip_address, country, save_ip=false } ) {
 
     log.info( `Saving IP address ${ ip_address } with country ${ country }` )
 
     // Count all non-stale IP addresses
-    const ipCountResult = await pool.query(
+    const ip_count_result = await pool.query(
         `SELECT COUNT(*) AS count FROM ip_addresses WHERE updated > $1`,
         [ stale_timestamp ]
     )
-    const ip_count = parseInt( ipCountResult.rows[0].count, 10 ) || 0
+    const ip_count = parseInt( ip_count_result.rows[0].count, 10 ) || 0
     log.info( `Total ip addresses: ${ ip_count }` )
 
-    // Count non-stale IP addresses in the same country
+    // Get all non-stale IP addresses in the same country
     log.info( `Checking for ip addresses in the same country: ${ country }` )
-    const countryCountResult = await pool.query(
-        `SELECT COUNT(*) AS count FROM ip_addresses WHERE country = $1 AND updated > $2`,
+    const ips_in_same_country_result = await pool.query(
+        `SELECT ip_address FROM ip_addresses WHERE country = $1 AND updated > $2`,
         [ country, stale_timestamp ]
     )
-    const country_count = parseInt( countryCountResult.rows[0].count, 10 ) || 0
+    const ips_in_same_country = ips_in_same_country_result.rows.map( row => row.ip_address )
+    const country_count = ips_in_same_country.length || 0
     log.info( `Total ip addresses in the same country: ${ country_count }` )
 
     // Calculate the percentage, guarding against division by zero
@@ -121,14 +124,22 @@ export async function save_ip_address_and_return_ip_stats( { ip_address, country
     log.info( `Percentage of ip addresses in the same country: ${ ip_pct_same_country }` )
 
     // Insert or update the IP address record
-    await pool.query(
-        `INSERT INTO ip_addresses (ip_address, country, updated) VALUES ($1, $2, $3)
-        ON CONFLICT (ip_address)
-        DO UPDATE SET country = $4, updated = $5`,
-        [ ip_address, country, Date.now(), country, Date.now() ]
-    )
+    if( save_ip ) {
+        log.info( `Saving IP address ${ ip_address } to the database` )
+        await pool.query(
+            `INSERT INTO ip_addresses (ip_address, country, updated) VALUES ($1, $2, $3)
+            ON CONFLICT (ip_address)
+            DO UPDATE SET country = $4, updated = $5`,
+            [ ip_address, country, Date.now(), country, Date.now() ]
+        )
+    } else {
+        log.info( `Not saving IP address ${ ip_address } to the database` )
+    }
 
-    return { ip_count, country_count, ip_pct_same_country }
+    // Debug logging
+    log.info( `${ ip_address } is in ${ country }, others: `, ips_in_same_country.join( ', ' ) )
+
+    return { ip_count, country_count, ip_pct_same_country, ips_in_same_country }
 }
 
 export async function get_timestamp( { label } ) {

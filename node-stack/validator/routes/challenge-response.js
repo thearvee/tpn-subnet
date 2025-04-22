@@ -47,8 +47,10 @@ const calculate_score = ( { uniqueness_score, ms_to_solve } ) => {
     const speed_score = Math.sqrt( 100 - penalty )
     
     // Uniqeness score, minus maximum speed score, plus speed score
-    const score = Math.max( Math.round( uniqueness_score - 10 + speed_score ), 0 )
+    // const score = Math.max( Math.round( uniqueness_score - 10 + speed_score ), 0 )
 
+    // The speed score is causing discrepancies between validators, we will disable it for now
+    const score = Math.round( uniqueness_score )
             
     return { score, speed_score }
 
@@ -106,7 +108,7 @@ router.get( "/:challenge/:response?", async ( req, res ) => {
         if( !correct ) return res.json( { correct } )
 
         // If correct, score the request
-        const { uniqueness_score, country_uniqueness_score } = await score_request_uniqueness( req )
+        const { uniqueness_score, country_uniqueness_score } = await score_request_uniqueness( req, { save_ip: false } )
         log.info( `[GET] Uniqueness score for ${ challenge }: ${ uniqueness_score }` )
         if( uniqueness_score === undefined && !CI_MODE ) {
             log.info( `Uniqueness score is undefined, returning error` )
@@ -170,18 +172,18 @@ router.post( "/:challenge/:response", async ( req, res ) => {
         // If not correct, return false
         if( !correct ) return res.json( { correct } )
 
-        // If correct, score the request
-        const { uniqueness_score, country_uniqueness_score } = await score_request_uniqueness( req )
-        if( uniqueness_score === undefined ) {
-            log.info( `[POST] Uniqueness score is undefined, returning error` )
-            return res.status( 200 ).json( { error: 'Nice try', correct: false, score: 0 } )
-        }
-
         // Upon solution success, test the wireguard config
         const { valid: wireguard_valid, message='Unknown error validating wireguard config' } = await validate_wireguard_config( { peer_config, peer_id } )
         if( !wireguard_valid ) {
             log.info( `[POST] Wireguard config for peer ${ peer_id } failed challenge` )
             return res.json( { message, correct: false, score: 0 } )
+        }
+
+        // If correct, score the request
+        const { uniqueness_score, country_uniqueness_score, details } = await score_request_uniqueness( req, { save_ip: true } )
+        if( uniqueness_score === undefined ) {
+            log.info( `[POST] Uniqueness score is undefined, returning error` )
+            return res.status( 200 ).json( { error: 'Nice try', correct: false, score: 0 } )
         }
 
 
@@ -196,6 +198,16 @@ router.post( "/:challenge/:response", async ( req, res ) => {
         // Save score to database
         await save_challenge_response_score( { correct, challenge, score, speed_score, uniqueness_score, country_uniqueness_score, solved_at } )
         log.info( `[POST] Challenge ${ challenge } solved with score ${ score }` )
+
+        // Memory cache miner uid score
+        let miner_scores = cache( `last_known_miner_scores` ) || {}
+        miner_scores[ miner_uid ] = { score, timestamp: Date.now(), details }
+        // Sort the scores by timestamp (latest to oldest)
+        miner_scores = Object.entries( miner_scores )
+            .sort( ( [ , a ], [ , b ] ) => b[1].timestamp - a[1].timestamp )
+            .reduce( ( acc, [ key, value ] ) => ( { ...acc, [ key ]: value } ), {} )
+            .map( miner_entry => ( { ...miner_entry, timestamp: new Date( miner_entry.timestamp ).toString() } ) )
+        cache( `last_known_miner_scores`, miner_scores )
 
         return res.json( data )
 
