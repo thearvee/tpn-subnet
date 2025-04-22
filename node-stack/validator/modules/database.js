@@ -17,7 +17,8 @@ const pool = new Pool( {
 const epoch_length_in_blocks = 100
 const block_time = 12
 const epoch_seconds = epoch_length_in_blocks * block_time
-const ms_to_stale = 1_000 * epoch_seconds
+const epochs_until_stale = 5
+const ms_to_stale = 1_000 * epoch_seconds * epochs_until_stale
 const stale_timestamp = Date.now() - ms_to_stale
 
 export async function init_tables() {
