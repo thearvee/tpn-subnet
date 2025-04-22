@@ -204,8 +204,8 @@ router.post( "/:challenge/:response", async ( req, res ) => {
         miner_scores[ miner_uid ] = { score, timestamp: Date.now(), details }
         // Sort the scores by timestamp (latest to oldest)
         miner_scores = Object.entries( miner_scores )
-            .sort( ( [ , a ], [ , b ] ) => b[1].timestamp - a[1].timestamp )
-            .map( miner_entry => ( { ...miner_entry, timestamp: new Date( miner_entry.timestamp ).toString() } ) )
+            .sort( ( a, b ) => b[1].timestamp - a[1].timestamp )
+            .map( ( [ uid, miner_entry ] ) => [ uid, { ...miner_entry, timestamp: new Date( miner_entry.timestamp ).toString() } ]  )
             .reduce( ( acc, [ key, value ] ) => ( { ...acc, [ key ]: value } ), {} )
         cache( `last_known_miner_scores`, miner_scores )
 
