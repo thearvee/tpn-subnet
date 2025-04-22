@@ -277,21 +277,6 @@ export async function validate_wireguard_config( { peer_config, peer_id } ) {
         peer_config = peer_config.replace( /Address =.*/, `Address = ${ address }` )
     }
 
-
-    // // Add a Table = off line if it doesn't exist, add it after the Address line
-    // if( !peer_config.includes( 'Table = off' ) ) peer_config = peer_config.replace( /Address =.*/, `$&\nTable = off` )
-
-
-    // Add PostUp and PostDown scripts
-    // const PostUp = `
-    //     PostUp = echo upsuccess 
-    // `.trim()
-    // const PostDown = `
-    //     PostDown = echo downsuccess
-    // `.trim()
-    // if( !peer_config.includes( PostUp ) ) peer_config = peer_config.replace( /Address =.*/, `$&\n${ PostUp }` )
-    // if( !peer_config.includes( PostDown ) ) peer_config = peer_config.replace( /Address =.*/, `$&\n${ PostDown }` )
-    // log.info( `${ log_tag } Parsed wireguard config for peer ${ peer_id }:`, peer_config )
     // Path for the WireGuard configuration file.
     const wg_config_path = `/tmp/wg_${ peer_id }.conf`
 

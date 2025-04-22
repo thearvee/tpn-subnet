@@ -9,7 +9,7 @@ router.get( "/", async ( req, res ) => {
 
     try {
 
-        const score = await score_request_uniqueness( req, true )
+        const score = await score_request_uniqueness( req, { save_ip: false } )
 
         return res.json( { score } )
         
@@ -37,6 +37,23 @@ router.get( "/stats", async ( req, res ) => {
 
         return res.json( stats )
         
+    } catch ( e ) {
+
+        log.error( e )
+        return res.status( 500 ).json( { error: e.message } )
+
+    }
+
+} )
+
+router.get( "/stats/miners", async ( req, res ) => {
+
+    try {
+
+        // Check if we have cached data
+        let stats = cache( 'last_known_miner_scores' )
+        return res.json( stats )
+
     } catch ( e ) {
 
         log.error( e )
