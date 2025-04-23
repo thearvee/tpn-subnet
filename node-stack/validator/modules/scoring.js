@@ -12,7 +12,7 @@ export const ip_from_req = ( request ) => {
 async function score_ip_uniqueness( ip ) {
 
     // Get the geolocation of this ip
-    const miner_data = cache( `miner_ip_to_country` )
+    const miner_data = cache( `miner_ip_to_country` ) || {}
     let { country } = miner_data[ ip ] || {}
     log.info( `Request from:`, country )
 
@@ -31,7 +31,7 @@ async function score_ip_uniqueness( ip ) {
     }
 
     // Get country counts
-    const miner_country_count = cache( `miner_country_count` )
+    const miner_country_count = cache( `miner_country_count` ) || []
     const miner_count = miner_data.length
     const country_count = miner_country_count[ country ] || 0
     const miners_in_same_country = miner_country_count[ country ] || 0
@@ -45,7 +45,7 @@ async function score_ip_uniqueness( ip ) {
     // Calcluate the score of the request, datacenters get half scores
     const datacenter_penalty = 0.9
     let country_uniqueness_score = ( 100 - ip_pct_same_country ) * ( is_dc ? datacenter_penalty : 1 )
-    if( country_count == 1 ) {
+    if( country_count <= 1 ) {
         log.info( `There is only one country in the database, force-setting country uniqueness to 100`  )
         country_uniqueness_score = 100
     }
