@@ -96,13 +96,13 @@ export async function broadcast_miner_ips( ip_addresses=[] ) {
             } )
 
             // Get json
-            const json = await response.clone().json()
+            const json = await response?.clone().json()
             log.info( `Response from ${ validator_ip }:`, json )
             return json
 
         } catch ( e ) {
-            const text_response = await response?.clone()?.text()?.catch( e => e.message )
-            log.error( `Error broadcasting to ${ validator_ip } with ${ e.message }: `, text_response )
+            const text_response = await response?.clone().text().catch( e => e.message )
+            log.warn( `Error broadcasting to ${ validator_ip } with ${ e.message }: `, text_response )
         } finally {
             // Clear the timeout
             clearTimeout( timeout )
