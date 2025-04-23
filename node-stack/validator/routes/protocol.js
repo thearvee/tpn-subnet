@@ -1,7 +1,7 @@
 import { Router } from "express"
 import { log, make_retryable } from "mentie"
-import { is_validator } from "../modules/validators"
-import { save_ip_address_and_return_ip_stats } from "../modules/database"
+import { is_validator } from "../modules/validators.js"
+import { save_ip_address_and_return_ip_stats } from "../modules/database.js"
 export const router = Router()
 
 
