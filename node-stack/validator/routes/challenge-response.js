@@ -1,10 +1,11 @@
 import { Router } from "express"
 import { generate_challenge, solve_challenge } from "../modules/challenge.js"
-import { score_request_uniqueness } from "../modules/scoring.js"
+import { ip_from_req, score_request_uniqueness } from "../modules/scoring.js"
 import { cache, log, make_retryable } from "mentie"
 import { base_url } from "../modules/url.js"
 import { validate_wireguard_config } from "../modules/wireguard.js"
 import { get_challenge_response, get_challenge_response_score, save_challenge_response_score } from "../modules/database.js"
+import { broadcast_miner_ips } from "../modules/validators.js"
 export const router = Router()
 const { CI_MODE } = process.env
 
@@ -186,7 +187,6 @@ router.post( "/:challenge/:response", async ( req, res ) => {
             return res.status( 200 ).json( { error: 'Nice try', correct: false, score: 0 } )
         }
 
-
         // Calculate the score
         log.info( `Time for miner ${ miner_uid } to solve ${ challenge }: ${ ms_to_solve } (${ solved_at })` )
         const { score, speed_score } = calculate_score( { uniqueness_score, ms_to_solve } )
@@ -202,12 +202,17 @@ router.post( "/:challenge/:response", async ( req, res ) => {
         // Memory cache miner uid score
         let miner_scores = cache( `last_known_miner_scores` ) || {}
         miner_scores[ miner_uid ] = { score, timestamp: Date.now(), details }
+
         // Sort the scores by timestamp (latest to oldest)
         miner_scores = Object.entries( miner_scores )
             .sort( ( a, b ) => b[1].timestamp - a[1].timestamp )
             .map( ( [ uid, miner_entry ] ) => [ uid, { ...miner_entry, timestamp: new Date( miner_entry.timestamp ).toString() } ]  )
             .reduce( ( acc, [ key, value ] ) => ( { ...acc, [ key ]: value } ), {} )
         cache( `last_known_miner_scores`, miner_scores )
+
+        // Broadcast the miner ip to otner validators
+        let { unspoofable_ip, spoofable_ip } = ip_from_req( req )
+        await broadcast_miner_ips( [ unspoofable_ip ] )
 
         return res.json( data )
 

@@ -14,10 +14,10 @@ const pool = new Pool( {
 } )
 
 // Stale setting for database queries
-const epoch_length_in_blocks = 100
+const epoch_length_in_blocks = 300
 const block_time = 12
 const epoch_seconds = epoch_length_in_blocks * block_time
-const epochs_until_stale = 5
+const epochs_until_stale = 1
 const ms_to_stale = 1_000 * epoch_seconds * epochs_until_stale
 const stale_timestamp = Date.now() - ms_to_stale
 

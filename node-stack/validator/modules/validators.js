@@ -1,4 +1,5 @@
-import { log } from "mentie"
+import { log, throttle_and_retry } from "mentie"
+import fetch from "node-fetch"
 const { CI_MODE } = process.env
 
 // This hardcoded validator list is temporary and will be replaced by a metagrah query
@@ -59,5 +60,72 @@ export function is_validator( request ) {
     const validator = validators.find( val => val.ip == unspoofable_ip )
 
     return validator
+
+}
+
+export async function broadcast_miner_ips( ip_addresses=[] ) {
+
+    // Get validator ips
+    log.info( `Broadcasting miner ips: `, ip_addresses )
+
+    // Define the broadcast function
+    async function broadcast( validator_ip ) {
+
+
+        // Timeout controls
+        const timeout_ms = 20_000
+        const controller = new AbortController()
+        const timeout = setTimeout( () => {
+            controller.abort()
+        }, timeout_ms )
+        const { signal } = controller
+
+        let response = undefined
+        try {
+
+            log.info( `Broadcasting to ${ validator_ip }` )
+
+            // Call the validator
+            response = await fetch( `http://${ validator_ip }:3000/protocol/broadcast/miner_ip`, {
+                signal,
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify( { ip_addresses } )
+            } )
+
+            // Get json
+            const json = await response.clone().json()
+            log.info( `Response from ${ validator_ip }:`, json )
+            return json
+
+        } catch ( e ) {
+            const text_response = await response?.clone()?.text()?.catch( e => e.message )
+            log.error( `Error broadcasting to ${ validator_ip } with ${ e.message }: `, text_response )
+        } finally {
+            // Clear the timeout
+            clearTimeout( timeout )
+        }
+
+    }
+
+    // Broadcast to all validators
+    try {
+
+        const broadcast_calls = validator_ips().map( ip => async () => broadcast( ip ) )
+        const results = await throttle_and_retry( broadcast_calls, {
+            max_parallell: 10,
+            cooldown_in_s: 5,
+            retry_times: 3
+        } )
+        log.info( `Broadcast results:`, results )
+        return results
+
+    } catch ( e ) {
+        log.error( `Error broadcasting to validators:`, e )
+        return { error: e.message }
+    }
+
 
 }

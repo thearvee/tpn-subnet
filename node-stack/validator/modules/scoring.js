@@ -3,6 +3,13 @@ import { save_ip_address_and_return_ip_stats } from './database.js'
 import { is_data_center } from './ip2location.js'
 const { CI_MODE } = process.env
 
+export const ip_from_req = ( request ) => {
+    let { ip: request_ip, ips, connection, socket } = request
+    let spoofable_ip = request_ip || ips[0] || request.get( 'x-forwarded-for' )
+    let unspoofable_ip = connection.remoteAddress || socket.remoteAddress
+    return { unspoofable_ip, spoofable_ip }
+}
+
 /**
  * Scores the uniqueness of a request based on its IP address.
  *
@@ -19,9 +26,7 @@ const { CI_MODE } = process.env
 export async function score_request_uniqueness( request, { save_ip=false }={} ) {
 
     // Get the ip of the originating request
-    let { ip: request_ip, ips, connection, socket } = request
-    let spoofable_ip = request_ip || ips[0] || request.get( 'x-forwarded-for' )
-    let unspoofable_ip = connection.remoteAddress || socket.remoteAddress
+    let { unspoofable_ip, spoofable_ip } = ip_from_req( request )
 
     // Sanetise potential ipv6 mapping of ipv4 address
     if( unspoofable_ip?.startsWith( '::ffff:' ) ) unspoofable_ip = unspoofable_ip?.replace( '::ffff:', '' )

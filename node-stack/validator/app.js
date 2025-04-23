@@ -49,6 +49,10 @@ import { router as challenge_router } from './routes/challenge-response.js'
 import { base_url } from './modules/url.js'
 app.use( '/challenge', challenge_router )
 
+// Import and add protocol routes
+import { router as protocol_router } from './routes/protocol.js'
+app.use( '/protocol', protocol_router )
+
 // Import public api endpoint
 import { router as api_router } from './routes/api.js'
 app.use( '/api', api_router )
