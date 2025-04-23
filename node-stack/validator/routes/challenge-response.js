@@ -1,11 +1,10 @@
 import { Router } from "express"
 import { generate_challenge, solve_challenge } from "../modules/challenge.js"
-import { ip_from_req, score_request_uniqueness } from "../modules/scoring.js"
+import { score_request_uniqueness } from "../modules/scoring.js"
 import { cache, log, make_retryable } from "mentie"
 import { base_url } from "../modules/url.js"
 import { validate_wireguard_config } from "../modules/wireguard.js"
 import { get_challenge_response, get_challenge_response_score, save_challenge_response_score } from "../modules/database.js"
-import { broadcast_miner_ips } from "../modules/validators.js"
 export const router = Router()
 const { CI_MODE } = process.env
 
@@ -209,10 +208,6 @@ router.post( "/:challenge/:response", async ( req, res ) => {
             .map( ( [ uid, miner_entry ] ) => [ uid, { ...miner_entry, timestamp: new Date( miner_entry.timestamp ).toString() } ]  )
             .reduce( ( acc, [ key, value ] ) => ( { ...acc, [ key ]: value } ), {} )
         cache( `last_known_miner_scores`, miner_scores )
-
-        // Broadcast the miner ip to otner validators
-        let { unspoofable_ip, spoofable_ip } = ip_from_req( req )
-        await broadcast_miner_ips( [ unspoofable_ip ] )
 
         return res.json( data )
 
