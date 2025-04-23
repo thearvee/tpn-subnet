@@ -103,6 +103,7 @@ export async function broadcast_miner_ips( ip_addresses=[] ) {
         } catch ( e ) {
             const text_response = await response?.clone().text().catch( e => e.message )
             log.warn( `Error broadcasting to ${ validator_ip } with ${ e.message }: `, text_response )
+            return { error: e.message }
         } finally {
             // Clear the timeout
             clearTimeout( timeout )
