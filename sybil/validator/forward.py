@@ -20,6 +20,7 @@
 import time
 import bittensor as bt
 import asyncio
+import aiohttp
 
 from sybil.protocol import Challenge
 from sybil.validator.utils import generate_challenges
@@ -86,4 +87,43 @@ async def forward(self):
 
     # Update the scores based on the rewards. You may want to define your own update_scores function for custom behavior.
     self.update_scores(rewards, miner_uids)
+    
+    # Post miner and validator info to the container
+    miners_info = []
+    validators_info = []
+    for uid in range(self.metagraph.n.item()):
+        if self.metagraph.validator_permit[uid]:
+            validators_info.append({
+                "uid": uid,
+                "ip": self.metagraph.axons[uid].ip,
+                "stake": self.metagraph.S[uid],
+            })
+        else:
+            miners_info.append({
+                "uid": uid,
+                "ip": self.metagraph.axons[uid].ip,
+            })
+            
+    async with aiohttp.ClientSession() as session:
+        async with session.post(
+            f"{self.validator_server_url}/protocol/broadcast/miners",
+            json={"miners": miners_info}
+        ) as resp:
+            result = await resp.json()
+            if result["success"]:
+                bt.logging.info(f"Broadcasted miners info: {len(miners_info)} miners")
+            else:
+                bt.logging.error(f"Failed to broadcast miners info")
+            
+    async with aiohttp.ClientSession() as session:
+        async with session.post(
+            f"{self.validator_server_url}/protocol/broadcast/validators",
+            json={"validators": validators_info}
+        ) as resp:
+            result = await resp.json()
+            if result["success"]:
+                bt.logging.info(f"Broadcasted validators info: {len(validators_info)} validators")
+            else:
+                bt.logging.error(f"Failed to broadcast validators info")
+
     time.sleep(10)
