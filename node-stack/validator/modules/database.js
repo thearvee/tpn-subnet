@@ -121,7 +121,7 @@ export async function save_ip_address_and_return_ip_stats( { ip_address, country
     log.info( `Total ip addresses in the same country: ${ country_count }` )
 
     // Calculate the percentage, guarding against division by zero
-    const ip_pct_same_country = ip_count ? Math.round(  country_count / ip_count  * 100 ) : 0
+    const ip_pct_same_country = ip_count ? Math.round( country_count / ip_count  * 100 ) : 0
     log.info( `Percentage of ip addresses in the same country: ${ ip_pct_same_country }` )
 
     // Insert or update the IP address record

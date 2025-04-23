@@ -1,5 +1,4 @@
-import { log } from 'mentie'
-import { save_ip_address_and_return_ip_stats } from './database.js'
+import { cache, log } from 'mentie'
 import { is_data_center } from './ip2location.js'
 const { CI_MODE } = process.env
 
@@ -9,6 +8,65 @@ export const ip_from_req = ( request ) => {
     let unspoofable_ip = connection.remoteAddress || socket.remoteAddress
     return { unspoofable_ip, spoofable_ip }
 }
+
+async function score_ip_uniqueness( ip ) {
+
+    // Get the geolocation of this ip
+    const miner_data = cache( `miner_ip_to_country` )
+    let { country } = miner_data[ ip ] || {}
+    log.info( `Request from:`, country )
+
+    // If country is missing, try to resolve it once more
+    if( !country ) {
+        try {
+            const { default: geoip } = await import( 'geoip-lite' )
+            const { country: new_country } = geoip.lookup( ip ) || {}
+            if( new_country ) {
+                log.info( `GeoIP lookup for ${ ip } returned ${ new_country }` )
+                country = new_country
+            }
+        } catch ( e ) {
+            log.error( `Error looking up country for ip ${ ip }`, e )
+        }
+    }
+
+    // Get country counts
+    const miner_country_count = cache( `miner_country_count` )
+    const miner_count = miner_data.length
+    const country_count = miner_country_count[ country ] || 0
+    const miners_in_same_country = miner_country_count[ country ] || 0
+
+    // Calculate score
+    const ip_pct_same_country = Math.round( miners_in_same_country / miner_count  * 100 )
+
+    // Get the connection type
+    const is_dc = await is_data_center( ip )
+
+    // Calcluate the score of the request, datacenters get half scores
+    const datacenter_penalty = 0.9
+    let country_uniqueness_score = ( 100 - ip_pct_same_country ) * ( is_dc ? datacenter_penalty : 1 )
+    if( country_count == 1 ) {
+        log.info( `There is only one country in the database, force-setting country uniqueness to 100`  )
+        country_uniqueness_score = 100
+    }
+    log.info( `Country uniqueness: ${ country_uniqueness_score }` )
+
+    // Curve score with a power function where 100 stays 100, but lower numbers get more extreme
+    const curve = 5
+    const powered_score = Math.pow( country_uniqueness_score / 100, curve ) * 100
+    log.info( `Powered score: ${ powered_score }` )
+
+    // Return the score of the request
+    return { powered_score, country_uniqueness_score, country, details: {
+        is_dc,
+        ip_pct_same_country,
+        country_count,
+        miners_in_same_country
+    } }
+    
+}
+
+
 
 /**
  * Scores the uniqueness of a request based on its IP address.
@@ -23,7 +81,7 @@ export const ip_from_req = ( request ) => {
  * @param {boolean} [options.save_ip=true] - Whether to save the IP address to the database.
  * @returns {Promise<Object|undefined>} - Returns an object containing the uniqueness score and country uniqueness score if successful, otherwise undefined.
  */
-export async function score_request_uniqueness( request, { save_ip=false }={} ) {
+export async function score_request_uniqueness( request ) {
 
     // Get the ip of the originating request
     let { unspoofable_ip, spoofable_ip } = ip_from_req( request )
@@ -39,10 +97,8 @@ export async function score_request_uniqueness( request, { save_ip=false }={} ) 
         return { uniqueness_score: undefined }
     }
 
-    // Get the geolocation of this ip
-    const { default: geoip } = await import( 'geoip-lite' )
-    const { country } = geoip.lookup( unspoofable_ip ) || {}
-    log.info( `Request from:`, country )
+    // Get the score of this ip
+    const { powered_score, country_uniqueness_score, country, details } = await score_ip_uniqueness( unspoofable_ip )
 
     // If country was undefined, exit with undefined score
     if( !country && !CI_MODE ) {
@@ -50,35 +106,8 @@ export async function score_request_uniqueness( request, { save_ip=false }={} ) 
         return { uniqueness_score: undefined }
     }
 
-    // Get the connection type and save ip to db
-    const [ is_dc, { ip_pct_same_country=0, country_count=0, ip_count, ips_in_same_country } ] = await Promise.all( [
-        is_data_center( unspoofable_ip ),
-        save_ip_address_and_return_ip_stats( { ip_address: unspoofable_ip, country, save_ip } )
-    ] )
-    log.info( `Call stats: `, { is_dc, ip_pct_same_country, country_count, ip_count } )
-    
-    // Calcluate the score of the request, datacenters get half scores
-    const datacenter_penalty = 0.9
-    let country_uniqueness_score = ( 100 - ip_pct_same_country ) * ( is_dc ? datacenter_penalty : 1 )
-    if( country_count == 1 ) {
-        log.info( `There is only one country in the database, force-setting country uniqueness to 100, details: `, { country_count, ip_count, ip_pct_same_country } )
-        country_uniqueness_score = 100
-    }
-    log.info( `Country uniqueness: ${ country_uniqueness_score }` )
-
-    // Curve score with a power function where 100 stays 100, but lower numbers get more extreme
-    const curve = 5
-    const powered_score = Math.pow( country_uniqueness_score / 100, curve ) * 100
-    log.info( `Powered score: ${ powered_score }` )
-
     // Return the score of the request
-    return { uniqueness_score: powered_score, country_uniqueness_score, details: {
-        is_dc,
-        ip_pct_same_country,
-        country_count,
-        ip_count,
-        ips_in_same_country
-    } }
+    return { uniqueness_score: powered_score, country_uniqueness_score, details }
 
 }
 // Datacenter name patterns (including educated guesses)
