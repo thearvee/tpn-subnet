@@ -76,18 +76,6 @@ async def forward(self):
     # Log the results for monitoring purposes.
     bt.logging.info(f"Received responses: {responses}")
     
-    # Get scores for the responses
-    rewards = await get_rewards([challenge.challenge for challenge in challenges], responses, validator_server_url=self.validator_server_url)
-    bt.logging.info(f"Scores: {rewards}")
-
-    if rewards is None:
-        bt.logging.error("Failed to get rewards")
-        time.sleep(10)
-        return
-
-    # Update the scores based on the rewards. You may want to define your own update_scores function for custom behavior.
-    self.update_scores(rewards, miner_uids)
-    
     # Post miner and validator info to the container
     miners_info = []
     validators_info = []
@@ -125,5 +113,17 @@ async def forward(self):
                 bt.logging.info(f"Broadcasted validators info: {len(validators_info)} validators")
             else:
                 bt.logging.error(f"Failed to broadcast validators info")
+    
+    # Get scores for the responses
+    rewards = await get_rewards([challenge.challenge for challenge in challenges], responses, validator_server_url=self.validator_server_url)
+    bt.logging.info(f"Scores: {rewards}")
+
+    if rewards is None:
+        bt.logging.error("Failed to get rewards")
+        time.sleep(10)
+        return
+
+    # Update the scores based on the rewards. You may want to define your own update_scores function for custom behavior.
+    self.update_scores(rewards, miner_uids)
 
     time.sleep(10)
