@@ -37,7 +37,21 @@ async def forward(self):
 
     """
     
-    # Post miner and validator info to the container
+    # Post miner and validator info to the container    
+    miners_info = []
+    validators_info = []
+    for uid in range(self.metagraph.n.item()):
+        if self.metagraph.axons[uid].is_serving:
+            miners_info.append({
+                "uid": uid,
+                "ip": self.metagraph.axons[uid].ip,
+            })
+        elif self.metagraph.validator_permit[uid]:
+            validators_info.append({
+                "uid": uid,
+                "ip": self.metagraph.axons[uid].ip,
+                "stake": self.metagraph.S[uid],
+            })
     try:
         async with aiohttp.ClientSession() as session:
             async with session.post(
@@ -100,22 +114,6 @@ async def forward(self):
 
     # Log the results for monitoring purposes.
     bt.logging.info(f"Received responses: {responses}")
-    
-    # Post miner and validator info to the container
-    miners_info = []
-    validators_info = []
-    for uid in range(self.metagraph.n.item()):
-        if self.metagraph.axons[uid].is_serving:
-            miners_info.append({
-                "uid": uid,
-                "ip": self.metagraph.axons[uid].ip,
-            })
-        elif self.metagraph.validator_permit[uid]:
-            validators_info.append({
-                "uid": uid,
-                "ip": self.metagraph.axons[uid].ip,
-                "stake": self.metagraph.S[uid],
-            })
     
     # Get scores for the responses
     rewards = await get_rewards([challenge.challenge for challenge in challenges], responses, validator_server_url=self.validator_server_url)
