@@ -64,9 +64,9 @@ router.post( "/broadcast/miners", async ( req, res ) => {
         } , {} )
 
         // Cache ip country data to memory
-        log.info( `Caching ip to country data: `, ip_to_country )
+        log.info( `Caching ip to country data at key "ip_to_country": `, ip_to_country )
         cache( `miner_ip_to_country`, ip_to_country )
-        log.info( `Caching country count data: `, country_count )
+        log.info( `Caching country count data at key "miner_country_count": `, country_count )
         cache( `miner_country_count`, country_count )
 
         return {

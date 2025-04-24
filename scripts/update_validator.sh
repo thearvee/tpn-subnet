@@ -22,7 +22,7 @@ docker compose -f node-stack/validator/validator.docker-compose.yml pull
 if [ "$REPO_UP_TO_DATE" -eq 0 ]; then
     echo "Repository has changes, force restarting docker process..."
     docker compose -f node-stack/validator/validator.docker-compose.yml down
-    echo "Pruning unused images and networks..."
+    echo "Pruning unused images..."
     docker image prune -f || echo "Failed to prune unused images."
     echo "Pruning unused networks..."
     docker network prune -f || echo "Failed to prune unused networks."

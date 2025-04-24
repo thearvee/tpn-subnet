@@ -12,8 +12,8 @@ export const ip_from_req = ( request ) => {
 async function score_ip_uniqueness( ip ) {
 
     // Get the geolocation of this ip
-    const miner_data = cache( `miner_ip_to_country` ) || {}
-    let { country } = miner_data[ ip ] || {}
+    const miner_ip_to_country = cache( `miner_ip_to_country` ) || {}
+    let { country } = miner_ip_to_country[ ip ] || {}
     log.info( `Request from:`, country )
 
     // If country is missing, try to resolve it once more
@@ -31,8 +31,8 @@ async function score_ip_uniqueness( ip ) {
     }
 
     // Get country counts
-    const miner_country_count = cache( `miner_country_count` ) || []
-    const miner_count = miner_data.length
+    const miner_country_count = cache( `miner_country_count` ) || {}
+    const miner_count = Object.keys( miner_ip_to_country ).length
     const country_count = miner_country_count[ country ] || 0
     const miners_in_same_country = miner_country_count[ country ] || 0
 
