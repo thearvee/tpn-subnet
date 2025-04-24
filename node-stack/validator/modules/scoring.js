@@ -77,9 +77,11 @@ async function score_ip_uniqueness( ip ) {
  * @param {Object} request.connection - The connection object of the request.
  * @param {Object} request.socket - The socket object of the request.
  * @param {Function} request.get - Function to get headers from the request.
- * @param {Object} options - Options for the function.
- * @param {boolean} [options.save_ip=true] - Whether to save the IP address to the database.
- * @returns {Promise<Object|undefined>} - Returns an object containing the uniqueness score and country uniqueness score if successful, otherwise undefined.
+ * @returns {Promise<Object|undefined>} scores_data - Returns an object containing the uniqueness score and country uniqueness score if successful, otherwise undefined.
+ * @returns {number} scores_data.uniqueness_score - The uniqueness score of the request.
+ * @returns {number} scores_data.country_uniqueness_score - The country uniqueness score of the request.
+ * @returns {string} scores_data.country - The country of the request.
+ * @returns {Object} scores_data.details - Additional details about the request.
  */
 export async function score_request_uniqueness( request ) {
 

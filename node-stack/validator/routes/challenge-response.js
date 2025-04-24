@@ -108,7 +108,7 @@ router.get( "/:challenge/:response?", async ( req, res ) => {
         if( !correct ) return res.json( { correct } )
 
         // If correct, score the request
-        const { uniqueness_score, country_uniqueness_score } = await score_request_uniqueness( req, { save_ip: false } )
+        const { uniqueness_score, country_uniqueness_score } = await score_request_uniqueness( req )
         log.info( `[GET] Uniqueness score for ${ challenge }: ${ uniqueness_score }` )
         if( uniqueness_score === undefined && !CI_MODE ) {
             log.info( `Uniqueness score is undefined, returning error` )
@@ -180,7 +180,7 @@ router.post( "/:challenge/:response", async ( req, res ) => {
         }
 
         // If correct, score the request
-        const { uniqueness_score, country_uniqueness_score, details } = await score_request_uniqueness( req, { save_ip: true } )
+        const { uniqueness_score, country_uniqueness_score, details } = await score_request_uniqueness( req )
         if( uniqueness_score === undefined ) {
             log.info( `[POST] Uniqueness score is undefined, returning error` )
             return res.status( 200 ).json( { error: 'Nice try', correct: false, score: 0 } )
