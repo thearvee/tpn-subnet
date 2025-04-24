@@ -64,7 +64,9 @@ router.post( "/broadcast/miners", async ( req, res ) => {
         } , {} )
 
         // Cache ip country data to memory
+        log.info( `Caching ip to country data: `, ip_to_country )
         cache( `miner_ip_to_country`, ip_to_country )
+        log.info( `Caching country count data: `, country_count )
         cache( `miner_country_count`, country_count )
 
         return {
@@ -81,8 +83,8 @@ router.post( "/broadcast/miners", async ( req, res ) => {
         
     } catch ( e ) {
 
-        log.error( `Error handling miner ip submitted from neuron. Error:`, e )
-        return res.status( 200 ).json( { error: e.message, score: 0, correct: false } )
+        log.warn( `Error handling miner ip submitted from neuron. Error:`, e )
+        return res.status( 200 ).json( { error: e.message } )
 
     }
 } )
@@ -115,6 +117,7 @@ router.post( "/broadcast/validators", async ( req, res ) => {
         if( valid_entries.length == 0 ) throw new Error( `No valid miner ips provided` )
 
         // Cache ip country data to memory
+        log.info( `Caching validator ip data: `, valid_entries )
         cache( 'last_known_validators', valid_entries )
 
         return valid_entries
@@ -128,8 +131,8 @@ router.post( "/broadcast/validators", async ( req, res ) => {
         
     } catch ( e ) {
 
-        log.error( `Error handling miner ip submitted from neuron. Error:`, e )
-        return res.status( 200 ).json( { error: e.message, score: 0, correct: false } )
+        log.warn( `Error handling miner ip submitted from neuron. Error:`, e )
+        return res.status( 200 ).json( { error: e.message } )
 
     }
 } )

@@ -42,6 +42,16 @@ async function score_ip_uniqueness( ip ) {
     // Get the connection type
     const is_dc = await is_data_center( ip )
 
+    // Log all data for debugging
+    log.info( `Calculation base variables:`, {
+        ip,
+        miner_country_count,
+        country_count,
+        miners_in_same_country,
+        ip_pct_same_country,
+        is_dc
+    } )
+
     // Calcluate the score of the request, datacenters get half scores
     const datacenter_penalty = 0.9
     let country_uniqueness_score = ( 100 - ip_pct_same_country ) * ( is_dc ? datacenter_penalty : 1 )
