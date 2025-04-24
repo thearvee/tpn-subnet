@@ -6,15 +6,10 @@ import { cache } from "mentie"
  */
 export async function get_miner_stats() {
 
-    // Check for cached value
-    const cache_key = 'miner_stats'
-    const cached_value = cache( cache_key )
-    if( cached_value ) return cached_value
-
     // Get last known miner country stats
     const miner_country_count = cache( `miner_country_count` ) || {}
 
-    return cache( cache_key, miner_country_count, 60_000 )
+    return miner_country_count
 
 }
 

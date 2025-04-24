@@ -51,7 +51,7 @@ router.get( "/stats/miners", async ( req, res ) => {
     try {
 
         // Check if we have cached data
-        let stats = cache( 'last_known_miner_scores' )
+        const stats = cache( 'last_known_miner_scores' ) || {}
         return res.json( stats )
 
     } catch ( e ) {
