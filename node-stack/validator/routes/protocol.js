@@ -57,21 +57,33 @@ router.post( "/broadcast/miners", async ( req, res ) => {
             acc[ ip ] = { country, uid }
             return acc
         }, {} )
+
+        // Reduce the ip array to a mapping of country to count
         const country_count = country_annotated_ips.reduce( ( acc, { country } ) => {
             if( !acc[ country ] ) acc[ country ] = 1
             acc[ country ] += 1
             return acc
         } , {} )
 
+        // Reduce the ip array to a mapping of country to ips
+        const country_to_ips = country_annotated_ips.reduce( ( acc, { ip, country } ) => {
+            if( !acc[ country ] ) acc[ country ] = []
+            acc[ country ].push( ip )
+            return acc
+        }, {} )
+
         // Cache ip country data to memory
         log.info( `Caching ip to country data at key "ip_to_country": `, ip_to_country )
         cache( `miner_ip_to_country`, ip_to_country )
         log.info( `Caching country count data at key "miner_country_count": `, country_count )
         cache( `miner_country_count`, country_count )
+        log.info( `Caching country to ips data at key "miner_country_to_ips": `, country_to_ips )
+        cache( `miner_country_to_ips`, country_to_ips )
 
         return {
             ip_to_country,
-            country_count
+            country_count,
+            country_to_ips
         }
 
     }

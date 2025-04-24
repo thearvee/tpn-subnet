@@ -1,5 +1,5 @@
 import postgres from 'pg'
-import { cache, log } from 'mentie'
+import { log } from 'mentie'
 
 // Create a connection pool to the postgres container
 const { POSTGRES_PASSWORD='setthispasswordinthedotenvfile', POSTGRES_HOST='postgres', POSTGRES_PORT=5432, POSTGRES_USER='postgres', CI_MODE } = process.env
@@ -98,50 +98,50 @@ export async function init_tables() {
     log.info( 'Tables initialized' )
 }
 
-export async function save_ip_address_and_return_ip_stats( { ip_address, country, save_ip=false } ) {
+// export async function save_ip_address_and_return_ip_stats( { ip_address, country, save_ip=false } ) {
 
-    log.info( `Saving IP address ${ ip_address } with country ${ country }` )
+//     log.info( `Saving IP address ${ ip_address } with country ${ country }` )
 
-    // Count all non-stale IP addresses
-    const ip_count_result = await pool.query(
-        `SELECT COUNT(*) AS count FROM ip_addresses WHERE updated > $1`,
-        [ stale_timestamp ]
-    )
-    const ip_count = parseInt( ip_count_result.rows[0].count, 10 ) || 0
-    log.info( `Total ip addresses: ${ ip_count }` )
+//     // Count all non-stale IP addresses
+//     const ip_count_result = await pool.query(
+//         `SELECT COUNT(*) AS count FROM ip_addresses WHERE updated > $1`,
+//         [ stale_timestamp ]
+//     )
+//     const ip_count = parseInt( ip_count_result.rows[0].count, 10 ) || 0
+//     log.info( `Total ip addresses: ${ ip_count }` )
 
-    // Get all non-stale IP addresses in the same country
-    log.info( `Checking for ip addresses in the same country: ${ country }` )
-    const ips_in_same_country_result = await pool.query(
-        `SELECT ip_address FROM ip_addresses WHERE country = $1 AND updated > $2`,
-        [ country, stale_timestamp ]
-    )
-    const ips_in_same_country = ips_in_same_country_result.rows.map( row => row.ip_address )
-    const country_count = ips_in_same_country.length || 0
-    log.info( `Total ip addresses in the same country: ${ country_count }` )
+//     // Get all non-stale IP addresses in the same country
+//     log.info( `Checking for ip addresses in the same country: ${ country }` )
+//     const ips_in_same_country_result = await pool.query(
+//         `SELECT ip_address FROM ip_addresses WHERE country = $1 AND updated > $2`,
+//         [ country, stale_timestamp ]
+//     )
+//     const ips_in_same_country = ips_in_same_country_result.rows.map( row => row.ip_address )
+//     const country_count = ips_in_same_country.length || 0
+//     log.info( `Total ip addresses in the same country: ${ country_count }` )
 
-    // Calculate the percentage, guarding against division by zero
-    const ip_pct_same_country = ip_count ? Math.round( country_count / ip_count  * 100 ) : 0
-    log.info( `Percentage of ip addresses in the same country: ${ ip_pct_same_country }` )
+//     // Calculate the percentage, guarding against division by zero
+//     const ip_pct_same_country = ip_count ? Math.round( country_count / ip_count  * 100 ) : 0
+//     log.info( `Percentage of ip addresses in the same country: ${ ip_pct_same_country }` )
 
-    // Insert or update the IP address record
-    if( save_ip ) {
-        log.info( `Saving IP address ${ ip_address } to the database` )
-        await pool.query(
-            `INSERT INTO ip_addresses (ip_address, country, updated) VALUES ($1, $2, $3)
-            ON CONFLICT (ip_address)
-            DO UPDATE SET country = $4, updated = $5`,
-            [ ip_address, country, Date.now(), country, Date.now() ]
-        )
-    } else {
-        log.info( `Not saving IP address ${ ip_address } to the database` )
-    }
+//     // Insert or update the IP address record
+//     if( save_ip ) {
+//         log.info( `Saving IP address ${ ip_address } to the database` )
+//         await pool.query(
+//             `INSERT INTO ip_addresses (ip_address, country, updated) VALUES ($1, $2, $3)
+//             ON CONFLICT (ip_address)
+//             DO UPDATE SET country = $4, updated = $5`,
+//             [ ip_address, country, Date.now(), country, Date.now() ]
+//         )
+//     } else {
+//         log.info( `Not saving IP address ${ ip_address } to the database` )
+//     }
 
-    // Debug logging
-    log.info( `${ ip_address } is in ${ country }, others: `, ips_in_same_country.join( ', ' ) )
+//     // Debug logging
+//     log.info( `${ ip_address } is in ${ country }, others: `, ips_in_same_country.join( ', ' ) )
 
-    return { ip_count, country_count, ip_pct_same_country, ips_in_same_country }
-}
+//     return { ip_count, country_count, ip_pct_same_country, ips_in_same_country }
+// }
 
 export async function get_timestamp( { label } ) {
     // Retrieve the timestamp for the given label
@@ -202,31 +202,6 @@ export async function mark_challenge_solved( { challenge, read_only=false } ) {
     return result.rows.length > 0 ? Number( result.rows[0].solved ) : null
 }
 
-export async function get_miner_stats() {
-
-    // Check for cached value
-    const cache_key = 'miner_stats'
-    const cached_value = cache( cache_key )
-    if( cached_value ) return cached_value
-
-    // Get all ip addresses with a country that are not stale
-    const result = await pool.query(
-        `SELECT country FROM ip_addresses WHERE updated > $1`,
-        [ stale_timestamp ]
-    )
-
-    // Reduce this to a per-country count
-    log.info( `Received ${ result.rows.length } ip addresses, collating by country` )
-    const country_counts = result.rows.reduce( ( acc, { country } ) => {
-        acc[country] = ( acc[country] || 0 ) + 1
-        return acc
-    }, {} )
-    log.info( `Country counts:`, country_counts )
-
-    return cache( cache_key, country_counts, 60_000 )
-
-}
-
 export async function save_challenge_response_score( { correct, challenge, score, speed_score, uniqueness_score, country_uniqueness_score, solved_at }={} ) {
 
     // Round all numbers to nearest integer
@@ -270,21 +245,3 @@ export async function get_challenge_response_score( { challenge } ) {
 
 }
 
-
-export async function get_ips_by_country( { geo }={} ) {
-
-    // Get nonstale ips, sort by timestamp where more recent is higher
-    let query = `SELECT ip_address FROM ip_addresses WHERE updated > $1 ORDER BY updated DESC`
-    if( geo ) query = `SELECT ip_address FROM ip_addresses WHERE country = $1 AND updated > $2 ORDER BY updated DESC`
-    const variables = geo ? [ geo, stale_timestamp ] : [ stale_timestamp ]
-    log.info( `Querying for IPs by country: ${ geo }: `, query, variables )
-    const result = await pool.query(
-        query,
-        variables
-    )
-    const ips = result.rows.map( row => row.ip_address )
-    log.info( `Query result for IPs by country ${ geo }:`, ips )
-
-    return ips
-
-}

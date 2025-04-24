@@ -2,7 +2,7 @@ import { Router } from "express"
 export const router = Router()
 import { score_request_uniqueness } from "../modules/scoring.js"
 import { cache, log } from "mentie"
-import { get_miner_stats } from "../modules/database.js"
+import { get_miner_stats } from "../modules/stats.js"
 
 // Scoring route
 router.get( "/", async ( req, res ) => {
