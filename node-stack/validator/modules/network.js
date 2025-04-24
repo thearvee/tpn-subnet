@@ -23,7 +23,7 @@ export function request_is_local( request ) {
         /^::ffff:127\.0\.0\.1$/,
         // Note: this is the ipv6 mock mask of the subnet defined in validator.docker-compose.yml
         /^172\.29\.187\./,
-        /^::ffff:172\.20\.0\./,
+        /^::ffff:172\.29\.187\./,
     ]
     const is_local = local_ip_patterns_v4_and_v6.some( pattern => pattern.test( unspoofable_ip ) )   
     
