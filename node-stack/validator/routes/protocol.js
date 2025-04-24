@@ -16,7 +16,10 @@ router.post( "/broadcast/miners", async ( req, res ) => {
         const { miners=[] } = req.body || {}
 
         // Validate that all miners have the { uid, ip } format where ip is regex matched as ipv4 naively
-        if( !Array.isArray( miners ) || miners.length == 0 ) throw new Error( `No miner ips provided` )
+        if( !Array.isArray( miners ) || miners.length == 0 ) {
+            log.warn( `No miner ips provided: `, req.body )
+            throw new Error( `No miner ips provided` )
+        }
         const valid_entries = miners.filter( entry => {
             const { uid, ip } = entry
             if( !uid || !ip ) return false
@@ -95,7 +98,10 @@ router.post( "/broadcast/validators", async ( req, res ) => {
         const { validators=[] } = req.body || {}
 
         // Validate that all miners have the { uid, ip } format where ip is regex matched as ipv4 naively
-        if( !Array.isArray( validators ) || validators.length == 0 ) throw new Error( `No miner ips provided` )
+        if( !Array.isArray( validators ) || validators.length == 0 ) {
+            log.warn( `No miner ips provided: `, req.body )
+            throw new Error( `No miner ips provided` )
+        }
         const valid_entries = validators.filter( entry => {
             const { uid, ip } = entry
             if( !uid || !ip ) return false
