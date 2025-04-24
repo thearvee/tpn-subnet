@@ -88,5 +88,5 @@ networks:
     # Set a specific subnet so we can deterministically detect local requests
     ipam:
       config:
-        - subnet: 172.20.0.0/24
-          gateway: 172.20.0.1
+        - subnet: 172.29.187.0/24
+          gateway: 172.29.187.1

@@ -17,12 +17,12 @@ export function request_is_local( request ) {
 
     // Check if the ip is local
     const local_ip_patterns_v4_and_v6 = [
-        /^127\./,
+        // Localhost
+        /^127\.0\.0\.1$/,
         /^::1$/,
-        // Note: this is defined in validator.docker-compose.yml
-        /^172\.20\.0\./,
-        /^::ffff:127\./,
+        /^::ffff:127\.0\.0\.1$/,
         // Note: this is the ipv6 mock mask of the subnet defined in validator.docker-compose.yml
+        /^172\.29\.187\./,
         /^::ffff:172\.20\.0\./,
     ]
     const is_local = local_ip_patterns_v4_and_v6.some( pattern => pattern.test( unspoofable_ip ) )   
