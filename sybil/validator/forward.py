@@ -91,28 +91,31 @@ async def forward(self):
                 "uid": uid,
                 "ip": self.metagraph.axons[uid].ip,
             })
-            
-    async with aiohttp.ClientSession() as session:
-        async with session.post(
-            f"{self.validator_server_url}/protocol/broadcast/miners",
-            json={"miners": miners_info}
-        ) as resp:
-            result = await resp.json()
-            if result["success"]:
-                bt.logging.info(f"Broadcasted miners info: {len(miners_info)} miners")
-            else:
-                bt.logging.error(f"Failed to broadcast miners info")
-            
-    async with aiohttp.ClientSession() as session:
-        async with session.post(
-            f"{self.validator_server_url}/protocol/broadcast/validators",
-            json={"validators": validators_info}
-        ) as resp:
-            result = await resp.json()
-            if result["success"]:
-                bt.logging.info(f"Broadcasted validators info: {len(validators_info)} validators")
-            else:
-                bt.logging.error(f"Failed to broadcast validators info")
+    
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.post(
+                f"{self.validator_server_url}/protocol/broadcast/miners",
+                json={"miners": miners_info}
+            ) as resp:
+                result = await resp.json()
+                if result["success"]:
+                    bt.logging.info(f"Broadcasted miners info: {len(miners_info)} miners")
+                else:
+                    bt.logging.error(f"Failed to broadcast miners info")
+                
+        async with aiohttp.ClientSession() as session:
+            async with session.post(
+                f"{self.validator_server_url}/protocol/broadcast/validators",
+                json={"validators": validators_info}
+            ) as resp:
+                result = await resp.json()
+                if result["success"]:
+                    bt.logging.info(f"Broadcasted validators info: {len(validators_info)} validators")
+                else:
+                    bt.logging.error(f"Failed to broadcast validators info")
+    except Exception as e:
+        bt.logging.error(f"Failed to broadcast miners or validators info: {e}")
     
     # Get scores for the responses
     rewards = await get_rewards([challenge.challenge for challenge in challenges], responses, validator_server_url=self.validator_server_url)
