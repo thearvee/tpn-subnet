@@ -1,8 +1,8 @@
 import { Router } from "express"
 export const router = Router()
 import { cache, log, require_props } from "mentie"
-import { get_ips_by_country, get_miner_stats } from "../modules/database.js"
 import fetch from "node-fetch"
+import { get_ips_by_country, get_miner_stats } from "../modules/stats.js"
 
 router.get( "/config/countries", async ( req, res ) => {
 

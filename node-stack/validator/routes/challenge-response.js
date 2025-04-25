@@ -47,8 +47,10 @@ const calculate_score = ( { uniqueness_score, ms_to_solve } ) => {
     const speed_score = Math.sqrt( 100 - penalty )
     
     // Uniqeness score, minus maximum speed score, plus speed score
-    const score = Math.max( Math.round( uniqueness_score - 10 + speed_score ), 0 )
+    // const score = Math.max( Math.round( uniqueness_score - 10 + speed_score ), 0 )
 
+    // The speed score is causing discrepancies between validators, we will disable it for now
+    const score = Math.round( uniqueness_score )
             
     return { score, speed_score }
 
@@ -170,13 +172,6 @@ router.post( "/:challenge/:response", async ( req, res ) => {
         // If not correct, return false
         if( !correct ) return res.json( { correct } )
 
-        // If correct, score the request
-        const { uniqueness_score, country_uniqueness_score } = await score_request_uniqueness( req )
-        if( uniqueness_score === undefined ) {
-            log.info( `[POST] Uniqueness score is undefined, returning error` )
-            return res.status( 200 ).json( { error: 'Nice try', correct: false, score: 0 } )
-        }
-
         // Upon solution success, test the wireguard config
         const { valid: wireguard_valid, message='Unknown error validating wireguard config' } = await validate_wireguard_config( { peer_config, peer_id } )
         if( !wireguard_valid ) {
@@ -184,6 +179,12 @@ router.post( "/:challenge/:response", async ( req, res ) => {
             return res.json( { message, correct: false, score: 0 } )
         }
 
+        // If correct, score the request
+        const { uniqueness_score, country_uniqueness_score, details } = await score_request_uniqueness( req )
+        if( uniqueness_score === undefined ) {
+            log.info( `[POST] Uniqueness score is undefined, returning error` )
+            return res.status( 200 ).json( { error: 'Nice try', correct: false, score: 0 } )
+        }
 
         // Calculate the score
         log.info( `Time for miner ${ miner_uid } to solve ${ challenge }: ${ ms_to_solve } (${ solved_at })` )
@@ -196,6 +197,17 @@ router.post( "/:challenge/:response", async ( req, res ) => {
         // Save score to database
         await save_challenge_response_score( { correct, challenge, score, speed_score, uniqueness_score, country_uniqueness_score, solved_at } )
         log.info( `[POST] Challenge ${ challenge } solved with score ${ score }` )
+
+        // Memory cache miner uid score
+        let miner_scores = cache( `last_known_miner_scores` ) || {}
+        miner_scores[ miner_uid ] = { score, timestamp: Date.now(), details }
+
+        // Sort the scores by timestamp (latest to oldest)
+        miner_scores = Object.entries( miner_scores )
+            .sort( ( a, b ) => b[1].timestamp - a[1].timestamp )
+            .map( ( [ uid, miner_entry ] ) => [ uid, { ...miner_entry, timestamp: new Date( miner_entry.timestamp ).toString() } ]  )
+            .reduce( ( acc, [ key, value ] ) => ( { ...acc, [ key ]: value } ), {} )
+        cache( `last_known_miner_scores`, miner_scores )
 
         return res.json( data )
 

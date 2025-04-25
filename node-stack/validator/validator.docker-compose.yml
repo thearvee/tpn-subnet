@@ -77,3 +77,8 @@ volumes:
 networks:
   tpn_network:
     driver: bridge
+    # Set a specific subnet so we can deterministically detect local requests
+    ipam:
+      config:
+        - subnet: 172.29.187.0/24
+          gateway: 172.29.187.1

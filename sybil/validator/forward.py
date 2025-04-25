@@ -20,6 +20,7 @@
 import time
 import bittensor as bt
 import asyncio
+import aiohttp
 
 from sybil.protocol import Challenge
 from sybil.validator.utils import generate_challenges
@@ -35,8 +36,47 @@ async def forward(self):
         self (:obj:`bittensor.neuron.Neuron`): The neuron object which contains all the necessary state for the validator.
 
     """
-    # TODO(developer): Define how the validator selects a miner to query, how often, etc.
     
+    # Post miner and validator info to the container    
+    miners_info = []
+    validators_info = []
+    for uid in range(self.metagraph.n.item()):
+        if self.metagraph.axons[uid].is_serving:
+            miners_info.append({
+                "uid": uid,
+                "ip": self.metagraph.axons[uid].ip,
+            })
+        elif self.metagraph.validator_permit[uid]:
+            validators_info.append({
+                "uid": uid,
+                "ip": self.metagraph.axons[uid].ip,
+                "stake": self.metagraph.S[uid],
+            })
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.post(
+                f"{self.validator_server_url}/protocol/broadcast/miners",
+                json={"miners": miners_info}
+            ) as resp:
+                result = await resp.json()
+                if result["success"]:
+                    bt.logging.info(f"Broadcasted miners info: {len(miners_info)} miners")
+                else:
+                    bt.logging.error(f"Failed to broadcast miners info")
+                
+        async with aiohttp.ClientSession() as session:
+            async with session.post(
+                f"{self.validator_server_url}/protocol/broadcast/validators",
+                json={"validators": validators_info}
+            ) as resp:
+                result = await resp.json()
+                if result["success"]:
+                    bt.logging.info(f"Broadcasted validators info: {len(validators_info)} validators")
+                else:
+                    bt.logging.error(f"Failed to broadcast validators info")
+    except Exception as e:
+        bt.logging.error(f"Failed to broadcast miners or validators info: {e}")
+        
     # get_random_uids is an example method, but you can replace it with your own.
     miner_uids = get_random_uids(self, k=self.config.neuron.sample_size)
     bt.logging.info(f"Miner uids: {miner_uids}")
@@ -49,11 +89,6 @@ async def forward(self):
         bt.logging.error("Failed to generate challenges")
         time.sleep(10)
         return
-
-    # Map the challenges and sequentially add the miner uids from miner_uids
-    # for uid, challenge in zip(miner_uids, challenges):
-    #     challenge.challenge_url = challenge.challenge_url + f"?miner_uid={uid}"
-    # bt.logging.info(f"Annotated challenges: {challenges}")
 
     # Create concurrent queries, one for each challenge-miner pair
     async_queries = [
@@ -86,4 +121,5 @@ async def forward(self):
 
     # Update the scores based on the rewards. You may want to define your own update_scores function for custom behavior.
     self.update_scores(rewards, miner_uids)
+
     time.sleep(10)
