@@ -59,6 +59,7 @@ const calculate_score = ( { uniqueness_score, ms_to_solve } ) => {
 // Challenge route, used by validator when validating challenge/responses through wireguard connection
 // :challenge only - return the response for the challenge
 // :challenge and :response - validate the response and return the score
+// NOTE: this pathway does not solve anything. This is checked in validate_wireguard_config()
 router.get( "/:challenge/:response?", async ( req, res ) => {
 
     const handle_route = async () => {
@@ -68,7 +69,12 @@ router.get( "/:challenge/:response?", async ( req, res ) => {
         const { challenge, response } = req.params
         log.info( `[GET] Challenge/response ${ challenge }/${ response || '' } called by ${ miner_uid ? 'validator' : 'miner' }` )
 
+        /* /////////////////////////////
+        //  Path 1: solving a challenge
+        // ////////////////////////// */
+
         // If only the challenge is provided, return the response
+        // this is hit when solving a GET challenge, the validator and miner both hit this
         if( !response ) {
 
             const cached_value = cache( `challenge_solution_${ challenge }` )
@@ -84,6 +90,10 @@ router.get( "/:challenge/:response?", async ( req, res ) => {
             return res.json( { ...challenge_response } )
 
         }
+
+        /* /////////////////////////////
+        //  Path 2: checking solution score
+        // ////////////////////////// */
 
         // Check for cached value
         const cached_value = cache( `solution_score_${ challenge }` )
@@ -101,31 +111,36 @@ router.get( "/:challenge/:response?", async ( req, res ) => {
             return res.json( scored_response )
         }
 
-        // Validate the response
-        const { correct, ms_to_solve, solved_at } = await solve_challenge( { challenge, response } )
+        /* /////////////////////////////
+        //  Path 3: no known score
+        // ////////////////////////// */
+        return res.json( { error: 'No known score for this challenge' } )
 
-        // If not correct, return false
-        if( !correct ) return res.json( { correct } )
+        // // Validate the response
+        // const { correct, ms_to_solve, solved_at } = await solve_challenge( { challenge, response } )
 
-        // If correct, score the request
-        const { uniqueness_score, country_uniqueness_score } = await score_request_uniqueness( req )
-        log.info( `[GET] Uniqueness score for ${ challenge }: ${ uniqueness_score }` )
-        if( uniqueness_score === undefined && !CI_MODE ) {
-            log.info( `Uniqueness score is undefined, returning error` )
-            return res.status( 200 ).json( { error: 'Nice try', score: 0, correct: false } )
-        }
+        // // If not correct, return false
+        // if( !correct ) return res.json( { correct } )
 
-        // Calculate the score
-        log.info( `[GET] Time to solve ${ challenge }: ${ ms_to_solve } (${ solved_at })` )
-        const { score, speed_score } = calculate_score( { uniqueness_score, ms_to_solve } )
+        // // If correct, score the request
+        // const { uniqueness_score, country_uniqueness_score } = await score_request_uniqueness( req )
+        // log.info( `[GET] Uniqueness score for ${ challenge }: ${ uniqueness_score }` )
+        // if( uniqueness_score === undefined && !CI_MODE ) {
+        //     log.info( `Uniqueness score is undefined, returning error` )
+        //     return res.status( 200 ).json( { error: 'Nice try', score: 0, correct: false } )
+        // }
 
-        // Formulate and cache response
-        const data = { correct, score, speed_score, uniqueness_score, country_uniqueness_score, solved_at, miner_uid }
-        await save_challenge_response_score( { correct, challenge, score, speed_score, uniqueness_score, country_uniqueness_score, solved_at } )
-        log.info( `[GET] Challenge ${ challenge } solved with score ${ score }` )
-        cache( `solution_score_${ challenge }`, data )
+        // // Calculate the score
+        // log.info( `[GET] Time to solve ${ challenge }: ${ ms_to_solve } (${ solved_at })` )
+        // const { score, speed_score } = calculate_score( { uniqueness_score, ms_to_solve } )
 
-        return res.json( data )
+        // // Formulate and cache response
+        // const data = { correct, score, speed_score, uniqueness_score, country_uniqueness_score, solved_at, miner_uid }
+        // await save_challenge_response_score( { correct, challenge, score, speed_score, uniqueness_score, country_uniqueness_score, solved_at } )
+        // log.info( `[GET] Challenge ${ challenge } solved with score ${ score }` )
+        // cache( `solution_score_${ challenge }`, data )
+
+        // return res.json( data )
 
     }
 
