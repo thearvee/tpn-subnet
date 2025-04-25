@@ -111,10 +111,10 @@ router.post( "/broadcast/validators", async ( req, res ) => {
         // Get ip addresses from the request
         const { validators=[] } = req.body || {}
 
-        // Validate that all miners have the { uid, ip } format where ip is regex matched as ipv4 naively
+        // Validate that all validator have the { uid, ip } format where ip is regex matched as ipv4 naively
         if( !Array.isArray( validators ) || validators.length == 0 ) {
-            log.warn( `No miner ips provided: `, req.body )
-            throw new Error( `No miner ips provided` )
+            log.warn( `No validator ips provided: `, req.body )
+            throw new Error( `No validator ips provided` )
         }
         const valid_entries = validators.filter( entry => {
             const { uid, ip } = entry
@@ -123,10 +123,10 @@ router.post( "/broadcast/validators", async ( req, res ) => {
             if( !is_ipv4 ) return false
             return true
         } )
-        log.info( `Valid miner entries: ${ valid_entries.length }` )
+        log.info( `Valid validator entries: ${ valid_entries.length }` )
 
         // If there are no valid entries, throw an error
-        if( valid_entries.length == 0 ) throw new Error( `No valid miner ips provided` )
+        if( valid_entries.length == 0 ) throw new Error( `No valid validator ips provided` )
 
         // Cache ip country data to memory
         log.info( `Caching validator ip data: `, valid_entries )
@@ -163,5 +163,5 @@ router.get( "/sync/stats", ( req, res ) => {
         miner_country_to_ips,
         last_known_validators
     } )
-    
+
 } )

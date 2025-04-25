@@ -1,4 +1,5 @@
 import { cache, log } from "mentie"
+import fetch from "node-fetch"
 
 /**
  * Retrieves miner statistics from the cache or computes them if not available.
