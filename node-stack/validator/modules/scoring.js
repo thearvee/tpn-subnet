@@ -1,5 +1,6 @@
 import { cache, log } from 'mentie'
 import { is_data_center } from './ip2location.js'
+import { fetch_failover_stats } from './stats.js'
 const { CI_MODE } = process.env
 
 export const ip_from_req = ( request ) => {
@@ -11,8 +12,25 @@ export const ip_from_req = ( request ) => {
 
 async function score_ip_uniqueness( ip ) {
 
+    // Retreive relevant cache data
+    let miner_ip_to_country = cache( `miner_ip_to_country` ) || {}
+    let miner_country_count = cache( `miner_country_count` ) || {}
+
+    // If either of the cache have 0 keys, grab failover data
+    if( !Object.keys( miner_ip_to_country ).length || !Object.keys( miner_country_count ).length ) {
+        
+        log.info( `Missing miner data in cache, using failover` )
+        const data = await fetch_failover_stats()
+
+        if( !Object.keys( miner_ip_to_country ).length ) miner_ip_to_country = data.miner_ip_to_country
+        if( !Object.keys( miner_country_count ).length ) miner_country_count = data.miner_country_count
+
+        log.info( `Miner ip to country cache:`, miner_ip_to_country )
+        log.info( `Miner country count cache:`, miner_country_count )
+
+    }
+
     // Get the geolocation of this ip
-    const miner_ip_to_country = cache( `miner_ip_to_country` ) || {}
     let { country } = miner_ip_to_country[ ip ] || {}
     log.info( `Request from:`, country )
 
@@ -31,7 +49,6 @@ async function score_ip_uniqueness( ip ) {
     }
 
     // Get country counts
-    const miner_country_count = cache( `miner_country_count` ) || {}
     const miner_count = Object.keys( miner_ip_to_country ).length
     const country_count = miner_country_count[ country ] || 0
     const miners_in_same_country = miner_country_count[ country ] || 0
