@@ -26,7 +26,10 @@ export async function get_ips_by_country( { geo }={} ) {
     const miner_country_to_ips = cache( `miner_country_to_ips` ) || {}
 
     // Get the ips for this country
-    const ips = miner_country_to_ips[ geo ] || []
+    let ips = miner_country_to_ips[ geo ] || []
+
+    // If no geo was provided, return all ips
+    if( !geo ) ips = Object.values( miner_country_to_ips ).flat()
 
     return ips
 
