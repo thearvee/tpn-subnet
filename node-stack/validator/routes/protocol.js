@@ -148,3 +148,20 @@ router.post( "/broadcast/validators", async ( req, res ) => {
 
     }
 } )
+
+router.get( "/sync/stats", ( req, res ) => {
+
+    // Get relevant cache entries
+    const miner_ip_to_country = cache( `miner_ip_to_country` ) || {}
+    const miner_country_count = cache( `miner_country_count` ) || {}
+    const miner_country_to_ips = cache( `miner_country_to_ips` ) || {}
+    const last_known_validators = cache( 'last_known_validators' ) || []
+
+    return res.json( {
+        miner_ip_to_country,
+        miner_country_count,
+        miner_country_to_ips,
+        last_known_validators
+    } )
+    
+} )
