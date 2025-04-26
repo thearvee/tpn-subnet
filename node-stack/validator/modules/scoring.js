@@ -1,14 +1,8 @@
 import { cache, log } from 'mentie'
 import { is_data_center } from './ip2location.js'
 import { fetch_failover_stats } from './stats.js'
+import { ip_from_req } from "./network.js"
 const { CI_MODE } = process.env
-
-export const ip_from_req = ( request ) => {
-    let { ip: request_ip, ips, connection, socket } = request
-    let spoofable_ip = request_ip || ips[0] || request.get( 'x-forwarded-for' )
-    let unspoofable_ip = connection.remoteAddress || socket.remoteAddress
-    return { unspoofable_ip, spoofable_ip }
-}
 
 async function score_ip_uniqueness( ip ) {
 
@@ -52,22 +46,14 @@ async function score_ip_uniqueness( ip ) {
     const miner_count = Object.keys( miner_ip_to_country ).length
     const country_count = miner_country_count[ country ] || 0
     const miners_in_same_country = miner_country_count[ country ] || 0
-
-    // Calculate score
     const ip_pct_same_country = Math.round( miners_in_same_country / miner_count  * 100 )
+
+    // Calculate the average number of miners in a country
+    const average_miners_in_country = Math.round( miner_count / Object.keys( miner_country_count ).length )
+    log.info( `Average miners in country: ${ average_miners_in_country }` )
 
     // Get the connection type
     const is_dc = await is_data_center( ip )
-
-    // Log all data for debugging
-    log.info( `Calculation base variables:`, {
-        ip,
-        miner_country_count,
-        country_count,
-        miners_in_same_country,
-        ip_pct_same_country,
-        is_dc
-    } )
 
     // Calcluate the score of the request, datacenters get half scores
     const datacenter_penalty = 0.9
@@ -83,13 +69,17 @@ async function score_ip_uniqueness( ip ) {
     const powered_score = Math.pow( country_uniqueness_score / 100, curve ) * 100
     log.info( `Powered score: ${ powered_score }` )
 
-    // Return the score of the request
-    return { powered_score, country_uniqueness_score, country, details: {
+    // Score details
+    const details = {
         is_dc,
         ip_pct_same_country,
         country_count,
-        miners_in_same_country
-    } }
+        miners_in_same_country,
+        average_miners_in_country
+    }
+
+    // Return the score of the request
+    return { powered_score, country_uniqueness_score, country, details }
     
 }
 

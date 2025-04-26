@@ -5,6 +5,7 @@ import { cache, log, make_retryable } from "mentie"
 import { base_url } from "../modules/url.js"
 import { validate_wireguard_config } from "../modules/wireguard.js"
 import { get_challenge_response, get_challenge_response_score, save_challenge_response_score } from "../modules/database.js"
+import { ip_from_req } from "../modules/network.js"
 export const router = Router()
 const { CI_MODE } = process.env
 
@@ -187,8 +188,11 @@ router.post( "/:challenge/:response", async ( req, res ) => {
         // If not correct, return false
         if( !correct ) return res.json( { correct } )
 
+        // Get ip from request
+        const { unspoofable_ip, spoofable_ip } = ip_from_req( req )
+
         // Upon solution success, test the wireguard config
-        const { valid: wireguard_valid, message='Unknown error validating wireguard config' } = await validate_wireguard_config( { peer_config, peer_id } )
+        const { valid: wireguard_valid, message='Unknown error validating wireguard config' } = await validate_wireguard_config( { peer_config, peer_id, miner_ip: unspoofable_ip } )
         if( !wireguard_valid ) {
             log.info( `[POST] Wireguard config for peer ${ peer_id } failed challenge` )
             return res.json( { message, correct: false, score: 0 } )
@@ -215,7 +219,9 @@ router.post( "/:challenge/:response", async ( req, res ) => {
 
         // Memory cache miner uid score
         let miner_scores = cache( `last_known_miner_scores` ) || {}
-        miner_scores[ miner_uid ] = { score, timestamp: Date.now(), details }
+        const miner_ip_to_country = cache( `miner_ip_to_country` ) || {}
+        const country = miner_ip_to_country[ unspoofable_ip ] || 'unknown'
+        miner_scores[ miner_uid ] = { score, timestamp: Date.now(), details, country, ip: unspoofable_ip }
 
         // Sort the scores by timestamp (latest to oldest)
         miner_scores = Object.entries( miner_scores )

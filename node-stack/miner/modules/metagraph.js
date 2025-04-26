@@ -1,4 +1,5 @@
 import { log } from "mentie"
+import { ip_from_req } from "./network.js"
 const { CI_MODE } = process.env
 
 // This hardcoded validator list is temporary and will be replaced by a metagrah query
@@ -44,10 +45,7 @@ export function is_validator( request ) {
     }
 
     // Get the ip of the originating request
-    let { ip: request_ip, ips, connection, socket } = request
-    let spoofable_ip = request_ip || ips[0] || request.get( 'x-forwarded-for' )
-    let unspoofable_ip = connection.remoteAddress || socket.remoteAddress
-    if( unspoofable_ip?.startsWith( '::ffff:' ) ) unspoofable_ip = unspoofable_ip?.replace( '::ffff:', '' )
+    const { spoofable_ip, unspoofable_ip } = ip_from_req( request )
     log.info( `Request ip: ${ unspoofable_ip } (spoofable: ${ spoofable_ip } )` )
 
     // Check if input is ipv4 (very naively)

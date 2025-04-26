@@ -134,7 +134,7 @@ export async function clean_up_tpn_interfaces( { interfaces, ip_addresses, dryru
  * @returns {boolean} result.valid - Whether the wireguard config is valid
  * @returns {string} result.message - The message to return
  */
-export async function validate_wireguard_config( { peer_config, peer_id } ) {
+export async function validate_wireguard_config( { peer_config, peer_id, miner_ip } ) {
 
     const log_tag = `[ ${ peer_id }_${ Date.now() } ]`
 
@@ -229,6 +229,7 @@ export async function validate_wireguard_config( { peer_config, peer_id } ) {
         log.warn( `${ log_tag } Wireguard config for peer ${ peer_id } has format errors:`, format_errors )
         return { valid: false, message: `Wireguard config for peer ${ peer_id } has format errors: ${ format_errors.join( ', ' ) }` }
     }
+    if( miner_ip && endpoint != miner_ip ) format_errors.push( `Miner supplied endpoint from ip that that does not beling to miner` )
 
     log.info( `${ log_tag } Validating wireguard config for peer ${ peer_id }:`, {
         address,

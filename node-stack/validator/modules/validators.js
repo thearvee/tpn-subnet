@@ -1,4 +1,5 @@
 import { cache, log, wait } from "mentie"
+import { ip_from_req } from "./network.js"
 const { CI_MODE } = process.env
 
 const get_validators = async () => {
@@ -49,10 +50,7 @@ export async function is_validator( request ) {
     }
 
     // Get the ip of the originating request
-    let { ip: request_ip, ips, connection, socket } = request
-    let spoofable_ip = request_ip || ips[0] || request.get( 'x-forwarded-for' )
-    let unspoofable_ip = connection.remoteAddress || socket.remoteAddress
-    if( unspoofable_ip?.startsWith( '::ffff:' ) ) unspoofable_ip = unspoofable_ip?.replace( '::ffff:', '' )
+    const { unspoofable_ip, spoofable_ip } = ip_from_req( request )
     log.info( `Request ip: ${ unspoofable_ip } (spoofable: ${ spoofable_ip } )` )
 
     // Check if input is ipv4 (very naively)
