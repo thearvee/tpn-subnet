@@ -2,7 +2,7 @@
 
 # Default values for flags
 TPN_DIR=~/tpn-subnet
-ENABLE_AUTOUPDATE=false
+ENABLE_AUTOUPDATE=true
 FORCE_RESTART=true
 PM2_PROCESS_NAME=tpn_validator
 
@@ -12,7 +12,7 @@ print_help() {
   echo ""
   echo "Options:"
   echo "  --tpn_dir=PATH               Path to the TPN repository (default: ~/tpn-subnet)"
-  echo "  --enable_autoupdate=true|false  Enable or disable crontab auto-update (default: false)"
+  echo "  --enable_autoupdate=true|false  Enable or disable crontab auto-update (default: true)"
   echo "  --force_restart=true|false     Force restart regardless of repository update (default: true)"
   echo "  --pm2_process_name=NAME        Name of the pm2 process to restart (default: tpn_validator)"
   echo "  --help                         Show this help message and exit"
