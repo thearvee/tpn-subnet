@@ -163,7 +163,7 @@ router.get( "/:challenge/:response?", async ( req, res ) => {
 
     try {
 
-        const retryable_handler = await make_retryable( handle_route, { retry_times: 2, cooldown_in_s: 10, cooldown_entropy: false } )
+        const retryable_handler = await make_retryable( handle_route, { retry_times: 2, cooldown_in_s: 10, cooldown_entropy: false, logger: log.info } )
         return retryable_handler()
         
     } catch ( e ) {
@@ -257,7 +257,7 @@ router.post( "/:challenge/:response", async ( req, res ) => {
 
     try {
 
-        const retryable_handler = await make_retryable( handle_route, { retry_times: 2, cooldown_in_s: 10, cooldown_entropy: false } )
+        const retryable_handler = await make_retryable( handle_route, { retry_times: 2, cooldown_in_s: 10, cooldown_entropy: false, logger: log.info } )
         return retryable_handler()
         
     } catch ( e ) {

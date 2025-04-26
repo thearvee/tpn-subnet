@@ -55,14 +55,25 @@ if [ ! -d "$TPN_DIR" ]; then
     exit 1
 fi
 
-# Optionally check/add crontab entry if autoupdate is enabled
+# Define the command to ensure in crontab
+restart_command="0 * * * * $TPN_DIR/scripts/update_validator.sh --force_restart=false"
+
 if [ "$ENABLE_AUTOUPDATE" = "true" ]; then
-    if ! crontab -l | grep -q "$TPN_DIR/scripts/update_validator.sh"; then
-        (crontab -l 2>/dev/null; echo "0 * * * * $TPN_DIR/scripts/update_validator.sh") | crontab -
+    # Dump crontab, fallback to empty if none exists
+    existing_cron=$(crontab -l 2>/dev/null || true)
+    
+    # Check if restart_command already exists
+    if ! echo "$existing_cron" | grep -Fq "$restart_command"; then
+        # Remove any old validator update entries
+        new_cron=$(echo "$existing_cron" | grep -v "scripts/update_validator.sh")
+
+        # Add the correct restart_command
+        printf "%s\n%s\n" "$new_cron" "$restart_command" | crontab -
     fi
 else
     echo "Autoupdate disabled, skipping crontab check."
 fi
+
 
 # Update the TPN repository
 cd "$TPN_DIR" || exit 1
