@@ -41,7 +41,7 @@ export async function update_maxmind() {
         
         // Listen for output from stdout
         updateProcess.stdout.on( 'data', ( data ) => {
-            log.info( `Maxmimnd update progress:`, data.toString() )
+            log.info( `Maxmind update progress:`, data.toString() )
         } )
         
         // Listen for errors on stderr

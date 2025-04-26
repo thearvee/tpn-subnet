@@ -1,11 +1,16 @@
 import { log } from "mentie"
 
-export function request_is_local( request ) {
-
-    // Get the ip of the originating request
+export function ip_from_req( request ) {
     let { ip: request_ip, ips, connection, socket } = request
     let spoofable_ip = request_ip || ips[0] || request.get( 'x-forwarded-for' )
     let unspoofable_ip = connection.remoteAddress || socket.remoteAddress
+    return { unspoofable_ip, spoofable_ip }
+}
+
+export function request_is_local( request ) {
+
+    // Get the ip of the originating request
+    const { unspoofable_ip, spoofable_ip } = ip_from_req( request )
 
     // Log out the ip address of the request
     if( unspoofable_ip ) log.info( `Request from ${ unspoofable_ip }` )
