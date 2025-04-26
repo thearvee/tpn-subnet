@@ -12,10 +12,17 @@ const { CI_MODE } = process.env
 // Generate challenge route
 router.get( "/new", async ( req, res ) => {
 
+
     try {
+
+        // Allow only localhost to call this route
+        if( !request_is_local( req ) ) return res.status( 403 ).json( { error: `Request not from localhost` } )
 
         // Get miner uid from get query
         const { miner_uid='unknown' } = req.query
+
+        // If miner uid is not provided, warn
+        if( !miner_uid ) log.warn( `No miner uid provided, this implies the neuron is misconfigured` )
 
         // Generate a new challenge
         const challenge = await generate_challenge( { miner_uid } )

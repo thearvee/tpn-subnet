@@ -83,7 +83,7 @@ async def forward(self):
     
     # Generate k challenges
     challenges = await generate_challenges(miner_uids=miner_uids, validator_server_url=self.validator_server_url)
-    bt.logging.info(f"Generated challenge: {challenges}")
+    bt.logging.info(f"Generated challenges:\n" + "\n".join([str(challenge) for challenge in challenges]))
     
     if challenges is None:
         bt.logging.error("Failed to generate challenges")
@@ -103,12 +103,12 @@ async def forward(self):
     # Execute all queries concurrently
     responses = await asyncio.gather(*async_queries)
 
-    bt.logging.info(f"Received Raw responses: {responses}")
+    bt.logging.info(f"Received Raw responses:\n" + "\n".join([str(resp) for resp in responses]))
     # Flatten the responses list since each query returns a list with one item
     responses = [resp[0] for resp in responses]
 
     # Log the results for monitoring purposes.
-    bt.logging.info(f"Received responses: {responses}")
+    bt.logging.info(f"Received responses: \n" + "\n".join([str(resp) for resp in responses]))
     
     # Get scores for the responses
     rewards = await get_rewards([challenge.challenge for challenge in challenges], responses, validator_server_url=self.validator_server_url)

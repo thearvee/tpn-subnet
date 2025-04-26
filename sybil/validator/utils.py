@@ -3,6 +3,7 @@ import aiohttp
 from sybil.protocol import Challenge
 from typing import List
 
+
 # Fetch a challenge from a given URL
 async def fetch(url):
     async with aiohttp.ClientSession() as session:

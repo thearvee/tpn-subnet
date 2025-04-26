@@ -256,7 +256,7 @@ export async function validate_wireguard_config( { peer_config, peer_id, miner_i
 
     // If endpoint is string, resolve it
     if( !endpoint.match( /\d*\.\d*\.\d*\.\d*/ ) ) {
-        const { stdout, stderr } = await run( `dig +short ${ endpoint }`, { silent: false, log_tag } )
+        const { stdout, stderr } = await run( `dig +short ${ endpoint }`, { silent: true, log_tag } )
         if( stderr ) {
             log.warn( `${ log_tag } Error resolving endpoint ${ endpoint }:`, stderr )
             return { valid: false, message: `Error resolving endpoint ${ endpoint }: ${ stderr }` }
@@ -379,9 +379,6 @@ export async function validate_wireguard_config( { peer_config, peer_id, miner_i
     }
     const run_test = async () => {
 
-        // TEMPORARY CHECK, log out all intefaces
-        await run( `ip addr show`, { silent: false, verbose: true, log_tag } )
-
         // Check for ip address conflicts
         const timeout = test_timeout_seconds * 5 // How many ip addresses to assume in the worst of circumstances to take their max timeout
         const ip_free = await wait_for_ip_free( { ip_address: address, timeout, log_tag } )
@@ -403,7 +400,7 @@ export async function validate_wireguard_config( { peer_config, peer_id, miner_i
         const network_setup_commands = split_ml_commands( network_setup_command )
 
         for( const command of network_setup_commands ) {
-            await run( command, { silent: false, verbose: true, log_tag } )
+            await run( command, { silent: false, verbose: false, log_tag } )
         }
     
 
