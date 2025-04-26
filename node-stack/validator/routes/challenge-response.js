@@ -83,7 +83,7 @@ router.get( "/:challenge/:response?", async ( req, res ) => {
             response = null
         }
 
-        log.info( `[GET] Challenge/response ${ challenge }${ response ? `/${ response }/` : '' }${ miner_uid ? `miner_uid="${ miner_uid }"` : '' } called by ${ caller }` )
+        log.info( `[GET] ${ new Date().toString() } Challenge/response ${ challenge }${ response ? `/${ response }/` : '' }${ miner_uid ? `?miner_uid="${ miner_uid }"` : '' } called by ${ caller }` )
 
         /* /////////////////////////////
         //  Path 1: solving a challenge
@@ -189,7 +189,7 @@ router.post( "/:challenge/:response", async ( req, res ) => {
         if( !challenge || !response ) return res.status( 400 ).json( { error: 'Missing challenge or response' } )
 
         // Log out this run
-        log.info( `[POST] [run=${ run }] Challenge/response ${ challenge }/${ response } called by ${ miner_uid ? 'validator' : 'miner' }` )
+        log.info( `[POST] [run=${ run }] ${ new Date().toString() } Challenge/response ${ challenge }/${ response } called by ${ miner_uid ? 'validator' : 'miner' }` )
         run++
 
         // Extact wireguard config from request
@@ -250,7 +250,9 @@ router.post( "/:challenge/:response", async ( req, res ) => {
             .map( ( [ uid, miner_entry ] ) => [ uid, { ...miner_entry, timestamp: new Date( miner_entry.timestamp ).toString() } ]  )
             .reduce( ( acc, [ key, value ] ) => ( { ...acc, [ key ]: value } ), {} )
         cache( `last_known_miner_scores`, miner_scores )
+        log.info( `[POST] Miner scores updated` )
 
+        log.info( `[POST] Returning challenge response to ${ miner_uid } for challenge ${ challenge }: `, data )
         return res.json( data )
 
     }

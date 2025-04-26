@@ -42,7 +42,7 @@ async def get_rewards(challenges: List[str], responses: List[str], validator_ser
         Get the scores for the responses.
         """
         async def fetch_score(challenge, response) -> float:
-            bt.logging.info(f"Getting score of: {validator_server_url}/challenge/{challenge}/{response}")
+            bt.logging.info(f"Getting score at: {validator_server_url}/challenge/{challenge}/{response}")
             if response is None:
                 return 0
             async with aiohttp.ClientSession() as session:
