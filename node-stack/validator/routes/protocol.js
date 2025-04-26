@@ -83,7 +83,8 @@ router.post( "/broadcast/miners", async ( req, res ) => {
         return {
             ip_to_country,
             country_count,
-            country_to_ips
+            country_to_ips,
+            success: true
         }
 
     }
@@ -161,7 +162,8 @@ router.get( "/sync/stats", ( req, res ) => {
         miner_ip_to_country,
         miner_country_count,
         miner_country_to_ips,
-        last_known_validators
+        last_known_validators,
+        success: true
     } )
 
 } )

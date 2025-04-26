@@ -154,6 +154,9 @@ The miner automatically updates some components periodically, but not all. You s
 bash scripts/update_miner.sh
 ```
 
+> [!CAUTION]
+> The update script can be customised, for details run `bash scripts/update_miner.sh --help`
+
 ## Running a validator
 
 Validators are the interface between end users and miners. They send work requests to miners, which the miners complete and submit to the validator. Running a validator is more complicated than a miner and requires more setup than a miner.
@@ -259,5 +262,9 @@ export PYTHONPATH=. && pm2 start "python3 neurons/validator.py \
 The validator automatically updates some components periodically, but not all. You should regularly run the following commands to keep your validator up to date:
 
 ```bash
+# Run the update script, this assumes the tpn repository is located at ~/tpn-subnet
 bash scripts/update_validator.sh
 ```
+
+> [!CAUTION]
+> The update script can be customised, for details run `bash scripts/update_validator.sh --help`
