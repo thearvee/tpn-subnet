@@ -163,13 +163,18 @@ router.get( "/:challenge/:response?", async ( req, res ) => {
 // :challenge and :response - validate the response and return the score, expects a wireguard_config object in the request body
 router.post( "/:challenge/:response", async ( req, res ) => {
 
-    const handle_route = async () => {
+    let run = 1
 
+    const handle_route = async () => {
 
         // Extract challenge and response from request
         const { miner_uid } = req.query
         const { challenge, response } = req.params
         if( !challenge || !response ) return res.status( 400 ).json( { error: 'Missing challenge or response' } )
+
+        // Log out this run
+        log.info( `[POST] [run=${ run }] Challenge/response ${ challenge }/${ response } called by ${ miner_uid ? 'validator' : 'miner' }` )
+        run++
 
         // Extact wireguard config from request
         const { wireguard_config={} } = req.body || {}
