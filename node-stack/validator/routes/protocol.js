@@ -133,7 +133,10 @@ router.post( "/broadcast/validators", async ( req, res ) => {
         log.info( `Caching validator ip data: `, valid_entries )
         cache( 'last_known_validators', valid_entries )
 
-        return valid_entries
+        return {
+            valid_entries,
+            success: true
+        }
 
     }
 

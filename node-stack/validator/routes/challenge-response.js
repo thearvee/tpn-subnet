@@ -111,19 +111,39 @@ router.get( "/:challenge/:response?", async ( req, res ) => {
         //  Path 2: checking solution score
         // ////////////////////////// */
 
-        // Check for cached value
-        const cached_value = cache( `solution_score_${ challenge }` )
-        if( cached_value ) {
-            log.info( `[GET] Returning cached value to ${ caller } for solution ${ challenge }: `, cached_value )
-            return res.json( cached_value )
-        }
+        let scored_response = null
+        const start = Date.now()
+        const timeout_ms = 60_000
+        let attempt = 1
 
-        // Check for solved value
-        log.info( `[GET] Checking for scored response in database for ${ challenge }` )
-        const scored_response = await get_challenge_response_score( { challenge } )
-        if( scored_response && !scored_response.error ) {
+        while( !scored_response && Date.now() - start  < timeout_ms ) {
+
+            log.info( `[GET] Attempt ${ attempt } at getting score for ${ challenge }` )
+
+            // Check for cached value
+            const cached_value = cache( `solution_score_${ challenge }` )
+            if( cached_value ) {
+                log.info( `[GET] Returning cached value to ${ caller } for solution ${ challenge }: `, cached_value )
+                scored_response = cached_value
+            }
+
+            // Check for solved value
+            log.info( `[GET] Checking for scored response in database for ${ challenge }` )
+            const database_score = await get_challenge_response_score( { challenge } )
+            if( database_score && !scored_response.error ) {
+                log.info( `[GET] Returning scored value to ${ caller } for solution ${ challenge }: `, scored_response )
+                scored_response = database_score
+                cache( `solution_score_${ challenge }`, scored_response )
+            }
+
+            attempt++
+
+        }
+        
+
+        // If there is a scored response, return it
+        if( scored_response ) {
             log.info( `[GET] Returning scored value to ${ caller } for solution ${ challenge }: `, scored_response )
-            cache( `solution_score_${ challenge }`, scored_response )
             return res.json( scored_response )
         }
 
