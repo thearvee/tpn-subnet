@@ -62,3 +62,25 @@ router.get( "/stats/miners", async ( req, res ) => {
     }
 
 } )
+
+router.get( "/stats/miner/:uid", async ( req, res ) => {
+
+    try {
+
+        // Get miner UID param
+        const { uid } = req.params
+        if( !uid ) return res.status( 400 ).json( { error: "Missing miner UID" } )
+
+        // Check if we have cached data
+        const stats = cache( 'last_known_miner_scores' ) || {}
+        const miner = stats[ uid ] || {}
+        return res.json( miner )
+
+    } catch ( e ) {
+
+        log.error( e )
+        return res.status( 500 ).json( { error: e.message } )
+
+    }
+
+} )

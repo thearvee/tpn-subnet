@@ -68,7 +68,8 @@ router.get( "/:challenge/:response?", async ( req, res ) => {
         // Extract challenge and response from request
         const { miner_uid } = req.query
         const { challenge, response } = req.params
-        log.info( `[GET] Challenge/response ${ challenge }/${ response || '' } called by ${ miner_uid ? 'validator' : 'miner' }` )
+        const caller = miner_uid ? 'validator' : 'miner'
+        log.info( `[GET] Challenge/response ${ challenge }/${ response || '' } called by ${ caller }` )
 
         /* /////////////////////////////
         //  Path 1: solving a challenge
@@ -99,7 +100,7 @@ router.get( "/:challenge/:response?", async ( req, res ) => {
         // Check for cached value
         const cached_value = cache( `solution_score_${ challenge }` )
         if( cached_value ) {
-            log.info( `[GET] Returning cached value for solution ${ challenge }` )
+            log.info( `[GET] Returning cached value to ${ caller } for solution ${ challenge }: `, cached_value )
             return res.json( cached_value )
         }
 
@@ -107,7 +108,7 @@ router.get( "/:challenge/:response?", async ( req, res ) => {
         log.info( `[GET] Checking for scored response in database for ${ challenge }` )
         const scored_response = await get_challenge_response_score( { challenge } )
         if( scored_response && !scored_response.error ) {
-            log.info( `[GET] Returning scored value for solution ${ challenge }` )
+            log.info( `[GET] Returning scored value to ${ caller } for solution ${ challenge }: `, scored_response )
             cache( `solution_score_${ challenge }`, scored_response )
             return res.json( scored_response )
         }
@@ -115,7 +116,8 @@ router.get( "/:challenge/:response?", async ( req, res ) => {
         /* /////////////////////////////
         //  Path 3: no known score
         // ////////////////////////// */
-        return res.json( { error: 'No known score for this challenge' } )
+        log.info( `[GET] Returning ERROR to ${ caller } for solution ${ challenge }` )
+        return res.json( { score: 0, error: 'No known score for this challenge' } )
 
         // // Validate the response
         // const { correct, ms_to_solve, solved_at } = await solve_challenge( { challenge, response } )
