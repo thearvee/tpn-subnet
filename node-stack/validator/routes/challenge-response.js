@@ -12,10 +12,17 @@ const { CI_MODE } = process.env
 // Generate challenge route
 router.get( "/new", async ( req, res ) => {
 
+
     try {
+
+        // Allow only localhost to call this route
+        if( !request_is_local( req ) ) return res.status( 403 ).json( { error: `Request not from localhost` } )
 
         // Get miner uid from get query
         const { miner_uid='unknown' } = req.query
+
+        // If miner uid is not provided, warn
+        if( !miner_uid ) log.warn( `No miner uid provided, this implies the neuron is misconfigured` )
 
         // Generate a new challenge
         const challenge = await generate_challenge( { miner_uid } )
@@ -67,8 +74,15 @@ router.get( "/:challenge/:response?", async ( req, res ) => {
 
         // Extract challenge and response from request
         const { miner_uid } = req.query
-        const { challenge, response } = req.params
+        let { challenge, response } = req.params
         const caller = request_is_local( req ) ? 'validator' : 'miner'
+
+        // If the response is None, that is weird python null handling and we can take it out
+        if( response === 'None' ) {
+            log.info( `Response was None, setting to null` )
+            response = null
+        }
+
         log.info( `[GET] Challenge/response ${ challenge }${ response ? `/${ response }/` : '' }${ miner_uid ? `miner_uid="${ miner_uid }"` : '' } called by ${ caller }` )
 
         /* /////////////////////////////
@@ -117,7 +131,7 @@ router.get( "/:challenge/:response?", async ( req, res ) => {
         //  Path 3: no known score
         // ////////////////////////// */
         log.info( `[GET] Returning ERROR to ${ caller } for solution ${ challenge }` )
-        throw new Error( `No known score for challenge ${ challenge }` )
+        return res.json( { error: 'No known score for this challenge', score: 0 } )
 
         // // Validate the response
         // const { correct, ms_to_solve, solved_at } = await solve_challenge( { challenge, response } )
@@ -149,7 +163,7 @@ router.get( "/:challenge/:response?", async ( req, res ) => {
 
     try {
 
-        const retryable_handler = await make_retryable( handle_route, { retry_times: 2, cooldown_in_s: 10, cooldown_entropy: false } )
+        const retryable_handler = await make_retryable( handle_route, { retry_times: 2, cooldown_in_s: 10, cooldown_entropy: false, logger: log.info } )
         return retryable_handler()
         
     } catch ( e ) {
@@ -243,7 +257,7 @@ router.post( "/:challenge/:response", async ( req, res ) => {
 
     try {
 
-        const retryable_handler = await make_retryable( handle_route, { retry_times: 2, cooldown_in_s: 10, cooldown_entropy: false } )
+        const retryable_handler = await make_retryable( handle_route, { retry_times: 2, cooldown_in_s: 10, cooldown_entropy: false, logger: log.info } )
         return retryable_handler()
         
     } catch ( e ) {

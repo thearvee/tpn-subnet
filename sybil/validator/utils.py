@@ -2,6 +2,8 @@ import asyncio
 import aiohttp
 from sybil.protocol import Challenge
 from typing import List
+import bittensor as bt
+
 
 # Fetch a challenge from a given URL
 async def fetch(url):
@@ -14,6 +16,7 @@ async def generate_challenges(miner_uids: List[int], validator_server_url: str) 
     try:
         tasks = []
         for uid in miner_uids:
+            bt.logging.info(f"Generating challenge for miner uid: {uid}")
             url = f"{validator_server_url}/challenge/new?miner_uid={uid}"
             tasks.append(fetch(url))
         

@@ -83,7 +83,7 @@ async def forward(self):
     
     # Generate k challenges
     challenges = await generate_challenges(miner_uids=miner_uids, validator_server_url=self.validator_server_url)
-    bt.logging.info(f"Generated challenge: {challenges}")
+    bt.logging.info(f"Generated challenges:\n" + "\n".join([str(challenge) for challenge in challenges]))
     
     if challenges is None:
         bt.logging.error("Failed to generate challenges")

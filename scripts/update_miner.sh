@@ -2,7 +2,7 @@
 
 # Default values for flags
 TPN_DIR=~/tpn-subnet
-ENABLE_AUTOUPDATE=false
+ENABLE_AUTOUPDATE=true
 FORCE_RESTART=true
 PM2_PROCESS_NAME=tpn_miner
 
@@ -12,7 +12,7 @@ print_help() {
   echo ""
   echo "Options:"
   echo "  --tpn_dir=PATH               Path to the TPN repository (default: ~/tpn-subnet)"
-  echo "  --enable_autoupdate=true|false  Enable or disable crontab auto-update (default: false)"
+  echo "  --enable_autoupdate=true|false  Enable or disable crontab auto-update (default: true)"
   echo "  --force_restart=true|false     Force restart regardless of repository update (default: true)"
   echo "  --pm2_process_name=NAME        Name of the pm2 process to restart (default: tpn_miner)"
   echo "  --help                         Show this help message and exit"
@@ -55,14 +55,25 @@ if [ ! -d "$TPN_DIR" ]; then
     exit 1
 fi
 
-# Optionally check/add crontab entry if autoupdate is enabled
+# Define the miner update command
+miner_update_command="0 * * * * $TPN_DIR/scripts/update_miner.sh"
+
 if [ "$ENABLE_AUTOUPDATE" = "true" ]; then
-    if ! crontab -l | grep -q "$TPN_DIR/scripts/update_miner.sh"; then
-        (crontab -l 2>/dev/null; echo "0 * * * * $TPN_DIR/scripts/update_miner.sh") | crontab -
+    # Dump crontab, fallback to empty if none exists
+    existing_cron=$(crontab -l 2>/dev/null || true)
+
+    # Check if miner_update_command already exists
+    if ! echo "$existing_cron" | grep -Fq "$miner_update_command"; then
+        # Remove any old miner update entries
+        new_cron=$(echo "$existing_cron" | grep -v "scripts/update_miner.sh")
+
+        # Add the correct miner_update_command
+        printf "%s\n%s\n" "$new_cron" "$miner_update_command" | crontab -
     fi
 else
     echo "Autoupdate disabled, skipping crontab check."
 fi
+
 
 # Update the TPN repository
 cd "$TPN_DIR" || exit 1
