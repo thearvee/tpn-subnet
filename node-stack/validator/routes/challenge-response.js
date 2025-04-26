@@ -5,7 +5,7 @@ import { cache, log, make_retryable } from "mentie"
 import { base_url } from "../modules/url.js"
 import { validate_wireguard_config } from "../modules/wireguard.js"
 import { get_challenge_response, get_challenge_response_score, save_challenge_response_score } from "../modules/database.js"
-import { ip_from_req } from "../modules/network.js"
+import { ip_from_req, request_is_local } from "../modules/network.js"
 export const router = Router()
 const { CI_MODE } = process.env
 
@@ -68,8 +68,8 @@ router.get( "/:challenge/:response?", async ( req, res ) => {
         // Extract challenge and response from request
         const { miner_uid } = req.query
         const { challenge, response } = req.params
-        const caller = miner_uid ? 'validator' : 'miner'
-        log.info( `[GET] Challenge/response ${ challenge }/${ response || '' } called by ${ caller }` )
+        const caller = request_is_local( req ) ? 'validator' : 'miner'
+        log.info( `[GET] Challenge/response ${ challenge }${ response ? `/${ response }/` : '' }${ miner_uid ? `miner_uid="${ miner_uid }"` : '' } called by ${ caller }` )
 
         /* /////////////////////////////
         //  Path 1: solving a challenge
@@ -81,14 +81,14 @@ router.get( "/:challenge/:response?", async ( req, res ) => {
 
             const cached_value = cache( `challenge_solution_${ challenge }` )
             if( cached_value ) {
-                log.info( `[GET] Returning cached value (no response provided) for challenge ${ challenge }: `, cached_value )
+                log.info( `[GET] Returning cached value to ${ caller } (no response provided) for challenge ${ challenge }: `, cached_value )
                 return res.json( { response: cached_value.response } )
             }
 
             const challenge_response = await get_challenge_response( { challenge } )
             if( !cached_value && challenge_response.response ) cache( `challenge_solution_${ challenge }`, challenge_response )
 
-            log.info( `[GET] Returning challenge response for challenge ${ challenge }: `, challenge_response )
+            log.info( `[GET] Returning challenge response to ${ caller } (no response provided) for challenge ${ challenge }: `, challenge_response )
             return res.json( { ...challenge_response } )
 
         }
@@ -117,7 +117,7 @@ router.get( "/:challenge/:response?", async ( req, res ) => {
         //  Path 3: no known score
         // ////////////////////////// */
         log.info( `[GET] Returning ERROR to ${ caller } for solution ${ challenge }` )
-        return res.json( { score: 0, error: 'No known score for this challenge' } )
+        throw new Error( `No known score for challenge ${ challenge }` )
 
         // // Validate the response
         // const { correct, ms_to_solve, solved_at } = await solve_challenge( { challenge, response } )
