@@ -186,10 +186,11 @@ router.post( "/:challenge/:response", async ( req, res ) => {
         // Extract challenge and response from request
         const { miner_uid } = req.query
         const { challenge, response } = req.params
+        const caller = request_is_local( req ) ? 'validator' : 'miner'
         if( !challenge || !response ) return res.status( 400 ).json( { error: 'Missing challenge or response' } )
 
         // Log out this run
-        log.info( `[POST] [run=${ run }] ${ new Date().toString() } Challenge/response ${ challenge }/${ response } called by ${ miner_uid ? 'validator' : 'miner' }` )
+        log.info( `[POST] [run=${ run }] ${ new Date().toString() } Challenge/response ${ challenge }/${ response } called by ${ caller }` )
         run++
 
         // Extact wireguard config from request

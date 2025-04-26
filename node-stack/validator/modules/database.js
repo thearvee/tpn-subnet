@@ -218,6 +218,13 @@ export async function save_challenge_response_score( { correct, challenge, score
     )
     log.info( 'Score saved:', { challenge, correct, score, speed_score, uniqueness_score, country_uniqueness_score, solved_at } )
 
+    // TEMPORARY DEBUGGING, read the entry we just wrote
+    const result = await pool.query(
+        `SELECT correct, score, speed_score, uniqueness_score, country_uniqueness_score, solved_at FROM scores WHERE challenge = $1 ORDER BY solved_at ASC LIMIT 1`,
+        [ challenge ]
+    )
+    log.info( 'Query result for challenge response score:', result.rows )
+
     return { correct, score, speed_score, uniqueness_score, country_uniqueness_score, solved_at }
 
 }
@@ -230,7 +237,6 @@ export async function get_challenge_response_score( { challenge } ) {
         `SELECT correct, score, speed_score, uniqueness_score, country_uniqueness_score, solved_at FROM scores WHERE challenge = $1 ORDER BY solved_at ASC LIMIT 1`,
         [ challenge ]
     )
-    log.info( `Query result for challenge response score ${ challenge }:`, result.rows )
 
     const default_values = {
         correct: false,
@@ -241,7 +247,12 @@ export async function get_challenge_response_score( { challenge } ) {
         solved_at: 0,
         error: 'No score found'
     }
-    return result.rows.length > 0 ? result.rows[0] : default_values
+
+    const data_to_return = result.rows.length > 0 ? result.rows[0] : default_values
+
+    log.info( `Query result for challenge response score ${ challenge }:`, result.rows, data_to_return )
+
+    return data_to_return
 
 }
 
