@@ -74,8 +74,15 @@ router.get( "/:challenge/:response?", async ( req, res ) => {
 
         // Extract challenge and response from request
         const { miner_uid } = req.query
-        const { challenge, response } = req.params
+        let { challenge, response } = req.params
         const caller = request_is_local( req ) ? 'validator' : 'miner'
+
+        // If the response is None, that is weird python null handling and we can take it out
+        if( response === 'None' ) {
+            log.info( `Response was None, setting to null` )
+            response = null
+        }
+
         log.info( `[GET] Challenge/response ${ challenge }${ response ? `/${ response }/` : '' }${ miner_uid ? `miner_uid="${ miner_uid }"` : '' } called by ${ caller }` )
 
         /* /////////////////////////////
@@ -124,7 +131,7 @@ router.get( "/:challenge/:response?", async ( req, res ) => {
         //  Path 3: no known score
         // ////////////////////////// */
         log.info( `[GET] Returning ERROR to ${ caller } for solution ${ challenge }` )
-        throw new Error( `No known score for challenge ${ challenge }` )
+        return res.json( { error: 'No known score for this challenge', score: 0 } )
 
         // // Validate the response
         // const { correct, ms_to_solve, solved_at } = await solve_challenge( { challenge, response } )

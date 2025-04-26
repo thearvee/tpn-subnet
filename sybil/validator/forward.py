@@ -103,12 +103,12 @@ async def forward(self):
     # Execute all queries concurrently
     responses = await asyncio.gather(*async_queries)
 
-    bt.logging.info(f"Received Raw responses:\n" + "\n".join([str(resp) for resp in responses]))
+    bt.logging.info(f"Received Raw responses: {responses}")
     # Flatten the responses list since each query returns a list with one item
     responses = [resp[0] for resp in responses]
 
     # Log the results for monitoring purposes.
-    bt.logging.info(f"Received responses: \n" + "\n".join([str(resp) for resp in responses]))
+    bt.logging.info(f"Received responses: {responses}")
     
     # Get scores for the responses
     rewards = await get_rewards([challenge.challenge for challenge in challenges], responses, validator_server_url=self.validator_server_url)
