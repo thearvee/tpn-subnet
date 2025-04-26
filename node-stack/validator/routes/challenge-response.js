@@ -1,7 +1,7 @@
 import { Router } from "express"
 import { generate_challenge, solve_challenge } from "../modules/challenge.js"
 import { score_request_uniqueness } from "../modules/scoring.js"
-import { cache, log, make_retryable } from "mentie"
+import { cache, log, make_retryable, wait } from "mentie"
 import { base_url } from "../modules/url.js"
 import { validate_wireguard_config } from "../modules/wireguard.js"
 import { get_challenge_response, get_challenge_response_score, save_challenge_response_score } from "../modules/database.js"
@@ -136,6 +136,8 @@ router.get( "/:challenge/:response?", async ( req, res ) => {
                 cache( `solution_score_${ challenge }`, scored_response )
             }
 
+            // Wait and increment
+            await wait( 5_000 )
             attempt++
 
         }
