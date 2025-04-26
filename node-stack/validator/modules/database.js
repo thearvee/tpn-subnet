@@ -211,19 +211,19 @@ export async function save_challenge_response_score( { correct, challenge, score
     country_uniqueness_score = Math.round( country_uniqueness_score )
 
     // Save score
-    log.info( 'Saving score:', { correct, challenge, score, speed_score, uniqueness_score, country_uniqueness_score, solved_at } )
+    log.info( `Saving score for ${ challenge }:`, { correct, challenge, score, speed_score, uniqueness_score, country_uniqueness_score, solved_at } )
     await pool.query(
         `INSERT INTO scores (challenge, correct, score, speed_score, uniqueness_score, country_uniqueness_score, solved_at) VALUES ($1, $2, $3, $4, $5, $6, $7)`,
         [ challenge, correct, score, speed_score, uniqueness_score, country_uniqueness_score, solved_at ]
     )
-    log.info( 'Score saved:', { challenge, correct, score, speed_score, uniqueness_score, country_uniqueness_score, solved_at } )
+    log.info( `Score saved for ${ challenge }:`, { challenge, correct, score, speed_score, uniqueness_score, country_uniqueness_score, solved_at } )
 
     // TEMPORARY DEBUGGING, read the entry we just wrote
     const result = await pool.query(
         `SELECT correct, score, speed_score, uniqueness_score, country_uniqueness_score, solved_at FROM scores WHERE challenge = $1 ORDER BY solved_at ASC LIMIT 1`,
         [ challenge ]
     )
-    log.info( 'Query result for challenge response score:', result.rows )
+    log.info( `Reading back saved score for ${ challenge }`, result.rows )
 
     return { correct, score, speed_score, uniqueness_score, country_uniqueness_score, solved_at }
 
