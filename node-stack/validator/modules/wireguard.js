@@ -67,6 +67,36 @@ export async function wait_for_ip_free( { ip_address, timeout_s=test_timeout_sec
 
 }
 
+export async function clean_up_tpn_namespaces( { namespaces }={} ) {
+
+    log.info( `Cleaning up ${ namespaces?.length || 'all' } namespaces` )
+
+    // Get all namespaces
+    if( !namespaces ) {
+        log.info( `No namespaces provided, getting all namespaces` )
+        const { stdout } = await run( `ip netns list`, { silent: false } )
+        namespaces = stdout?.split( '\n' ).filter( line => line.includes( 'tpn' ) ).map( line => line.split( ':' )[ 0 ].trim() )   
+        log.info( `Found TPN namespaces:`, namespaces )
+    }
+
+    // If no namespaces found, return
+    if( !namespaces || !namespaces?.length ) {
+        log.info( `No namespaces found to clean up` )
+        return false
+    }
+
+    // Loop over namespaces and delete them
+    log.info( `Deleting ${ namespaces?.length } namespaces` )
+    for( const namespace_id of namespaces ) {
+        log.info( `Cleaning up namespace ${ namespace_id }` )
+        await run( `ip netns del ${ namespace_id }`, { silent: false } )
+        log.info( `Deleted namespace ${ namespace_id }` )
+    }
+
+    return !!namespaces?.length
+
+}
+
 /**
  * Cleans up TPN interfaces by deleting their links, routing tables, 
  * and configuration files. Can operate in dry-run mode to simulate the cleanup process.
@@ -85,7 +115,7 @@ export async function clean_up_tpn_interfaces( { interfaces, ip_addresses, dryru
     if( !interfaces && !ip_addresses ) {
         log.info( `No interfaces provided, getting all interfaces` )
         const { stdout } = await run( `ip link show`, { silent: false } )
-        interfaces = stdout.split( '\n' ).filter( line => line.includes( 'tpn' ) ).map( line => line.split( ':' )[ 1 ].trim() )   
+        interfaces = stdout?.split( '\n' ).filter( line => line.includes( 'tpn' ) ).map( line => line.split( ':' )[ 1 ].trim() )   
         log.info( `Found TPN interfaces:`, interfaces )
     }
 
@@ -94,7 +124,7 @@ export async function clean_up_tpn_interfaces( { interfaces, ip_addresses, dryru
         log.info( `Getting all interfaces associated with ip addresses:`, ip_addresses )
         const interfaces_of_ips = await Promise.all( ip_addresses.map( ip => {
             const { stdout } = run( `ip addr show | grep ${ ip } | awk -F' ' '{print $2}'` )
-            if( stdout?.includes( 'tpn' ) ) return stdout.trim()
+            if( stdout?.includes( 'tpn' ) ) return stdout?.trim()
             return null
         } ) ).split( '\n' ).filter( line => line?.includes( 'tpn' ) ).trim()
         log.info( `Found interfaces associated with ip addresses:`, interfaces_of_ips )
@@ -163,7 +193,7 @@ export async function validate_wireguard_config( { peer_config, peer_id, miner_i
 
     // Run specific variables
     let interface_id = `tpn${ peer_id }${ random_string_of_length( 5 ) }`
-    let veth_id = random_string_of_length( 5 )
+    let veth_id = `tpn${ random_string_of_length( 5 ) }`
     let veth_subnet_prefix = `10.200.${ random_number_between( 1, 254 ) }`
     const config_path = `/tmp/${ interface_id }.conf`
     let { stdout: default_route } = await run( `ip route show default | awk '/^default/ {print $3}'`, { silent: false, log_tag } )
@@ -412,7 +442,7 @@ export async function validate_wireguard_config( { peer_config, peer_id, miner_i
         }
         
         // Isolate the json
-        const [ json ] = stdout.match( /{.*}/s ) || []
+        const [ json ] = stdout?.match( /{.*}/s ) || []
         if( !json ) {
             log.warn( `${ log_tag } No JSON response found in stdout:`, stdout )
             return false
@@ -451,7 +481,7 @@ export async function validate_wireguard_config( { peer_config, peer_id, miner_i
         if( !stdout ) throw new Error( `Unable to reach validator through wireguard connection of miner, this suggests misconfiguration` )
 
         // Extract the challenge and response from the stdout
-        let [ json_response ] = stdout.match( /{.*}/s ) || []
+        let [ json_response ] = stdout?.match( /{.*}/s ) || []
         if( !json_response ) {
             log.warn( `${ log_tag } No JSON response found in stdout:`, stdout )
             return { valid: false, message: `No JSON response found in stdout` }
