@@ -1,7 +1,7 @@
 import { Router } from "express"
 import { generate_challenge, solve_challenge } from "../modules/challenge.js"
 import { score_request_uniqueness } from "../modules/scoring.js"
-import { cache, log, make_retryable } from "mentie"
+import { cache, log, make_retryable, wait } from "mentie"
 import { base_url } from "../modules/url.js"
 import { validate_wireguard_config } from "../modules/wireguard.js"
 import { get_challenge_response, get_challenge_response_score, save_challenge_response_score } from "../modules/database.js"
@@ -111,19 +111,53 @@ router.get( "/:challenge/:response?", async ( req, res ) => {
         //  Path 2: checking solution score
         // ////////////////////////// */
 
-        // Check for cached value
-        const cached_value = cache( `solution_score_${ challenge }` )
-        if( cached_value ) {
-            log.info( `[GET] Returning cached value to ${ caller } for solution ${ challenge }: `, cached_value )
-            return res.json( cached_value )
+        let scored_response = null
+        const start = Date.now()
+        const timeout_ms = 60_000
+        let attempt = 1
+
+        while( !scored_response && Date.now() - start  < timeout_ms ) {
+
+            log.info( `[GET] Attempt ${ attempt } at getting score for ${ challenge }` )
+
+            // Check for cached value
+            const cached_value = cache( `solution_score_${ challenge }` )
+            if( cached_value ) {
+                log.info( `[GET] found cashed value for ${ challenge }: `, cached_value )
+                scored_response = cached_value
+                continue
+            }
+
+            // Check for solved value
+            log.info( `[GET] Checking for scored response in database for ${ challenge }` )
+            const database_score = await get_challenge_response_score( { challenge } )
+            if( database_score && !scored_response.error ) {
+                scored_response = database_score
+                cache( `solution_score_${ challenge }`, scored_response )
+            }
+
+            // Wait and increment
+            await wait( 5_000 )
+            attempt++
+
+        }
+        
+        // If there is a scored response, make very sure all properties except "correct" are typecase as numbers
+        if( scored_response ) {
+            const { correct, score, speed_score, uniqueness_score, country_uniqueness_score, solved_at } = scored_response
+            scored_response = {
+                correct,
+                score: Number( score ),
+                speed_score: Number( speed_score ),
+                uniqueness_score: Number( uniqueness_score ),
+                country_uniqueness_score: Number( country_uniqueness_score ),
+                solved_at: Number( solved_at )
+            }
         }
 
-        // Check for solved value
-        log.info( `[GET] Checking for scored response in database for ${ challenge }` )
-        const scored_response = await get_challenge_response_score( { challenge } )
-        if( scored_response && !scored_response.error ) {
+        // If there is a scored response, return it
+        if( scored_response ) {
             log.info( `[GET] Returning scored value to ${ caller } for solution ${ challenge }: `, scored_response )
-            cache( `solution_score_${ challenge }`, scored_response )
             return res.json( scored_response )
         }
 
