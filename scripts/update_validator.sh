@@ -77,7 +77,7 @@ fi
 
 # Update the TPN repository
 cd "$TPN_DIR" || exit 1
-REPO_UP_TO_DATE=$(git pull 2>&1 | grep -c "Already up to date.")
+git pull 2>&1 | tee /dev/stderr | grep -c "Already up to date."; REPO_UP_TO_DATE=$?
 
 # If force_restart flag is true, pretend repo is not up to date
 if [ "$FORCE_RESTART" = "true" ]; then
