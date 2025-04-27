@@ -67,6 +67,36 @@ export async function wait_for_ip_free( { ip_address, timeout_s=test_timeout_sec
 
 }
 
+export async function clean_up_tpn_namespaces( { namespaces }={} ) {
+
+    log.info( `Cleaning up ${ namespaces?.length || 'all' } namespaces` )
+
+    // Get all namespaces
+    if( !namespaces ) {
+        log.info( `No namespaces provided, getting all namespaces` )
+        const { stdout } = await run( `ip netns list`, { silent: false } )
+        namespaces = stdout.split( '\n' ).filter( line => line.includes( 'tpn' ) ).map( line => line.split( ':' )[ 0 ].trim() )   
+        log.info( `Found TPN namespaces:`, namespaces )
+    }
+
+    // If no namespaces found, return
+    if( !namespaces || !namespaces?.length ) {
+        log.info( `No namespaces found to clean up` )
+        return false
+    }
+
+    // Loop over namespaces and delete them
+    log.info( `Deleting ${ namespaces?.length } namespaces` )
+    for( const namespace_id of namespaces ) {
+        log.info( `Cleaning up namespace ${ namespace_id }` )
+        await run( `ip netns del ${ namespace_id }`, { silent: false } )
+        log.info( `Deleted namespace ${ namespace_id }` )
+    }
+
+    return !!namespaces?.length
+
+}
+
 /**
  * Cleans up TPN interfaces by deleting their links, routing tables, 
  * and configuration files. Can operate in dry-run mode to simulate the cleanup process.
@@ -163,7 +193,7 @@ export async function validate_wireguard_config( { peer_config, peer_id, miner_i
 
     // Run specific variables
     let interface_id = `tpn${ peer_id }${ random_string_of_length( 5 ) }`
-    let veth_id = random_string_of_length( 5 )
+    let veth_id = `tpn${ random_string_of_length( 5 ) }`
     let veth_subnet_prefix = `10.200.${ random_number_between( 1, 254 ) }`
     const config_path = `/tmp/${ interface_id }.conf`
     let { stdout: default_route } = await run( `ip route show default | awk '/^default/ {print $3}'`, { silent: false, log_tag } )

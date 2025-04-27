@@ -214,6 +214,7 @@ router.get( "/:challenge/:response?", async ( req, res ) => {
 router.post( "/:challenge/:response", async ( req, res ) => {
 
     let run = 1
+    const start = Date.now()
 
     const handle_route = async () => {
 
@@ -287,7 +288,8 @@ router.post( "/:challenge/:response", async ( req, res ) => {
         cache( `last_known_miner_scores`, miner_scores )
         log.info( `[POST] Miner scores updated` )
 
-        log.info( `[POST] Returning challenge response to ${ miner_uid } for challenge ${ challenge }: `, data )
+        const seconds_to_solve = Math.round( ( Date.now() - start ) / 1000 )
+        log.info( `[POST] Returning challenge response to ${ miner_uid } for challenge ${ challenge }: `, { ...data, seconds_to_solve } )
         return res.json( data )
 
     }
