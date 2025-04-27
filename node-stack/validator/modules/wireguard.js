@@ -75,7 +75,7 @@ export async function clean_up_tpn_namespaces( { namespaces }={} ) {
     if( !namespaces ) {
         log.info( `No namespaces provided, getting all namespaces` )
         const { stdout } = await run( `ip netns list`, { silent: false } )
-        namespaces = stdout.split( '\n' ).filter( line => line.includes( 'tpn' ) ).map( line => line.split( ':' )[ 0 ].trim() )   
+        namespaces = stdout?.split( '\n' ).filter( line => line.includes( 'tpn' ) ).map( line => line.split( ':' )[ 0 ].trim() )   
         log.info( `Found TPN namespaces:`, namespaces )
     }
 
@@ -115,7 +115,7 @@ export async function clean_up_tpn_interfaces( { interfaces, ip_addresses, dryru
     if( !interfaces && !ip_addresses ) {
         log.info( `No interfaces provided, getting all interfaces` )
         const { stdout } = await run( `ip link show`, { silent: false } )
-        interfaces = stdout.split( '\n' ).filter( line => line.includes( 'tpn' ) ).map( line => line.split( ':' )[ 1 ].trim() )   
+        interfaces = stdout?.split( '\n' ).filter( line => line.includes( 'tpn' ) ).map( line => line.split( ':' )[ 1 ].trim() )   
         log.info( `Found TPN interfaces:`, interfaces )
     }
 
@@ -124,7 +124,7 @@ export async function clean_up_tpn_interfaces( { interfaces, ip_addresses, dryru
         log.info( `Getting all interfaces associated with ip addresses:`, ip_addresses )
         const interfaces_of_ips = await Promise.all( ip_addresses.map( ip => {
             const { stdout } = run( `ip addr show | grep ${ ip } | awk -F' ' '{print $2}'` )
-            if( stdout?.includes( 'tpn' ) ) return stdout.trim()
+            if( stdout?.includes( 'tpn' ) ) return stdout?.trim()
             return null
         } ) ).split( '\n' ).filter( line => line?.includes( 'tpn' ) ).trim()
         log.info( `Found interfaces associated with ip addresses:`, interfaces_of_ips )
@@ -442,7 +442,7 @@ export async function validate_wireguard_config( { peer_config, peer_id, miner_i
         }
         
         // Isolate the json
-        const [ json ] = stdout.match( /{.*}/s ) || []
+        const [ json ] = stdout?.match( /{.*}/s ) || []
         if( !json ) {
             log.warn( `${ log_tag } No JSON response found in stdout:`, stdout )
             return false
@@ -481,7 +481,7 @@ export async function validate_wireguard_config( { peer_config, peer_id, miner_i
         if( !stdout ) throw new Error( `Unable to reach validator through wireguard connection of miner, this suggests misconfiguration` )
 
         // Extract the challenge and response from the stdout
-        let [ json_response ] = stdout.match( /{.*}/s ) || []
+        let [ json_response ] = stdout?.match( /{.*}/s ) || []
         if( !json_response ) {
             log.warn( `${ log_tag } No JSON response found in stdout:`, stdout )
             return { valid: false, message: `No JSON response found in stdout` }
