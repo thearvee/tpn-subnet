@@ -131,7 +131,7 @@ router.get( "/:challenge/:response?", async ( req, res ) => {
             // Check for solved value
             log.info( `[GET] Checking for scored response in database for ${ challenge }` )
             const database_score = await get_challenge_response_score( { challenge } )
-            if( database_score && !scored_response.error ) {
+            if( database_score && !scored_response?.error ) {
                 scored_response = database_score
                 cache( `solution_score_${ challenge }`, scored_response )
             }
