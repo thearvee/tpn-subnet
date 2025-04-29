@@ -96,6 +96,7 @@ async def forward(self):
             axons=[self.metagraph.axons[uid]],
             synapse=challenge,
             deserialize=True,
+            timeout=120.0,
         )
         for uid, challenge in zip(miner_uids, challenges)
     ]
