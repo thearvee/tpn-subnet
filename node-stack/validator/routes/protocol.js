@@ -80,12 +80,12 @@ router.post( "/broadcast/miners", async ( req, res ) => {
         log.info( `Caching country to ips data at key "miner_country_to_ips"` )
         cache( `miner_country_to_ips`, country_to_ips )
 
-        return {
+        return res.json( {
             ip_to_country,
             country_count,
             country_to_ips,
             success: true
-        }
+        } )
 
     }
 
@@ -133,10 +133,10 @@ router.post( "/broadcast/validators", async ( req, res ) => {
         log.info( `Caching validator ip data: `, valid_entries )
         cache( 'last_known_validators', valid_entries )
 
-        return {
+        return res.json( {
             valid_entries,
             success: true
-        }
+        } )
 
     }
 
