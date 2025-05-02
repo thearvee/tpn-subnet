@@ -50,7 +50,7 @@ async def forward(self):
             validators_info.append({
                 "uid": uid,
                 "ip": self.metagraph.axons[uid].ip,
-                "stake": self.metagraph.S[uid],
+                "stake": float(self.metagraph.S[uid].item()),
             })
     try:
         async with aiohttp.ClientSession() as session:
