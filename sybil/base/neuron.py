@@ -118,7 +118,7 @@ class BaseNeuron(ABC):
     def run(self):
         ...
 
-    def sync(self):
+    def sync(self, save_state: bool = True):
         """
         Wrapper for synchronizing the state of the network for the given miner or validator.
         """
@@ -132,7 +132,8 @@ class BaseNeuron(ABC):
             self.set_weights()
 
         # Always save state.
-        self.save_state()
+        if save_state:
+            self.save_state()
 
     def check_registered(self):
         # --- Check for registration.
