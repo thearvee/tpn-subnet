@@ -31,5 +31,5 @@ async def generate_challenges(miner_uids: List[int], validator_server_url: str) 
         
         return challenges
     except Exception as e:
-        print(f"Error generating challenges: {e}")
-        return None
+        print(f"Error generating challenges: {e}. Returning empty list.")
+        return []
