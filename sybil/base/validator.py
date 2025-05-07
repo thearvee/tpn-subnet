@@ -67,7 +67,7 @@ class BaseValidatorNeuron(BaseNeuron):
         self.scores = np.zeros(self.metagraph.n, dtype=np.float32)
 
         # Init sync with the network. Updates the metagraph.
-        self.sync()
+        self.sync(save_state=False)
 
         # # Serve axon to enable external connections.
         # if not self.config.neuron.axon_off:

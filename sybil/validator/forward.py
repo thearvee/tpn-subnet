@@ -18,9 +18,11 @@
 # DEALINGS IN THE SOFTWARE.
 
 import time
+import math
 import bittensor as bt
 import asyncio
 import aiohttp
+import numpy as np
 
 from sybil.protocol import Challenge
 from sybil.validator.utils import generate_challenges
@@ -76,51 +78,66 @@ async def forward(self):
                     bt.logging.error(f"Failed to broadcast validators info")
     except Exception as e:
         bt.logging.error(f"Failed to broadcast miners or validators info: {e}")
+    
+    # initialize the total rewards
+    all_rewards = []
+    
+    # shuffle the miner uids
+    shuffled_miner_uids = np.random.permutation(self.metagraph.n.item())
+    bt.logging.info(f"Shuffled miner uids: {shuffled_miner_uids}")
+    
+    batch_size = self.config.neuron.sample_size
+    num_batches = math.ceil(self.metagraph.n.item() / batch_size)
+    
+    # iterate all the shuffled miner uids by batch size
+    for i in range(num_batches):
+        # get the miner uids for the current batch
+        miner_uids = shuffled_miner_uids[i*batch_size:(i+1)*batch_size]
+        bt.logging.info(f"Batch {i+1} ==> Miner uids: {miner_uids}")
         
-    # get_random_uids is an example method, but you can replace it with your own.
-    miner_uids = get_random_uids(self, k=self.config.neuron.sample_size)
-    bt.logging.info(f"Miner uids: {miner_uids}")
-    
-    # Generate k challenges
-    challenges = await generate_challenges(miner_uids=miner_uids, validator_server_url=self.validator_server_url)
-    bt.logging.info(f"Generated challenges:\n" + "\n".join([str(challenge) for challenge in challenges]))
-    
-    if challenges is None:
-        bt.logging.error("Failed to generate challenges")
-        time.sleep(10)
-        return
+        # Generate k challenges
+        challenges = await generate_challenges(miner_uids=miner_uids, validator_server_url=self.validator_server_url)
+        bt.logging.info(f"Batch {i+1} ==> Generated challenges:\n" + "\n".join([str(challenge) for challenge in challenges]))
+        
+        if challenges is None:
+            bt.logging.error("Batch {i+1} ==> Failed to generate challenges")
+            time.sleep(10)
+            return
 
-    # Create concurrent queries, one for each challenge-miner pair
-    async_queries = [
-        self.dendrite(
-            axons=[self.metagraph.axons[uid]],
-            synapse=challenge,
-            deserialize=True,
-            timeout=120.0,
-        )
-        for uid, challenge in zip(miner_uids, challenges)
-    ]
+        # Create concurrent queries, one for each challenge-miner pair
+        async_queries = [
+            self.dendrite(
+                axons=[self.metagraph.axons[uid]],
+                synapse=challenge,
+                deserialize=True,
+                timeout=120.0,
+            )
+            for uid, challenge in zip(miner_uids, challenges)
+        ]
 
-    # Execute all queries concurrently
-    responses = await asyncio.gather(*async_queries)
+        # Execute all queries concurrently
+        responses = await asyncio.gather(*async_queries)
 
-    bt.logging.info(f"Received Raw responses: {responses}")
-    # Flatten the responses list since each query returns a list with one item
-    responses = [resp[0] for resp in responses]
+        bt.logging.info(f"Batch {i+1} ==> Received Raw responses: {responses}")
+        # Flatten the responses list since each query returns a list with one item
+        responses = [resp[0] for resp in responses]
 
-    # Log the results for monitoring purposes.
-    bt.logging.info(f"Received responses: {responses}")
-    
-    # Get scores for the responses
-    rewards = await get_rewards([challenge.challenge for challenge in challenges], responses, validator_server_url=self.validator_server_url)
-    bt.logging.info(f"Scores: {rewards}")
+        # Log the results for monitoring purposes.
+        bt.logging.info(f"Batch {i+1} ==> Received responses: {responses}")
+        
+        # Get scores for the responses
+        rewards = await get_rewards([challenge.challenge for challenge in challenges], responses, validator_server_url=self.validator_server_url)
+        bt.logging.info(f"Batch {i+1} ==> Scores: {rewards}")
+        
+        if rewards is None:
+            bt.logging.error(f"Batch {i+1} ==> Failed to get rewards. Adding 0 scores to the total rewards")
+            all_rewards.extend([0] * len(miner_uids))
+            continue
 
-    if rewards is None:
-        bt.logging.error("Failed to get rewards")
-        time.sleep(10)
-        return
+        all_rewards.extend(rewards)
 
     # Update the scores based on the rewards. You may want to define your own update_scores function for custom behavior.
-    self.update_scores(rewards, miner_uids)
+    bt.logging.info(f"Updating final scores: {all_rewards}")
+    self.update_scores(all_rewards, shuffled_miner_uids)
 
     time.sleep(10)
