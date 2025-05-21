@@ -1,23 +1,25 @@
 import { Router } from "express"
 export const router = Router()
-import { cache, log, require_props } from "mentie"
+import { cache, log, require_props, sanetise_string } from "mentie"
 import fetch from "node-fetch"
-import { get_ips_by_country, get_miner_stats } from "../modules/stats.js"
+import { get_ips_by_country } from "../modules/stats.js"
+import { code_to_country, country_to_code } from "../modules/countries.js"
 
 router.get( "/config/countries", async ( req, res ) => {
 
     try {
 
-        // Check if we have cached data
-        let country_codes = cache(  'country_code_stats' )
-        if( country_codes ) return res.json( country_codes )
+        // Check if get parameter is ?format=code or ?format=name
+        const { format='code' } = req.query
 
-        // Cache stats
-        const stats = await get_miner_stats()
-        country_codes = Object.keys( stats )
-        log.info( `country_code_stats`, country_codes, 60_000 )
+        // Get current country code to name mapping
+        const country_code_to_name = cache( 'miner_country_code_to_name' ) || {}
 
-        return res.json( country_codes )
+        // Translate to country code array
+        let response_data = []
+        if( format == 'name' ) response_data = Object.values( country_code_to_name )
+        if( format == 'code' ) response_data = Object.keys( country_code_to_name )
+        return res.json( response_data )
         
     } catch ( e ) {
 
@@ -50,6 +52,16 @@ router.get( '/config/new', async ( req, res ) => {
 
         // If geo was set to 'any', set it to null
         if( geo == 'any' ) geo = null
+
+        // If geo was provided, uppercase it
+        if( geo ) geo = sanetise_string( geo ).toUpperCase()
+
+        // Check if this geo translates to a known country name, if not, check if it is a name to be translated to a geo
+        const country_name = code_to_country( geo )
+        if( !country_name ) {
+            const country_code = country_to_code( geo )
+            if( country_code ) geo = country_code
+        }
 
         // Dummy response
         const live = true

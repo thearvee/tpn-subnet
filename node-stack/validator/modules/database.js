@@ -80,6 +80,18 @@ export async function init_tables() {
         )
     ` )
 
+    // Create table for balances
+    await pool.query( `
+        CREATE TABLE IF NOT EXISTS balances (
+            block BIGINT,
+            miner_uid BIGINT,
+            hotkey TEXT,
+            balance BIGINT,
+            updated BIGINT,
+            PRIMARY KEY (block, miner_uid, hotkey)
+        )
+    ` )
+
     /* //////////////////////
     // Backwards iompatibility
     ////////////////////// */
@@ -98,50 +110,85 @@ export async function init_tables() {
     log.info( 'Tables initialized' )
 }
 
-// export async function save_ip_address_and_return_ip_stats( { ip_address, country, save_ip=false } ) {
+// ///////////////////////
+// Blance functions
+// ///////////////////////
 
-//     log.info( `Saving IP address ${ ip_address } with country ${ country }` )
+export async function save_balance( { block, miner_uid, hotkey, balance } ) {
 
-//     // Count all non-stale IP addresses
-//     const ip_count_result = await pool.query(
-//         `SELECT COUNT(*) AS count FROM ip_addresses WHERE updated > $1`,
-//         [ stale_timestamp ]
-//     )
-//     const ip_count = parseInt( ip_count_result.rows[0].count, 10 ) || 0
-//     log.info( `Total ip addresses: ${ ip_count }` )
+    // Save the balance for the given block and miner_uid
+    log.info( 'Saving balance:', { block, miner_uid, hotkey, balance } )
+    
+    // Save to database and make sure that if the PRIMARY KEY already exists, it will be updated
+    await pool.query(
+        `INSERT INTO balances (block, miner_uid, hotkey, balance, updated) VALUES ($1, $2, $3, $4, $5)
+        ON CONFLICT (block, miner_uid, hotkey)
+        DO UPDATE SET balance = $6, updated = $7`,
+        [ block, miner_uid, hotkey, balance, Date.now(), balance, Date.now() ]
+    )
 
-//     // Get all non-stale IP addresses in the same country
-//     log.info( `Checking for ip addresses in the same country: ${ country }` )
-//     const ips_in_same_country_result = await pool.query(
-//         `SELECT ip_address FROM ip_addresses WHERE country = $1 AND updated > $2`,
-//         [ country, stale_timestamp ]
-//     )
-//     const ips_in_same_country = ips_in_same_country_result.rows.map( row => row.ip_address )
-//     const country_count = ips_in_same_country.length || 0
-//     log.info( `Total ip addresses in the same country: ${ country_count }` )
+    log.info( 'Balance saved:', { block, miner_uid, hotkey, balance } )
+    return { block, miner_uid, hotkey, balance }
 
-//     // Calculate the percentage, guarding against division by zero
-//     const ip_pct_same_country = ip_count ? Math.round( country_count / ip_count  * 100 ) : 0
-//     log.info( `Percentage of ip addresses in the same country: ${ ip_pct_same_country }` )
+}
 
-//     // Insert or update the IP address record
-//     if( save_ip ) {
-//         log.info( `Saving IP address ${ ip_address } to the database` )
-//         await pool.query(
-//             `INSERT INTO ip_addresses (ip_address, country, updated) VALUES ($1, $2, $3)
-//             ON CONFLICT (ip_address)
-//             DO UPDATE SET country = $4, updated = $5`,
-//             [ ip_address, country, Date.now(), country, Date.now() ]
-//         )
-//     } else {
-//         log.info( `Not saving IP address ${ ip_address } to the database` )
-//     }
+/**
+ * Get the sma snd last known balance for a miner_uid
+ * @param {string} miner_uid - The miner_uid to get the SMA for
+ * @param {number} block_window - The number of blocks to calculate the SMA over
+ * @returns {object} result - The last known balance and SMA for the miner_uid
+ * @returns {number} result.block - The last known block for the miner_uid
+ * @returns {string} result.hotkey - The last known hotkey for the miner_uid
+ * @returns {number} result.balance - The last known balance for the miner_uid
+ * @returns {number} result.sma - The SMA for the miner_uid
+ */
+export async function get_sma_for_miner_uid( { miner_uid, block_window=100 } ) {
 
-//     // Debug logging
-//     log.info( `${ ip_address } is in ${ country }, others: `, ips_in_same_country.join( ', ' ) )
+    // First, get the last known hotkey, balance and block for this miner_uid
+    const result = await pool.query(
+        `SELECT hotkey, block FROM balances WHERE miner_uid = $1 ORDER BY block DESC LIMIT 1`,
+        [ miner_uid ]
+    )
+    const { hotkey, balance, block } = result.rows[0] || {}
 
-//     return { ip_count, country_count, ip_pct_same_country, ips_in_same_country }
-// }
+    // If no hotkey or block is found, return 
+    if( !hotkey || !block ) {
+        log.info( `No hotkey or block found for miner_uid ${ miner_uid }: `, result )
+        return {}
+    }
+
+    // Get all balances for this hotkey in the last block_window blocks
+    const result2 = await pool.query(
+        `SELECT block, balance FROM balances WHERE hotkey = $1 AND block >= $2 ORDER BY block DESC`,
+        [ hotkey, block - block_window ]
+    )
+    const balances = result2.rows
+    log.info( `Balances for hotkey ${ hotkey } in the last ${ block_window } blocks:`, balances.length )
+
+    // If no balances are found, return null
+    if( balances.length == 0 ) {
+        log.info( `No balances found for hotkey ${ hotkey } in the last ${ block_window } blocks: `, result2 )
+        return {}
+    }
+
+    // Calculate the SMA
+    const total_balance = balances.reduce( ( acc, entry ) => acc + Number( entry.balance ), 0 )
+    const sma = total_balance / balances.length
+    log.info( `SMA for hotkey ${ hotkey } in the last ${ block_window } blocks:`, sma )
+
+    // Return the balance and sma
+    return {
+        block,
+        hotkey,
+        balance,
+        sma
+    }
+
+}
+
+// //////////////////////
+// Timestamp functions
+// //////////////////////
 
 export async function get_timestamp( { label } ) {
     // Retrieve the timestamp for the given label
@@ -162,6 +209,10 @@ export async function set_timestamp( { label, timestamp } ) {
     )
     log.info( 'Timestamp set:', { label, timestamp } )
 }
+
+// //////////////////////
+// Challenge functions
+// //////////////////////
 
 export async function save_challenge_response( { challenge, response, miner_uid='unknown' } ) {
     // Save the challenge response; errors if challenge already exists
