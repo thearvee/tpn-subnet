@@ -37,7 +37,7 @@ router.get( "/config/countries", async ( req, res ) => {
             } )
 
             // If there are no online uids, this country is defunct
-            return has_online_uid
+            return !has_online_uid
 
         } )
 
