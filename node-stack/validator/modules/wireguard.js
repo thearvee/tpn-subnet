@@ -512,7 +512,7 @@ export async function validate_wireguard_config( { miner_uid, peer_config, peer_
 
         // If the response is valid, return true
         log.info( `${ log_tag } Wireguard config passed for peer ${ peer_id } ${ challenge } with response ${ response }` )
-        await save_miner_status( { miner_uid, status: 'valid' } )
+        await save_miner_status( { miner_uid, status: 'online' } )
         return { valid: true, message: `Wireguard config passed for peer ${ peer_id } ${ challenge } with response ${ response }` }
 
     } catch ( e ) {
