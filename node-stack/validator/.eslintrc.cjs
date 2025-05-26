@@ -1,7 +1,7 @@
 // const { eslint_config } = require( './index.cjs' )
 const { eslint_config } = require( 'airier' )
 
-// Ammend eslint config to include impoer files
+// Amend eslint config to include import files
 eslint_config.plugins.push( 'import' )
 eslint_config.rules = {
     ...eslint_config.rules,
