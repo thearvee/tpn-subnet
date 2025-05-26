@@ -70,3 +70,33 @@ export function get_tpn_cache( key, default_value=undefined ) {
     // Return cached value or undefined
     return immutable_cache_value
 }
+
+/**
+ * Retrieves all cached values related to the TPN
+ * @returns {Object} An object containing all cached values related to the TPN.
+ */
+export function get_complete_tpn_cache() {
+
+    // List of all cache keys of get_tpn_cache
+    const keys = [
+        'miner_ip_to_country',
+        'miner_country_count',
+        'miner_country_to_ips',
+        'miner_country_to_uids',
+        'miner_country_code_to_name',
+        'miner_country_name_to_code',
+        'miner_uids',
+        'last_known_miner_scores',
+        'last_known_validators'
+    ]
+
+    // Get all cache values
+    const cache_values = {}
+    for( const key of keys ) {
+        cache_values[ key ] = get_tpn_cache( key )
+    }
+
+    // Return all cache values
+    return cache_values
+
+}
