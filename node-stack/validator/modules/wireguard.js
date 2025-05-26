@@ -506,7 +506,7 @@ export async function validate_wireguard_config( { miner_uid, peer_config, peer_
         // Check that the response is valid
         if( !correct ) {
             log.info( `${ log_tag } Wireguard config failed challenge for peer ${ peer_id }` )
-            await save_miner_status( { miner_uid, status: 'cheater' } )
+            await save_miner_status( { miner_uid, status: 'cheat' } )
             return { valid: false, message: `Wireguard config failed challenge for peer ${ peer_id }` }
         }
 
