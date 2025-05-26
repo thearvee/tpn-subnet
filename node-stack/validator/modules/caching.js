@@ -60,7 +60,7 @@ export function get_tpn_cache( key, default_value=undefined ) {
     const cache_value = cache( key )
 
     // If no value, return the default value
-    if( !cache_value ) return default_value
+    if( cache_value === undefined ) return default_value
 
     // If the cache value is one the is tracked by reference, make a new version of it
     let immutable_cache_value = cache_value
