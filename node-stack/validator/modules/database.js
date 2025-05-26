@@ -92,6 +92,16 @@ export async function init_tables() {
         )
     ` )
 
+    // Create a table for miner status tracking
+    await pool.query( `
+        CREATE TABLE IF NOT EXISTS miner_status (
+            miner_uid TEXT PRIMARY KEY,
+            status TEXT,
+            updated BIGINT,
+            PRIMARY KEY (miner_uid, status, updated)
+        )`
+    )
+
     /* //////////////////////
     // Backwards iompatibility
     ////////////////////// */
@@ -183,6 +193,84 @@ export async function get_sma_for_miner_uid( { miner_uid, block_window=100 } ) {
         balance,
         sma
     }
+
+}
+
+// /////////////////////
+// Status functions
+// /////////////////////
+
+/**
+ * Save the status of a miner_uid
+ * @param {Object} params - The parameters for the function
+ * @param {string} params.miner_uid - The miner_uid to save the status for
+ * @param {'online'|'offline'|'cheat'|'misconfigured'} params.status - The status to save for the miner_uid
+ * @returns {Promise<Object>} result - Returns an object with the miner_uid and status
+ * @returns {string} result.miner_uid - The miner_uid that was saved
+ * @returns {string} result.status - The status that was saved for the miner_uid
+ */
+export async function save_miner_status( { miner_uid, status } ) {
+
+    // Save the miner status for the given miner_uid
+    log.info( 'Saving miner status:', { miner_uid, status } )
+
+    // Check if the status is valid
+    const allowed_statuses = [ 'online', 'offline', 'cheat', 'misconfigured' ]
+    if( !allowed_statuses.includes( status ) ) {
+        log.warn( `Invalid status provided: ${ status }, allowed statuses are: ${ allowed_statuses.join( ', ' ) }` )
+    }
+
+
+    // Save a new status entry for this miner_uid, we are not updating entries so that we have a history of statuses
+    await pool.query(
+        `INSERT INTO miner_status (miner_uid, status, updated) VALUES ($1, $2, $3)`,
+        [ miner_uid, status, Date.now() ]
+    )
+    log.info( 'Miner status saved:', { miner_uid, status } )
+    return { miner_uid, status }
+
+}
+
+/**
+ * Get the status of a miner_uid
+ * @param {Object} params - The parameters for the function
+ * @param {string} params.miner_uid - The miner_uid to get the status for
+ * @param {number|null} [params.from_timestamp=null] - The timestamp to get the status from (optional)
+ * @param {number|null} [params.to_timestamp=null] - The timestamp to get the status to (optional)
+ * @returns {Promise<Object|Array>} result - Returns the last known status if no timestamps are provided, or an array of statuses in the given range
+ * @returns {string} result.status - The status of the miner_uid
+ * @returns {number} result.updated - The timestamp when the status was last updated
+ * @returns {Array} result - An array of status objects if timestamps are provided, or an empty array if no statuses are found
+ * @returns {Object} result - An object with the last known status if no timestamps are provided, or an empty object if no statuses are found
+ * @returns {number} result.updated - The timestamp when the status was last updated
+ * @returns {string} result.status - The status of the miner_uid
+*/
+export async function get_miner_status( { miner_uid, from_timestamp=null, to_timestamp=null } ) {
+
+    // If no timestamps are provided, get the last known status
+    if( !from_timestamp && !to_timestamp ) {
+        log.info( 'Getting last known status for miner_uid:', miner_uid )
+        const result = await pool.query(
+            `SELECT status, updated FROM miner_status WHERE miner_uid = $1 ORDER BY updated DESC LIMIT 1`,
+            [ miner_uid ]
+        )
+        return result.rows.length > 0 ? result.rows[0] : {}
+    }
+
+    // If from was set, but to was not, set to now
+    if( from_timestamp && !to_timestamp ) to_timestamp = Date.now()
+
+    // If to was set, but from was not, set from to 0
+    if( !from_timestamp && to_timestamp ) from_timestamp = 0
+
+    // If timestamps are provided, get the status in that range
+    log.info( 'Getting miner status for miner_uid:', miner_uid, 'from:', from_timestamp, 'to:', to_timestamp )
+    const result = await pool.query(
+        `SELECT status, updated FROM miner_status WHERE miner_uid = $1 AND updated >= $2 AND updated <= $3 ORDER BY updated DESC`,
+        [ miner_uid, from_timestamp, to_timestamp ]
+    )
+    log.info( 'Query result:', result.rows )
+    return result.rows.length > 0 ? result.rows : []
 
 }
 

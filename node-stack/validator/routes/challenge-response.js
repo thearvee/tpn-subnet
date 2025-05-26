@@ -253,7 +253,7 @@ router.post( "/:challenge/:response", async ( req, res ) => {
         const { unspoofable_ip, spoofable_ip } = ip_from_req( req )
 
         // Upon solution success, test the wireguard config
-        const { valid: wireguard_valid, message='Unknown error validating wireguard config' } = await validate_wireguard_config( { peer_config, peer_id, miner_ip: unspoofable_ip } )
+        const { valid: wireguard_valid, message='Unknown error validating wireguard config' } = await validate_wireguard_config( { miner_uid, peer_config, peer_id, miner_ip: unspoofable_ip } )
         if( !wireguard_valid ) {
             log.info( `[POST] Wireguard config for peer ${ peer_id } failed challenge` )
             return res.json( { message, correct: false, score: 0 } )
@@ -286,6 +286,7 @@ router.post( "/:challenge/:response", async ( req, res ) => {
         log.info( `Saving miner ${ miner_uid } score to memory: `, miner_scores[ miner_uid ] )
 
         // Sort the scores by timestamp (latest to oldest)
+        // format: { uid: { score, timestamp, details, country, ip } }
         miner_scores = Object.entries( miner_scores )
             .sort( ( a, b ) => b[1].timestamp - a[1].timestamp )
             .map( ( [ uid, miner_entry ] ) => [ uid, { ...miner_entry, timestamp: new Date( miner_entry.timestamp ).toString() } ]  )

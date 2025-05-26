@@ -2,8 +2,9 @@ import { Router } from "express"
 export const router = Router()
 import { cache, log, require_props, sanetise_string } from "mentie"
 import fetch from "node-fetch"
-import { get_ips_by_country } from "../modules/stats.js"
+import { get_ips_by_country, get_miner_statuses } from "../modules/stats.js"
 import { code_to_country, country_to_code } from "../modules/countries.js"
+import { get_tpn_cache } from "../modules/caching.js"
 
 router.get( "/config/countries", async ( req, res ) => {
 
@@ -13,12 +14,46 @@ router.get( "/config/countries", async ( req, res ) => {
         const { format='code' } = req.query
 
         // Get current country code to name mapping
-        const country_code_to_name = cache( 'miner_country_code_to_name' ) || {}
+        const country_code_to_name = get_tpn_cache( 'miner_country_code_to_name', {} )
+
+        // Get the country code to miner uid mapping, and cross reference it with the last known miner statuses, so we can make a list of countries without miners whose status is not 'online'
+        const miner_uids = get_tpn_cache( 'miner_uids', [] )
+        const country_to_uids = get_tpn_cache( 'miner_country_to_uids', {} )
+        const miner_statuses = await get_miner_statuses()
+        
+        // Find countries with no online miners
+        const defunct_country_codes = Object.keys( country_to_uids ).filter( country_code => {
+
+            // Get the uids for this country code
+            const uids = country_to_uids[ country_code ] || []
+
+            // If there are no uids, this country is defunct
+            if( uids.length == 0 ) return true
+
+            // If there are uids, check if any of them are online
+            const has_online_uid = uids.some( uid => {
+                const status = miner_statuses[ uid ]
+                return status && status.status == 'online'
+            } )
+
+            // If there are no online uids, this country is defunct
+            return has_online_uid
+
+        } )
+
+        // Remove defunct countries from the country code to name mapping
+        const online_country_code_to_name = defunct_country_codes.reduce( ( acc, country_code ) => {
+
+            // Delete country code from the mapping
+            delete acc[ country_code ]
+            return acc
+
+        }, { ...country_code_to_name } )
 
         // Translate to country code array
         let response_data = []
-        if( format == 'name' ) response_data = Object.values( country_code_to_name )
-        if( format == 'code' ) response_data = Object.keys( country_code_to_name )
+        if( format == 'name' ) response_data = Object.values( online_country_code_to_name )
+        if( format == 'code' ) response_data = Object.keys( online_country_code_to_name )
         return res.json( response_data )
         
     } catch ( e ) {

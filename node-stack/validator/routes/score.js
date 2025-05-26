@@ -2,7 +2,7 @@ import { Router } from "express"
 export const router = Router()
 import { score_request_uniqueness } from "../modules/scoring.js"
 import { cache, log } from "mentie"
-import { get_miner_stats } from "../modules/stats.js"
+import { get_miner_stats, get_miner_statuses } from "../modules/stats.js"
 
 // Scoring route
 router.get( "/", async ( req, res ) => {
@@ -75,6 +75,24 @@ router.get( "/stats/miner/:uid", async ( req, res ) => {
         const stats = cache( 'last_known_miner_scores' ) || {}
         const miner = stats[ uid ] || {}
         return res.json( miner )
+
+    } catch ( e ) {
+
+        log.error( e )
+        return res.status( 500 ).json( { error: e.message } )
+
+    }
+
+} )
+
+router.get( '/stats/miners', async ( req, res ) => {
+
+    try {
+
+        // Get last known statuses 
+        const statuses = await get_miner_statuses()
+
+        return res.json( statuses )
 
     } catch ( e ) {
 
