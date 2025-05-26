@@ -1,5 +1,5 @@
-import { sanetise_string, cache } from "mentie"
-import { get_tpn_cache } from "./caching"
+import { sanetise_string } from "mentie"
+import { get_tpn_cache } from "./caching.js"
 
 /**
  * Translate a country code to a country name based on protocol cache

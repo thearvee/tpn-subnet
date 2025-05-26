@@ -1,7 +1,7 @@
 import { cache, log } from "mentie"
 import fetch from "node-fetch"
-import { get_miner_status } from "./database"
-import { get_tpn_cache } from "./caching"
+import { get_miner_status } from "./database.js"
+import { get_tpn_cache } from "./caching.js"
 
 /**
  * Retrieves miner statistics from the cache or computes them if not available.

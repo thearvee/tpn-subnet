@@ -1,4 +1,4 @@
-import { cache, log } from 'mentie'
+import { log } from 'mentie'
 import { is_data_center } from './ip2location.js'
 import { fetch_failover_stats } from './stats.js'
 import { ip_from_req } from "./network.js"

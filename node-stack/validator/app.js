@@ -8,6 +8,10 @@ const { version } = JSON.parse( await readFile( new URL( './package.json', impor
 const now = new Date().toISOString()
 log.info( `${ now } - Starting Sybil Network validator component version ${ version }` )
 
+// Check system resources
+import { check_system_warnings } from './modules/shell.js'
+await check_system_warnings()
+
 // Initialize the database
 import { init_tables } from './modules/database.js'
 log.info( 'Initializing database' )

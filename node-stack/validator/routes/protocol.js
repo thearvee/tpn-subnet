@@ -2,7 +2,7 @@ import { Router } from "express"
 import { cache, log, make_retryable, sanetise_string } from "mentie"
 import { request_is_local } from "../modules/network.js"
 import { save_balance } from "../modules/database.js"
-import { get_complete_tpn_cache, get_tpn_cache } from "../modules/caching.js"
+import { get_complete_tpn_cache } from "../modules/caching.js"
 export const router = Router()
 
 
