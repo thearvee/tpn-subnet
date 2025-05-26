@@ -1,16 +1,17 @@
-import { cache, log, wait } from "mentie"
+import { log, wait } from "mentie"
 import { ip_from_req } from "./network.js"
+import { get_tpn_cache } from "./caching.js"
 const { CI_MODE } = process.env
 
 const get_validators = async () => {
 
     // Get validators from cache
-    let validators = cache( 'last_known_validators' )
+    let validators = get_tpn_cache( 'last_known_validators' )
     let attempts = 0
 
     while( !validators?.length && attempts < 5 ) {
         await wait( 5000 )
-        validators = cache( 'last_known_validators' )
+        validators = get_tpn_cache( 'last_known_validators' )
         attempts++
     }
 

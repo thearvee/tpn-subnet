@@ -2,6 +2,7 @@ import { Router } from "express"
 import { cache, log, make_retryable, sanetise_string } from "mentie"
 import { request_is_local } from "../modules/network.js"
 import { save_balance } from "../modules/database.js"
+import { get_complete_tpn_cache } from "../modules/caching.js"
 export const router = Router()
 
 
@@ -76,6 +77,13 @@ router.post( "/broadcast/miners", async ( req, res ) => {
             return acc
         }, {} )
 
+        // For each country, list the miner uids in there
+        const country_to_uids = country_annotated_ips.reduce( ( acc, { uid, country } ) => {
+            if( !acc[ country ] ) acc[ country ] = []
+            acc[ country ].push( uid )
+            return acc
+        }, {} )
+
         // Translate available country codes to full country names
         const region_names = new Intl.DisplayNames( [ 'en' ], { type: 'region' } )
         const country_codes = Object.keys( country_count )
@@ -97,6 +105,9 @@ router.post( "/broadcast/miners", async ( req, res ) => {
 
         }, {} )
 
+        // Make a list of miner uids
+        const miner_uids = country_annotated_ips.map( entry => entry.uid )
+
 
         // Cache ip country data to memory
         log.info( `Caching ip to country data at key "ip_to_country"` )
@@ -109,6 +120,10 @@ router.post( "/broadcast/miners", async ( req, res ) => {
         cache( `miner_country_code_to_name`, country_code_to_name )
         log.info( `Caching country name to code data at key "miner_country_name_to_code":`, country_name_to_code.length )
         cache( `miner_country_name_to_code`, country_name_to_code )
+        log.info( `Caching miner uids to "miner_uids":`, miner_uids.length )
+        cache( `miner_uids`, miner_uids )
+        log.info( `Caching the country_to_uids list: `, Object.keys( country_to_uids ).length )
+        cache( `miner_country_to_uids`, country_to_uids )
 
         return res.json( {
             ip_to_country,
@@ -245,22 +260,9 @@ router.post( `/broadcast/balances/miners`, async ( req, res ) => {
  */
 router.get( "/sync/stats", ( req, res ) => {
 
-    // Get relevant cache entries
-    const miner_ip_to_country = cache( `miner_ip_to_country` ) || {}
-    const miner_country_count = cache( `miner_country_count` ) || {}
-    const miner_country_to_ips = cache( `miner_country_to_ips` ) || {}
-    const last_known_validators = cache( 'last_known_validators' ) || []
-    const miner_country_code_to_name = cache( `miner_country_code_to_name` ) || {}
-    const miner_country_name_to_code = cache( `miner_country_name_to_code` ) || {}
+    // Get tpn cache
+    const tpn_cache = get_complete_tpn_cache()
 
-    return res.json( {
-        miner_ip_to_country,
-        miner_country_count,
-        miner_country_to_ips,
-        last_known_validators,
-        miner_country_code_to_name,
-        miner_country_name_to_code,
-        success: true
-    } )
+    return res.json( tpn_cache )
 
 } )
