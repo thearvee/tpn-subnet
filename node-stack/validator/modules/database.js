@@ -95,7 +95,7 @@ export async function init_tables() {
     // Create a table for miner status tracking
     await pool.query( `
         CREATE TABLE IF NOT EXISTS miner_status (
-            miner_uid TEXT PRIMARY KEY,
+            miner_uid TEXT,
             status TEXT,
             updated BIGINT,
             PRIMARY KEY (miner_uid, status, updated)
