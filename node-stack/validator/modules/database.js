@@ -13,6 +13,9 @@ const pool = new Pool( {
     port: POSTGRES_PORT
 } )
 
+// Helper function to close the pool
+export const close_pool = async () => pool.end().then( () => log.info( 'Postgres pool closed' ) ).catch( e => log.error( 'Error closing Postgres pool:', e ) )
+
 // Stale setting for database queries
 const epoch_length_in_blocks = 300
 const block_time = 12

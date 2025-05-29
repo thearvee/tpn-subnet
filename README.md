@@ -226,6 +226,9 @@ PUBLIC_PORT=3000
 # The free ip2location lite API key, obtained by creating an account at https://lite.ip2location.com/login
 IP2LOCATION_DOWNLOAD_TOKEN=xxxx
 POSTGRES_PASSWORD=xxxx # May be any valid string, choose something random, it does not matter what.
+
+# Configure the max RAM the validator may use, above 8GB is recommended
+VALIDATOR_MAX_PROCESS_RAM_MB=8192 # Find the max of your system by running: awk '/MemTotal/ { print int($2 / 1024) }' /proc/meminfo
 ```
 
 ### Step 3: Start the validator

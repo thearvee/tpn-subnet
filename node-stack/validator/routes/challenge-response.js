@@ -6,6 +6,7 @@ import { base_url } from "../modules/url.js"
 import { validate_wireguard_config } from "../modules/wireguard.js"
 import { get_challenge_response, get_challenge_response_score, get_sma_for_miner_uid, save_challenge_response_score } from "../modules/database.js"
 import { ip_from_req, request_is_local } from "../modules/network.js"
+import { get_tpn_cache } from "../modules/caching.js"
 export const router = Router()
 const { CI_MODE } = process.env
 
@@ -279,8 +280,8 @@ router.post( "/:challenge/:response", async ( req, res ) => {
         log.info( `[POST] Challenge ${ challenge } solved with score ${ score }` )
 
         // Memory cache miner uid score
-        let miner_scores = cache( `last_known_miner_scores` ) || {}
-        const miner_ip_to_country = cache( `miner_ip_to_country` ) || {}
+        let miner_scores = get_tpn_cache( `last_known_miner_scores`, {} )
+        const miner_ip_to_country = get_tpn_cache( `miner_ip_to_country`, {} )
         const { country='not in cache.miner_ip_to_country' } = miner_ip_to_country[ unspoofable_ip ] || {}
         miner_scores[ miner_uid ] = { score, timestamp: Date.now(), details, country, ip: unspoofable_ip }
         log.info( `Saving miner ${ miner_uid } score to memory: `, miner_scores[ miner_uid ] )

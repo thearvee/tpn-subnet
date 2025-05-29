@@ -1,6 +1,6 @@
 {
   "name": "tpn-subnet-validator",
-  "version": "0.1.32",
+  "version": "0.1.33",
   "main": "app.js",
   "type": "module",
   "scripts": {
@@ -18,7 +18,7 @@
     "geoip-lite": "^1.4.10",
     "ip2location-nodejs": "^9.6.3",
     "maxmind": "^4.3.24",
-    "mentie": "^0.3.8",
+    "mentie": "^0.3.9",
     "node-fetch": "^3.3.2",
     "pg": "^8.15.6",
     "sqlite": "^5.1.1",
