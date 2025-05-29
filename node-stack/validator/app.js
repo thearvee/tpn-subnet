@@ -97,8 +97,12 @@ process.on( 'unhandledRejection', async ( reason, promise ) => {
 const log_interval_ms = 60_000 * 5 // 5 minutes
 import { log_memory_stats } from './modules/system.js'
 setInterval( () => {
-    const memory_stats = log_memory_stats()
-    log.info( memory_stats )
-    const cache_stats = cache.stats()
-    log.info( `Cache stats:`, cache_stats )
+    try {
+        const memory_stats = log_memory_stats()
+        log.info( memory_stats )
+        const cache_stats = cache.stats()
+        log.info( `Cache stats:`, cache_stats )
+    } catch ( e ) {
+        log.warn( `Error getting memory stats: `, e )
+    }
 }, log_interval_ms )

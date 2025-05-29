@@ -66,7 +66,7 @@ router.post( "/broadcast/miners", async ( req, res ) => {
         // Reduce the ip array to a mapping of country to count
         const country_count = country_annotated_ips.reduce( ( acc, { country } ) => {
             if( !acc[ country ] ) acc[ country ] = 1
-            acc[ country ] += 1
+            else acc[ country ] += 1
             return acc
         } , {} )
 
