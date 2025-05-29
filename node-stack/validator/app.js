@@ -1,7 +1,7 @@
 // Set up environment
 import 'dotenv/config'
 const { CI_MODE } = process.env
-import { log } from 'mentie'
+import { cache, log } from 'mentie'
 const update_interval_ms = 1000 * 60 * 60 * 24 // 24 hours
 import { readFile } from 'fs/promises'
 const { version } = JSON.parse( await readFile( new URL( './package.json', import.meta.url ) ) )
@@ -91,3 +91,13 @@ process.on( 'unhandledRejection', ( reason, promise ) => {
     log.error( `${ now } - Unhandled rejection at:`, promise, 'reason:', reason )
     handle_close( 'unhandledRejection' )
 } )
+
+// Memory logging
+const log_interval_ms = 60_000 * 5 // 5 minutes
+import { log_memory_stats } from './modules/system.js'
+setInterval( () => {
+    const memory_stats = log_memory_stats()
+    log.info( memory_stats )
+    const cache_stats = cache.stats()
+    log.info( `Cache stats:`, cache_stats )
+}, log_interval_ms )
