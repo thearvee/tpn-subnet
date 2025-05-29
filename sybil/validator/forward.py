@@ -24,9 +24,7 @@ import asyncio
 import aiohttp
 import numpy as np
 
-from sybil.protocol import Challenge
 from sybil.validator.utils import generate_challenges
-from sybil.utils.uids import get_random_uids
 from sybil.validator.reward import get_rewards
 async def forward(self):
     """
@@ -84,10 +82,22 @@ async def forward(self):
     
     # shuffle the miner uids
     shuffled_miner_uids = np.random.permutation(self.metagraph.n.item())
-    bt.logging.info(f"Shuffled miner uids: {shuffled_miner_uids}")
+    bt.logging.info(f"Number of shuffled miner uids in total: {len(shuffled_miner_uids)}")
+    
+    # remove the uids with duplicate ips
+    unique_ips = set()
+    unique_miner_uids = []
+    for uid in shuffled_miner_uids:
+        ip = self.metagraph.axons[uid].ip
+        if ip not in unique_ips:
+            unique_ips.add(ip)
+            unique_miner_uids.append(uid)
+    
+    shuffled_miner_uids = np.array(unique_miner_uids)
+    bt.logging.info(f"Number of miner uids after removing duplicate IPs: {len(shuffled_miner_uids)}")
     
     batch_size = self.config.neuron.sample_size
-    num_batches = math.ceil(self.metagraph.n.item() / batch_size)
+    num_batches = math.ceil(len(shuffled_miner_uids) / batch_size)
     
     # iterate all the shuffled miner uids by batch size
     for i in range(num_batches):
