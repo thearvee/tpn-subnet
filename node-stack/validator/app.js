@@ -13,7 +13,7 @@ import { check_system_warnings } from './modules/shell.js'
 await check_system_warnings()
 
 // Initialize the database
-import { init_tables } from './modules/database.js'
+import { close_pool, init_tables } from './modules/database.js'
 log.info( 'Initializing database' )
 await init_tables()
 log.info( 'Database initialized' )
@@ -66,10 +66,11 @@ app.use( '/api', api_router )
 const server = app.listen( 3000, () => {
     console.log( `Server running, serving from base url ${ base_url }` )
 } )
-const handle_close = reason => {
+const handle_close = async reason => {
     log.info( 'Closing server, reason: ', reason || 'unknown' )
     log.info( 'Shutting down gracefully...' )
     server.close()
+    await close_pool()
     process.exit( 0 )
 }
 
@@ -77,19 +78,19 @@ const handle_close = reason => {
 const shutdown_signals = [ 'SIGTERM', 'SIGINT', 'SIGQUIT' ]
 shutdown_signals.map( signal => {
     log.info( `Listening for ${ signal } signal to shut down gracefully...` )
-    process.on( signal, () => handle_close( signal ) )
+    process.on( signal, async () => handle_close( signal ) )
 } )
 
 // Handle uncaught exceptions
-process.on( 'uncaughtException', ( err ) => {
+process.on( 'uncaughtException', async ( err ) => {
     const now = new Date().toISOString()
     log.error( `${ now } - Uncaught exception:`, err.message, err.stack )
-    handle_close( 'uncaughtException' )
+    await handle_close( 'uncaughtException' )
 } )
-process.on( 'unhandledRejection', ( reason, promise ) => {
+process.on( 'unhandledRejection', async ( reason, promise ) => {
     const now = new Date().toISOString()
     log.error( `${ now } - Unhandled rejection at:`, promise, 'reason:', reason )
-    handle_close( 'unhandledRejection' )
+    await handle_close( 'unhandledRejection' )
 } )
 
 // Memory logging
