@@ -6,6 +6,7 @@ import https from "https"
 import { cache, log } from "mentie"
 import unzipper from "unzipper"
 import { datacenter_patterns } from "./scoring.js"
+import { get_tpn_cache } from "./caching.js"
 
 // Configurations
 const __dirname = url.fileURLToPath( new URL( '.', import.meta.url ) )
@@ -212,7 +213,7 @@ export async function is_data_center( ip_address ) {
     // Check for cached value
     log.info( `Checking for cached value for IP address ${ ip_address }` )
     const cache_key = `is_dc_${ ip_address }`
-    let cached_value = cache( cache_key )
+    let cached_value = get_tpn_cache( cache_key )
     if( typeof cached_value == 'boolean' ) {
         log.info( `Returning cached value for IP address ${ ip_address }` )
         return cached_value

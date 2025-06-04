@@ -2,6 +2,7 @@ import { cache, log, random_number_between, random_string_of_length, wait } from
 import { generate_challenge, solve_challenge } from "./challenge.js"
 import { run } from "./shell.js"
 import { base_url } from "./url.js"
+import { save_miner_status } from "./database.js"
 
 // Timeout used for curl commands
 const { CI_MODE } = process.env
@@ -158,13 +159,14 @@ export async function clean_up_tpn_interfaces( { interfaces, ip_addresses, dryru
 /**
  * Validate a wireguard config by running it and checking the response of a challenge hosted on this machine
  * @param {Object} params
+ * @param {string} params.miner_uid - The uid of the miner to validate the wireguard config for
  * @param {string} params.peer_config - The wireguard config to validate
  * @param {string} params.peer_id - The peer id to use for logging
  * @returns {Object} - The result of the validation
  * @returns {boolean} result.valid - Whether the wireguard config is valid
  * @returns {string} result.message - The message to return
  */
-export async function validate_wireguard_config( { peer_config, peer_id, miner_ip } ) {
+export async function validate_wireguard_config( { miner_uid, peer_config, peer_id, miner_ip } ) {
 
     const log_tag = `[ ${ peer_id }_${ Date.now() } ]`
 
@@ -174,6 +176,7 @@ export async function validate_wireguard_config( { peer_config, peer_id, miner_i
     const missing_props = expected_props.filter( prop => !peer_config.includes( prop ) )
     if( missing_props.length ) {
         log.warn( `${ log_tag } Wireguard config for peer ${ peer_id } is missing required properties:`, missing_props )
+        await save_miner_status( { miner_uid, status: 'misconfigured' } )
         return { valid: false, message: `Wireguard config for peer ${ peer_id } is missing required properties: ${ missing_props.join( ', ' ) }` }
     }
     
@@ -257,6 +260,7 @@ export async function validate_wireguard_config( { peer_config, peer_id, miner_i
     if( !peer_allowedips.match( /\d*\.\d*\.\d*\.\d*/ ) ) format_errors.push( `AllowedIPs is not a valid IP address` )
     if( format_errors.length ) {
         log.warn( `${ log_tag } Wireguard config for peer ${ peer_id } has format errors:`, format_errors )
+        await save_miner_status( { miner_uid, status: 'misconfigured' } )
         return { valid: false, message: `Wireguard config for peer ${ peer_id } has format errors: ${ format_errors.join( ', ' ) }` }
     }
     if( miner_ip && endpoint != miner_ip ) format_errors.push( `Miner supplied endpoint from ip that that does not beling to miner` )
@@ -277,10 +281,12 @@ export async function validate_wireguard_config( { peer_config, peer_id, miner_i
     // If endpoint or address are missing, error
     if( !endpoint ) {
         log.warn( `${ log_tag } Wireguard config for peer ${ peer_id } is missing endpoint` )
+        await save_miner_status( { miner_uid, status: 'misconfigured' } )
         return { valid: false, message: `Wireguard config for peer ${ peer_id } is missing endpoint` }
     }
     if( !address ) {
         log.warn( `${ log_tag } Wireguard config for peer ${ peer_id } is missing address` )
+        await save_miner_status( { miner_uid, status: 'misconfigured' } )
         return { valid: false, message: `Wireguard config for peer ${ peer_id } is missing address` }
     }
 
@@ -289,6 +295,7 @@ export async function validate_wireguard_config( { peer_config, peer_id, miner_i
         const { stdout, stderr } = await run( `dig +short ${ endpoint }`, { silent: true, log_tag } )
         if( stderr ) {
             log.warn( `${ log_tag } Error resolving endpoint ${ endpoint }:`, stderr )
+            await save_miner_status( { miner_uid, status: 'misconfigured' } )
             return { valid: false, message: `Error resolving endpoint ${ endpoint }: ${ stderr }` }
         }
         log.info( `${ log_tag } Resolved endpoint ${ endpoint } to ${ stdout }` )
@@ -298,6 +305,7 @@ export async function validate_wireguard_config( { peer_config, peer_id, miner_i
     // If address is not an ip address, error
     if( !address.match( /\d*\.\d*\.\d*\.\d*/ ) ) {
         log.warn( `${ log_tag } Wireguard config for peer ${ peer_id } is missing address` )
+        await save_miner_status( { miner_uid, status: 'misconfigured' } )
         return { valid: false, message: `Wireguard config for peer ${ peer_id } is missing address` }
     }
 
@@ -478,7 +486,10 @@ export async function validate_wireguard_config( { peer_config, peer_id, miner_i
         cache( `ip_being_processed_${ address }`, false )
 
         // On failure to get response, error out to catch block
-        if( !stdout ) throw new Error( `Unable to reach validator through wireguard connection of miner, this suggests misconfiguration` )
+        if( !stdout ) {
+            await save_miner_status( { miner_uid, status: 'misconfigured' } )
+            throw new Error( `Unable to reach validator through wireguard connection of miner, this suggests misconfiguration` )
+        }
 
         // Extract the challenge and response from the stdout
         let [ json_response ] = stdout?.match( /{.*}/s ) || []
@@ -495,16 +506,19 @@ export async function validate_wireguard_config( { peer_config, peer_id, miner_i
         // Check that the response is valid
         if( !correct ) {
             log.info( `${ log_tag } Wireguard config failed challenge for peer ${ peer_id }` )
+            await save_miner_status( { miner_uid, status: 'cheat' } )
             return { valid: false, message: `Wireguard config failed challenge for peer ${ peer_id }` }
         }
 
         // If the response is valid, return true
         log.info( `${ log_tag } Wireguard config passed for peer ${ peer_id } ${ challenge } with response ${ response }` )
+        await save_miner_status( { miner_uid, status: 'online' } )
         return { valid: true, message: `Wireguard config passed for peer ${ peer_id } ${ challenge } with response ${ response }` }
 
     } catch ( e ) {
 
         log.error( `${ log_tag } Error validating wireguard config for peer ${ peer_id }:`, e )
+        await save_miner_status( { miner_uid, status: 'offline' } )
         await run_cleanup( { silent: true, log_tag } )
         return { valid: false, message: `Error validating wireguard config for peer ${ peer_id }: ${ e.message }` }
 

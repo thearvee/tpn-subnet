@@ -1,9 +1,14 @@
 import { Router } from "express"
-import { cache, log, make_retryable } from "mentie"
+import { cache, log, make_retryable, sanetise_string } from "mentie"
 import { request_is_local } from "../modules/network.js"
+import { save_balance } from "../modules/database.js"
+import { get_complete_tpn_cache } from "../modules/caching.js"
 export const router = Router()
 
 
+/**
+ * Route to handle miner ips submitted from the neuron
+ */
 router.post( "/broadcast/miners", async ( req, res ) => {
 
     // Make sure this request came from localhost
@@ -61,7 +66,7 @@ router.post( "/broadcast/miners", async ( req, res ) => {
         // Reduce the ip array to a mapping of country to count
         const country_count = country_annotated_ips.reduce( ( acc, { country } ) => {
             if( !acc[ country ] ) acc[ country ] = 1
-            acc[ country ] += 1
+            else acc[ country ] += 1
             return acc
         } , {} )
 
@@ -72,13 +77,53 @@ router.post( "/broadcast/miners", async ( req, res ) => {
             return acc
         }, {} )
 
+        // For each country, list the miner uids in there
+        const country_to_uids = country_annotated_ips.reduce( ( acc, { uid, country } ) => {
+            if( !acc[ country ] ) acc[ country ] = []
+            acc[ country ].push( uid )
+            return acc
+        }, {} )
+
+        // Translate available country codes to full country names
+        const region_names = new Intl.DisplayNames( [ 'en' ], { type: 'region' } )
+        const country_codes = Object.keys( country_count )
+        const country_code_to_name = country_codes.reduce( ( acc, code ) => {
+
+            // Get the country name
+            const name = sanetise_string( region_names.of( code ) )
+            if( !name ) return acc
+            acc[ code ] = name
+            return acc
+        }, {} )
+        const country_name_to_code = country_codes.reduce( ( acc, code ) => {
+
+            // Get country code
+            const country_name = country_code_to_name[ code ]
+            if( !country_name ) return acc
+            acc[ country_name ] = code
+            return acc
+
+        }, {} )
+
+        // Make a list of miner uids
+        const miner_uids = country_annotated_ips.map( entry => entry.uid )
+
+
         // Cache ip country data to memory
-        log.info( `Caching ip to country data at key "ip_to_country"` )
+        log.info( `Caching ip to country data at key "miner_ip_to_country"` )
         cache( `miner_ip_to_country`, ip_to_country )
         log.info( `Caching country count data at key "miner_country_count"` )
         cache( `miner_country_count`, country_count )
         log.info( `Caching country to ips data at key "miner_country_to_ips"` )
         cache( `miner_country_to_ips`, country_to_ips )
+        log.info( `Caching country code to name data at key "miner_country_code_to_name":`, country_code_to_name.length )
+        cache( `miner_country_code_to_name`, country_code_to_name )
+        log.info( `Caching country name to code data at key "miner_country_name_to_code":`, country_name_to_code.length )
+        cache( `miner_country_name_to_code`, country_name_to_code )
+        log.info( `Caching miner uids to "miner_uids":`, miner_uids.length )
+        cache( `miner_uids`, miner_uids )
+        log.info( `Caching the country_to_uids list: `, Object.keys( country_to_uids ).length )
+        cache( `miner_country_to_uids`, country_to_uids )
 
         return res.json( {
             ip_to_country,
@@ -102,6 +147,9 @@ router.post( "/broadcast/miners", async ( req, res ) => {
     }
 } )
 
+/**
+ * Route to handle validator ips submitted from the neuron
+ */
 router.post( "/broadcast/validators", async ( req, res ) => {
 
     // Make sure this request came from localhost
@@ -153,20 +201,68 @@ router.post( "/broadcast/validators", async ( req, res ) => {
     }
 } )
 
+/**
+ * Route to handle balances submitted from the neuron
+ */
+router.post( `/broadcast/balances/miners`, async ( req, res ) => {
+
+    
+    // Make sure this request came from localhost
+    if( !request_is_local( req ) ) return res.status( 403 ).json( { error: `Request not from localhost` } )
+
+    const handle_route = async () => {
+
+        // Get balances from the request
+        const { balances=[] } = req.body || {}
+
+        // Validate that all balances have the { block, miner_uid, hotkey, balance } format
+        if( !Array.isArray( balances ) || balances.length == 0 ) {
+            log.warn( `No balances provided: `, req.body )
+            throw new Error( `No balances provided` )
+        }
+        const valid_entries = balances.filter( entry => {
+            const { block, miner_uid, hotkey, balance } = entry
+            if( !block || !miner_uid || !hotkey || balance ) return false
+            return true
+        } )
+        log.info( `Valid balance entries: ${ valid_entries.length }` )
+
+        // If there are no valid entries, throw an error
+        if( valid_entries.length == 0 ) throw new Error( `No valid balances provided` )
+
+        // For each balance, save it to the database
+        await Promise.all( valid_entries.map( async entry => save_balance( entry ) ) )
+        log.info( `Saved ${ valid_entries.length } balances to database` )
+
+        return res.json( {
+            valid_entries,
+            success: true
+        } )
+
+    }
+
+    try {
+
+        const retryable_handler = await make_retryable( handle_route, { retry_times: 2, cooldown_in_s: 10, cooldown_entropy: false } )
+        return retryable_handler()
+        
+    } catch ( e ) {
+
+        log.warn( `Error handling balances submitted from neuron. Error:`, e ) 
+        return res.status( 200 ).json( { error: e.message } )
+
+    }
+
+} )
+
+/**
+ * Route to handle stats submitted from the neuron
+ */
 router.get( "/sync/stats", ( req, res ) => {
 
-    // Get relevant cache entries
-    const miner_ip_to_country = cache( `miner_ip_to_country` ) || {}
-    const miner_country_count = cache( `miner_country_count` ) || {}
-    const miner_country_to_ips = cache( `miner_country_to_ips` ) || {}
-    const last_known_validators = cache( 'last_known_validators' ) || []
+    // Get tpn cache
+    const tpn_cache = get_complete_tpn_cache()
 
-    return res.json( {
-        miner_ip_to_country,
-        miner_country_count,
-        miner_country_to_ips,
-        last_known_validators,
-        success: true
-    } )
+    return res.json( tpn_cache )
 
 } )

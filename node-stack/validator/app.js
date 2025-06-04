@@ -1,15 +1,19 @@
 // Set up environment
 import 'dotenv/config'
 const { CI_MODE } = process.env
-import { log } from 'mentie'
+import { cache, log } from 'mentie'
 const update_interval_ms = 1000 * 60 * 60 * 24 // 24 hours
 import { readFile } from 'fs/promises'
 const { version } = JSON.parse( await readFile( new URL( './package.json', import.meta.url ) ) )
-log.info( `Starting Sybil Network validator component version ${ version } and env`, process.env )
+const now = new Date().toISOString()
+log.info( `${ now } - Starting Sybil Network validator component version ${ version }` )
 
+// Check system resources
+import { check_system_warnings } from './modules/shell.js'
+await check_system_warnings()
 
 // Initialize the database
-import { init_tables } from './modules/database.js'
+import { close_pool, init_tables } from './modules/database.js'
 log.info( 'Initializing database' )
 await init_tables()
 log.info( 'Database initialized' )
@@ -62,10 +66,43 @@ app.use( '/api', api_router )
 const server = app.listen( 3000, () => {
     console.log( `Server running, serving from base url ${ base_url }` )
 } )
-const handle_close = () => {
-    log.info( 'Closing server' )
+const handle_close = async reason => {
+    log.info( 'Closing server, reason: ', reason || 'unknown' )
+    log.info( 'Shutting down gracefully...' )
     server.close()
+    await close_pool()
     process.exit( 0 )
 }
-process.on( 'SIGTERM', handle_close )
-process.on( 'SIGINT', handle_close )
+
+// Handle shutdown signals
+const shutdown_signals = [ 'SIGTERM', 'SIGINT', 'SIGQUIT' ]
+shutdown_signals.map( signal => {
+    log.info( `Listening for ${ signal } signal to shut down gracefully...` )
+    process.on( signal, async () => handle_close( signal ) )
+} )
+
+// Handle uncaught exceptions
+process.on( 'uncaughtException', async ( err ) => {
+    const now = new Date().toISOString()
+    log.error( `${ now } - Uncaught exception:`, err.message, err.stack )
+    await handle_close( 'uncaughtException' )
+} )
+process.on( 'unhandledRejection', async ( reason, promise ) => {
+    const now = new Date().toISOString()
+    log.error( `${ now } - Unhandled rejection at:`, promise, 'reason:', reason )
+    await handle_close( 'unhandledRejection' )
+} )
+
+// Memory logging
+const log_interval_ms = 60_000 * 5 // 5 minutes
+import { log_memory_stats } from './modules/system.js'
+setInterval( () => {
+    try {
+        const memory_stats = log_memory_stats()
+        log.info( memory_stats )
+        const cache_stats = cache.stats()
+        log.info( `Cache stats:`, cache_stats )
+    } catch ( e ) {
+        log.warn( `Error getting memory stats: `, e )
+    }
+}, log_interval_ms )

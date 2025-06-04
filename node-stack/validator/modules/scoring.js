@@ -1,14 +1,15 @@
-import { cache, log } from 'mentie'
+import { log } from 'mentie'
 import { is_data_center } from './ip2location.js'
 import { fetch_failover_stats } from './stats.js'
 import { ip_from_req } from "./network.js"
+import { get_tpn_cache } from './caching.js'
 const { CI_MODE } = process.env
 
 async function score_ip_uniqueness( ip ) {
 
     // Retreive relevant cache data
-    let miner_ip_to_country = cache( `miner_ip_to_country` ) || {}
-    let miner_country_count = cache( `miner_country_count` ) || {}
+    let miner_ip_to_country = get_tpn_cache( `miner_ip_to_country`, {} )
+    let miner_country_count = get_tpn_cache( `miner_country_count`, {} )
 
     // If either of the cache have 0 keys, grab failover data
     if( !Object.keys( miner_ip_to_country ).length || !Object.keys( miner_country_count ).length ) {
@@ -129,6 +130,7 @@ export async function score_request_uniqueness( request ) {
     return { uniqueness_score: powered_score, country_uniqueness_score, details }
 
 }
+
 // Datacenter name patterns (including educated guesses)
 export const datacenter_patterns = [
     /amazon/i,

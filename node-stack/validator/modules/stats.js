@@ -1,5 +1,7 @@
 import { cache, log } from "mentie"
 import fetch from "node-fetch"
+import { get_miner_status } from "./database.js"
+import { get_tpn_cache } from "./caching.js"
 
 /**
  * Retrieves miner statistics from the cache or computes them if not available.
@@ -8,7 +10,7 @@ import fetch from "node-fetch"
 export async function get_miner_stats() {
 
     // Get last known miner country stats
-    const miner_country_count = cache( `miner_country_count` ) || {}
+    const miner_country_count = get_tpn_cache( `miner_country_count`, {} )
 
     return miner_country_count
 
@@ -24,7 +26,7 @@ export async function get_miner_stats() {
 export async function get_ips_by_country( { geo }={} ) {
 
     // Get the minet details from cache
-    const miner_country_to_ips = cache( `miner_country_to_ips` ) || {}
+    const miner_country_to_ips = get_tpn_cache( `miner_country_to_ips`, {} )
 
     // Get the ips for this country
     let ips = miner_country_to_ips[ geo ] || []
@@ -79,5 +81,51 @@ export async function fetch_failover_stats() {
         }
 
     }
+
+}
+
+/**
+ * Retrieves the last known statuses of miners.
+ * @returns {Promise<Object>} result A promise that resolves to an object mapping miner UIDs to their last known statuses.
+ * @returns {string} result.miner_uid - The unique identifier of the miner.
+ * @returns {string} result.miner_uid.status - The status of the miner.
+ * @return {number} result.miner_uid.score - The score of the miner.
+ * @return {string} result.miner_uid.updated - The timestamp of the last update.
+ * @return {string} result.miner_uid.updated_human - The human-readable timestamp of the last update.
+ */
+export async function get_miner_statuses() {
+
+    // Handle cache
+    const cache_duration_ms = 5_000 // 5 seconds
+    const cached_statuses = get_tpn_cache( `last_known_miner_statuses` )
+    if( cached_statuses && Date.now() - cached_statuses.timestamp < cache_duration_ms ) {
+        log.info( `Returning cached miner statuses` )
+        return cached_statuses.data
+    }
+
+    // Get the miner uids
+    const miner_uids = get_tpn_cache( `miner_uids`, [] )
+
+    // Get all last known statuses
+    const last_known_statuses = await Promise.all( miner_uids.map( async ( uid ) => {
+        const status = await get_miner_status( uid )
+        return { miner_uid: uid, ...status }
+    } ) )
+
+    // Grab the last known scores
+    const stats = get_tpn_cache( 'last_known_miner_scores', {} )
+
+    // Format to uid to status mapping
+    const formatted_statuses = last_known_statuses.reduce( ( acc, _status ) => {
+
+        const { miner_uid, status, updated } = _status
+        const { score='not in cache' } = stats[ miner_uid ] || {}
+        const updated_human = new Date( updated ).toISOString()
+        acc[ miner_uid ] = { status, score, updated, updated_human }
+        return acc
+    }, {} )
+
+    // Cache last known statuses
+    return cache( `last_known_miner_statuses`, formatted_statuses, cache_duration_ms )
 
 }

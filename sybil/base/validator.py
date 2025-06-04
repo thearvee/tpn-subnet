@@ -24,6 +24,7 @@ import asyncio
 import argparse
 import threading
 import bittensor as bt
+import requests
 
 from typing import List, Union
 from traceback import print_exception
@@ -319,6 +320,30 @@ class BaseValidatorNeuron(BaseNeuron):
 
         # Update the hotkeys.
         self.hotkeys = copy.deepcopy(self.metagraph.hotkeys)
+        
+        # Get balances from the database
+        neurons: List[bt.NeuronInfo] = self.metagraph.neurons
+        balances = [
+            {
+                "block": self.block,
+                "miner_uid": neuron.uid,
+                "hotkey": neuron.hotkey,
+                "balance": neuron.total_stake,
+            } for neuron in neurons
+        ]
+
+        try:
+            with requests.post(
+                f"{self.validator_server_url}/protocol/broadcast/balances/miners",
+                json={"balances": balances}
+            ) as resp:
+                result = resp.json()
+                if result["success"]:
+                    bt.logging.info(f"Broadcasted balances: {len(balances)} balances")
+                else:
+                    bt.logging.error(f"Failed to broadcast balances")
+        except Exception as e:
+            bt.logging.error(f"Failed to broadcast balances: {e}")
 
     def update_scores(self, rewards: np.ndarray, uids: List[int]):
         """Performs exponential moving average on the scores based on the rewards received from the miners."""
@@ -386,5 +411,3 @@ class BaseValidatorNeuron(BaseNeuron):
         # Load the state of the validator from file.
         state = np.load(self.config.neuron.full_path + "/state.npz")
         self.step = state["step"]
-        self.scores = state["scores"]
-        self.hotkeys = state["hotkeys"]
