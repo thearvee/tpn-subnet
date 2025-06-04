@@ -1,6 +1,6 @@
-# Sybil subtensor network litepaper
+# TAO Private Network litepaper
 
-The sybil Bittensor subnet is designed to query public internet resources from a network of highly diverse node operators. It solves use-cases where an entity wants to query a resource and wants to have a freedom of choice on how the resource perceives them digitally. Example of this include:
+TAO Private Network is designed to query public internet resources from a network of highly diverse node operators. It solves use-cases where an entity wants to query a resource and wants to have a freedom of choice on how the resource perceives them digitally. Example of this include:
 
 - Geo control: An internet user that wants to know how a webpage looks when it is opened from a geolocation different than where the user is. For example a user in an area with restricted internet circumstances that wants to open a resource blocked by their ISP.
 - Fresh identities: A researcher that wants to open a webpage, but wants the webpage to perceive it as a new user instead of a recurring one.
@@ -12,7 +12,7 @@ This litepaper details the development roadmap of this Bittensor subnet.
 
 ## V0: network bootstrapping
 
-The first version of the sybil subnet incentivises miners and validators to set up a globally distributed network of nodes. Good behaviour is rewarded, and undesired behaviour is not. In this phase:
+The first version of the TPN subnet incentivises miners and validators to set up a globally distributed network of nodes. Good behaviour is rewarded, and undesired behaviour is not. In this phase:
 
 - Validators host a challenge/response endpoint and ask miners to supply the response as a challenge endpoint
 - Miners receive challenge urls, and send the challenge response to validators
@@ -79,7 +79,7 @@ At this stage the challenge/response system of V0 will be upgraded. Instead of s
 
 At this stage, miners would not just fulfil requests, but offer their connection to users. This would allow users to access a very diverse set of ip addresses.
 
-Common issues with commercial VPN providers include the fact that content hosts and ISPs are often able to blacklist these providers. The diverse network of the sybil subnet would be resistant to this issue since the ip addresses used by miners are incentivised to be in locations and on connections that look like regular residential users.
+Common issues with commercial VPN providers include the fact that content hosts and ISPs are often able to blacklist these providers. The diverse network of the TPN subnet would be resistant to this issue since the ip addresses used by miners are incentivised to be in locations and on connections that look like regular residential users.
 
 In this setup the validators would be the entry point for a user wanting a VPN connection. The validator would select a suitable miner through a challenge-response check. The miner response with a response to the challenge, as well as a VPN connection configuration file.
 
@@ -87,7 +87,7 @@ The validator would use this file to test the connection, and supply it to the e
 
 ## V4: consumer-level integrations
 
-Given the diverse and versatile nature of the sybil subnet, it would be suitable not only for automated actors, but also for consumers.
+Given the diverse and versatile nature of the TPN subnet, it would be suitable not only for automated actors, but also for consumers.
 
 This unlocks advanced use-cases that are not currently possible in traditional web2 VPN setups. For example, a user might request a connection that:
 
@@ -99,10 +99,9 @@ These highly granular and diverse levels of connection selections will allow hum
 
 # About the team
 
-The sybil subnet is an initiative of the team behind the [Taofu protocol](https://taofu.xyz/). For an overview, refer to [this Notion page](https://octagonal-thyme-e01.notion.site/Core-team-1495ba3d459e8044b54fcd2e52b8b309?pvs=74).
+The TPN subnet is an initiative of the team behind the [Taofu protocol](https://taofu.xyz/). For an overview, refer to [this Notion page](https://octagonal-thyme-e01.notion.site/Core-team-1495ba3d459e8044b54fcd2e52b8b309?pvs=74).
 
-Technical expertise relevant to the sybil subnet:
+Technical expertise relevant to the TPN subnet:
 
 - Just, an ex-Parity engineer with extensive experience with the Polkadot/substrate tech stack. His code can be found in the polkadot and core XCM codebase
 - Mentor, a web2/web3 engineer who ran two small VPN companies, sold the first one, and operated the second as a non-profit for 8 years. He also created [OnionDAO](https://oniondao.web.app/), a collective that incentivises Tor exit nodes.
-
