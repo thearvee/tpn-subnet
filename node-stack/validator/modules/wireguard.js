@@ -214,7 +214,10 @@ export async function validate_wireguard_config( { miner_uid, peer_config, peer_
             interface_id_in_use,
             veth_id_in_use,
             namespace_id_in_use,
-            veth_subnet_prefix_in_use
+            veth_subnet_prefix_in_use,
+            interface_id,
+            veth_id,
+            namespace_id,
         } )
         if( interface_id_in_use ) interface_id = `tpn${ peer_id }${ random_string_of_length( 5 ) }`
         if( veth_id_in_use ) veth_id = random_string_of_length( 5 )
