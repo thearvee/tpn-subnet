@@ -118,7 +118,7 @@ Create a `.env` file in the `node-stack/miner` directory with the following cont
 
 ```bash
 POSTGRES_PASSWORD=xxxx # REQUIRED, may be any valid string, choose something random
-LOG_LEVEL=info # optional, this controls the log level, valid values are: info, warn, error
+LOGLEVEL=info # optional, this controls the log level, valid values are: info, warn, error
 POSTGRES_HOST=postgres # optional, only use if you have a remote database (not recommended)
 POSTGRES_PORT=5432 # optional, this changes the postgres port (not recommended)
 WIREGUARD_PEER_COUNT=250 # optional, this changes the amount of connections the miner offers, must be between 15 and 250
@@ -211,7 +211,7 @@ The validator needs to be configured with some settings and third party API keys
 
 ```bash
 # This controls the verbosity of the logs. Possible values are: info, warn, error
-LOG_LEVEL=info # Optional
+LOGLEVEL=info # Optional
 
 # A free license key, obtained by creating an account and API key at http://maxmind.com/en/accounts/
 MAXMIND_LICENSE_KEY=xxxx

@@ -18,7 +18,7 @@
     "geoip-lite": "^1.4.10",
     "ip2location-nodejs": "^9.6.3",
     "maxmind": "^4.3.24",
-    "mentie": "^0.3.12",
+    "mentie": "^0.3.13",
     "node-fetch": "^3.3.2",
     "pg": "^8.15.6",
     "sqlite": "^5.1.1",

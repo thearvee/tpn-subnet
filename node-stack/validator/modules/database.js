@@ -226,7 +226,8 @@ export async function save_miner_status( { miner_uid, status } ) {
 
     // Save a new status entry for this miner_uid, we are not updating entries so that we have a history of statuses
     await pool.query(
-        `INSERT INTO miner_status (miner_uid, status, updated) VALUES ($1, $2, $3)`,
+        `INSERT INTO miner_status (miner_uid, status, updated) VALUES ($1, $2, $3)
+        ON CONFLICT DO NOTHING`,
         [ miner_uid, status, Date.now() ]
     )
     log.info( 'Miner status saved:', { miner_uid, status } )
