@@ -106,9 +106,6 @@ export async function score_request_uniqueness( request ) {
     // Get the ip of the originating request
     let { unspoofable_ip, spoofable_ip } = ip_from_req( request )
 
-    // Sanetise potential ipv6 mapping of ipv4 address
-    if( unspoofable_ip?.startsWith( '::ffff:' ) ) unspoofable_ip = unspoofable_ip?.replace( '::ffff:', '' )
-
     // Log out the ip address of the request
     if( unspoofable_ip ) log.info( `Request from ${ unspoofable_ip }` )
     if( !unspoofable_ip ) {

@@ -1,9 +1,19 @@
 import { log } from "mentie"
 
 export function ip_from_req( request ) {
+
+    // Extract the ip address from the request object
     let { ip: request_ip, ips, connection, socket } = request
+
+    // If the request has no ips, use the connection or socket remote address
     let spoofable_ip = request_ip || ips[0] || request.get( 'x-forwarded-for' )
+
+    // Grab the remote address from the connection or socket
     let unspoofable_ip = connection.remoteAddress || socket.remoteAddress
+
+    // If unspoofable ip is a ipv6 address with a v4-mapped prefix, remove it
+    unspoofable_ip = unspoofable_ip?.replace( '::ffff:', '' )
+    
     return { unspoofable_ip, spoofable_ip }
 }
 
