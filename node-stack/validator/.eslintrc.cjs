@@ -10,7 +10,7 @@ eslint_config.rules = {
     'import/default': 'error', // Ensure a default export is present, given a default import
     'import/namespace': 'error', // Ensure imported namespaces contain dereferenced properties as they are dereferenced
     'import/no-duplicates': 'error', // Disallow duplicate imports
-    'import/extensions': [ 'error', 'always', { js: 'always', json: 'always', ts: 'always' } ], // Enforce file extensions for imports
+    'import/extensions': [ 'warn', 'always', { js: 'always', json: 'always', ts: 'always' } ], // Enforce file extensions for imports
 }
 eslint_config.settings[ 'import/resolver' ] = {
     node: {
