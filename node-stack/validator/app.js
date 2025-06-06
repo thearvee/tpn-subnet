@@ -95,7 +95,7 @@ process.on( 'unhandledRejection', async ( reason, promise ) => {
 
 // Memory logging
 const log_interval_ms = 60_000 * 5 // 5 minutes
-import { log_memory_stats, heapdump } from './modules/system.js'
+import { log_memory_stats } from './modules/system.js'
 setInterval( async () => {
     try {
         const memory_stats = log_memory_stats()
@@ -105,11 +105,11 @@ setInterval( async () => {
         log.info( `Checking if memdump is advised` )
 
         // Get the value of 25% of the VALIDATOR_MAX_PROCESS_RAM_MB
-        const { VALIDATOR_MAX_PROCESS_RAM_MB=8192 } = process.env
-        const gib_threshold = VALIDATOR_MAX_PROCESS_RAM_MB * 0.25 / 1024 // Convert MB to GiB
-        log.info( `Memory usage threshold for heapdump: ${ gib_threshold } GiB` )
-        await heapdump( { gib_threshold } )
-        
+        // const { VALIDATOR_MAX_PROCESS_RAM_MB=8192 } = process.env
+        // const gib_threshold = VALIDATOR_MAX_PROCESS_RAM_MB * 0.25 / 1024 // Convert MB to GiB
+        // log.info( `Memory usage threshold for heapdump: ${ gib_threshold } GiB` )
+        // await heapdump( { gib_threshold } )
+
     } catch ( e ) {
         log.warn( `Error getting memory stats: `, e )
     }

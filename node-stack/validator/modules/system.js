@@ -1,6 +1,4 @@
-import { log } from 'mentie'
 import os from 'os'
-import url from 'url'
 
 
 /**
@@ -16,34 +14,34 @@ function format_bytes( bytes ) {
     return `${ bytes.toFixed( 2 ) } ${ units[i] }`
 }
 
-export async function heapdump( { gib_threshold=2 }={} ) {
+// export async function heapdump( { gib_threshold=2 }={} ) {
 
-    // Load heapdump module
-    const heapdump = await import( 'heapdump' )
+//     // Load heapdump module
+//     const heapdump = await import( 'heapdump' )
 
-    // Check if current memory usage exceeds threshold
-    const mem = process.memoryUsage()
-    const mem_used_gib = mem.heapUsed / ( 1024 * 1024 * 1024 )
+//     // Check if current memory usage exceeds threshold
+//     const mem = process.memoryUsage()
+//     const mem_used_gib = mem.heapUsed / ( 1024 * 1024 * 1024 )
 
-    // Exit if below threshold
-    if( mem_used_gib < gib_threshold ) {
-        log.info( `Memory usage is below ${ gib_threshold } GiB, skipping heapdump.` )
-        return
-    }
+//     // Exit if below threshold
+//     if( mem_used_gib < gib_threshold ) {
+//         log.info( `Memory usage is below ${ gib_threshold } GiB, skipping heapdump.` )
+//         return
+//     }
 
-    // Write heapdump to file
-    const __dirname = url.fileURLToPath( new URL( '.', import.meta.url ) )
-    const filename = `${ __dirname }/../.heapdump-${ Date.now() }.heapsnapshot`
-    log.info( `Memory usage is above ${ gib_threshold } GiB, writing heapdump to ${ filename }` )
-    heapdump.writeSnapshot( filename, ( err, filename ) => {
-        if( err ) {
-            log.error( `Error writing heapdump:`, err )
-            return
-        }
-        log.info( `Heapdump written to ${ filename }` )
-    } )
+//     // Write heapdump to file
+//     const __dirname = url.fileURLToPath( new URL( '.', import.meta.url ) )
+//     const filename = `${ __dirname }/../.heapdump-${ Date.now() }.heapsnapshot`
+//     log.info( `Memory usage is above ${ gib_threshold } GiB, writing heapdump to ${ filename }` )
+//     heapdump.writeSnapshot( filename, ( err, filename ) => {
+//         if( err ) {
+//             log.error( `Error writing heapdump:`, err )
+//             return
+//         }
+//         log.info( `Heapdump written to ${ filename }` )
+//     } )
 
-}
+// }
 
 /**
  * Log current memory usage and percentages.
