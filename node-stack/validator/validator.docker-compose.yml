@@ -18,7 +18,7 @@ services:
       - POSTGRES_HOST
       - POSTGRES_USER
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-setthispasswordinthedotenvfile}
-      - NODE_OPTIONS="--max-old-space-size=${VALIDATOR_MAX_PROCESS_RAM_MB:-8192} --trace-gc --trace-gc-verbose --trace_gc_nvp"
+      - NODE_OPTIONS=--max-old-space-size=${VALIDATOR_MAX_PROCESS_RAM_MB:-8192} --trace-gc --trace-gc-verbose --trace_gc_nvp
     restart: unless-stopped
     cap_add:
       - NET_ADMIN
