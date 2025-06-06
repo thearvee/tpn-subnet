@@ -21,6 +21,9 @@ const __dirname = url.fileURLToPath( new URL( '.', import.meta.url ) )
  */
 export async function update_maxmind() {
 
+    // Load geoip-lite
+    const { default: geoip } = await import( 'geoip-lite' )
+
     // Check if we should update based on timestamp
     const update_min_interval_ms = 1000 * 60 * 60 * .5 // 30 minutes
     const last_update = await get_timestamp( { label: 'last_maxmind_update' } )
@@ -53,7 +56,13 @@ export async function update_maxmind() {
         // Fires when the process exits
         updateProcess.on( 'close', ( code ) => {
             log.info( `Maxmind update complete:`, code )
+
+            // Reload database
+            log.info( `Reloading Maxmind database into memory` )
+            geoip.reloadDataSync()
+            log.info( `Maxmind database reloaded into memory` )
             set_timestamp( { label: 'last_maxmind_update', timestamp: Date.now() } ).then( () => {
+                log.info( `Maxmind database update timestamp set` )
                 resolve( `Maxmind database update complete` )
             } )
         } )
