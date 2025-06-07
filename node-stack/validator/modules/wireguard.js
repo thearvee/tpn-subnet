@@ -19,7 +19,7 @@ const split_ml_commands = commands => commands.split( '\n' ).map( c => c.replace
  * @throws {Error} Throws an error if no IP address is provided.
  * @returns {Promise<boolean>} Resolves to `true` if the IP address becomes free within the timeout, or `false` if it remains in use.
  */
-export async function wait_for_ip_free( { ip_address, timeout_s=test_timeout_seconds, log_tag=Date.now() } ) {
+export async function wait_for_ip_free( { ip_address, timeout_s=test_timeout_seconds, log_tag=Date.now(), verbose=false } ) {
 
     log.info( log_tag, `Waiting for IP address ${ ip_address } to become free` )
 
@@ -30,7 +30,7 @@ export async function wait_for_ip_free( { ip_address, timeout_s=test_timeout_sec
     let ip_being_processed = cache( `ip_being_processed_${ ip_address }` )
 
     // Check if the ip address is already in use
-    const { stdout, stderr } = await run( `ip addr show | grep ${ ip_address } || true`, { silent: false, verbose: true, log_tag } )
+    const { stdout, stderr } = await run( `ip addr show | grep ${ ip_address } || true`, { silent: !verbose, verbose, log_tag } )
     let ip_taken = stdout?.includes( ip_address )
 
     // If ip not taken, return out
@@ -49,7 +49,7 @@ export async function wait_for_ip_free( { ip_address, timeout_s=test_timeout_sec
         waited_for += interval
 
         // Check on interface level
-        const { stdout, stderr } = await run( `ip addr show | grep ${ ip_address } || true`, { silent: false } )
+        const { stdout, stderr } = await run( `ip addr show | grep ${ ip_address } || true`, { silent: !verbose } )
 
         // Check on cache level
         ip_being_processed = cache( `ip_being_processed_${ ip_address }` )
@@ -75,7 +75,7 @@ export async function clean_up_tpn_namespaces( { namespaces }={} ) {
     // Get all namespaces
     if( !namespaces ) {
         log.info( `No namespaces provided, getting all namespaces` )
-        const { stdout } = await run( `ip netns list`, { silent: false } )
+        const { stdout } = await run( `ip netns list`, { silent: true } )
         namespaces = stdout?.split( '\n' ).filter( line => line.includes( 'tpn' ) ).map( line => line.split( ':' )[ 0 ].trim() )   
         log.info( `Found TPN namespaces:`, namespaces )
     }
@@ -90,7 +90,7 @@ export async function clean_up_tpn_namespaces( { namespaces }={} ) {
     log.info( `Deleting ${ namespaces?.length } namespaces` )
     for( const namespace_id of namespaces ) {
         log.info( `Cleaning up namespace ${ namespace_id }` )
-        await run( `ip netns del ${ namespace_id }`, { silent: false } )
+        await run( `ip netns del ${ namespace_id }`, { silent: true } )
         log.info( `Deleted namespace ${ namespace_id }` )
     }
 
@@ -146,9 +146,9 @@ export async function clean_up_tpn_interfaces( { interfaces, ip_addresses, dryru
             continue
         }
         log.info( `Cleaning up interface ${ interface_id } link, route, config` )
-        await run( `ip link delete ${ interface_id }`, { silent: false } )
-        await run( `ip route flush table ${ interface_id }`, { silent: false } )
-        await run( `rm -f /tmp/${ interface_id }.conf`,  { silent: false } )
+        await run( `ip link delete ${ interface_id }`, { silent: true } )
+        await run( `ip route flush table ${ interface_id }`, { silent: true } )
+        await run( `rm -f /tmp/${ interface_id }.conf`,  { silent: true } )
         log.info( `Deleted interface ${ interface_id } and all associated entries` )
     }
 
@@ -166,7 +166,7 @@ export async function clean_up_tpn_interfaces( { interfaces, ip_addresses, dryru
  * @returns {boolean} result.valid - Whether the wireguard config is valid
  * @returns {string} result.message - The message to return
  */
-export async function validate_wireguard_config( { miner_uid, peer_config, peer_id, miner_ip } ) {
+export async function validate_wireguard_config( { miner_uid, peer_config, peer_id, miner_ip, verbose=false } ) {
 
     const log_tag = `[ ${ peer_id }_${ Date.now() } ]`
 
@@ -199,18 +199,37 @@ export async function validate_wireguard_config( { miner_uid, peer_config, peer_
     let veth_id = `tpn${ random_string_of_length( 5 ) }`
     let veth_subnet_prefix = `10.200.${ random_number_between( 1, 254 ) }`
     const config_path = `/tmp/${ interface_id }.conf`
-    let { stdout: default_route } = await run( `ip route show default | awk '/^default/ {print $3}'`, { silent: false, log_tag } )
+    let { stdout: default_route } = await run( `ip route show default | awk '/^default/ {print $3}'`, { silent: !verbose, log_tag } )
     default_route = default_route.trim()
     let namespace_id = `ns_${ interface_id }`
-    log.info( `${ log_tag } Default route:`, default_route )
+    if( verbose ) log.info( `${ log_tag } Default route:`, default_route )
 
     // Make sure there are no duplicates
     let interface_id_in_use = cache( `interface_id_in_use_${ interface_id }` )
     let veth_id_in_use = cache( `veth_id_in_use_${ veth_id }` )
     let namespace_id_in_use = cache( `namespace_id_in_use_${ namespace_id }` )
     let veth_subnet_prefix_in_use = cache( `veth_subnet_prefix_in_use_${ veth_subnet_prefix }` )
+    let attempts = 1
+    const max_attempts = 500
     while( interface_id_in_use || veth_id_in_use || namespace_id_in_use || veth_subnet_prefix_in_use ) {
-        log.info( `${ log_tag } Collision in ids found: `, {
+
+        // If we have exceeded the max attempts, something is very wrong, error
+        if( attempts > max_attempts ) {
+            log.error( `${ log_tag } Exceeded max attempts to generate unique ids for peer ${ peer_id }, trace: `, {
+                interface_id_in_use,
+                veth_id_in_use,
+                namespace_id_in_use,
+                veth_subnet_prefix_in_use,
+                interface_id,
+                veth_id,
+                namespace_id,
+                veth_subnet_prefix,
+                attempts,
+            } )
+            throw new Error( `Exceeded max attempts to generate unique ids for peer ${ peer_id }` )
+        }
+
+        if( verbose ) log.info( `${ log_tag } Collision in ids found: `, {
             interface_id_in_use,
             veth_id_in_use,
             namespace_id_in_use,
@@ -219,14 +238,46 @@ export async function validate_wireguard_config( { miner_uid, peer_config, peer_
             veth_id,
             namespace_id,
         } )
-        if( interface_id_in_use ) interface_id = `tpn${ peer_id }${ random_string_of_length( 5 ) }`
-        if( veth_id_in_use ) veth_id = random_string_of_length( 5 )
-        if( namespace_id_in_use ) namespace_id = `ns_${ interface_id }`
-        if( veth_subnet_prefix_in_use ) veth_subnet_prefix = `10.200.${ random_number_between( 1, 254 ) }`
-        interface_id_in_use = cache( `interface_id_in_use_${ interface_id }` )
-        veth_id_in_use = cache( `veth_id_in_use_${ veth_id }` )
-        namespace_id_in_use = cache( `namespace_id_in_use_${ namespace_id }` )
-        veth_subnet_prefix_in_use = cache( `veth_subnet_prefix_in_use_${ veth_subnet_prefix }` )
+        if( interface_id_in_use ) {
+            const new_interface_id = `tpn${ peer_id }${ random_string_of_length( 5 ) }`
+            log.info( `${ log_tag } Regenerating interface_id from ${ interface_id } to ${ new_interface_id }` )
+            interface_id = new_interface_id
+            interface_id_in_use = cache( `interface_id_in_use_${ interface_id }` )
+        }
+        if( veth_id_in_use ) {
+            const new_veth_id = random_string_of_length( 5 )
+            log.info( `${ log_tag } Regenerating veth_id from ${ veth_id } to ${ new_veth_id }` )
+            veth_id = new_veth_id
+            veth_id_in_use = cache( `veth_id_in_use_${ veth_id }` )
+        }
+        if( namespace_id_in_use ) {
+            const new_namespace_id = `ns_${ interface_id }`
+            log.info( `${ log_tag } Regenerating namespace_id from ${ namespace_id } to ${ new_namespace_id }` )
+            namespace_id = new_namespace_id
+            namespace_id_in_use = cache( `namespace_id_in_use_${ namespace_id }` )
+        }
+        if( veth_subnet_prefix_in_use ) {
+            const new_veth_subnet_prefix = `10.200.${ random_number_between( 1, 254 ) }`
+            log.info( `${ log_tag } Regenerating veth_subnet_prefix from ${ veth_subnet_prefix } to ${ new_veth_subnet_prefix }` )
+            veth_subnet_prefix = new_veth_subnet_prefix
+            veth_subnet_prefix_in_use = cache( `veth_subnet_prefix_in_use_${ veth_subnet_prefix }` )
+        }
+
+        if( verbose ) log.info( `${ log_tag } Trace of ids: `, {
+            interface_id,
+            veth_id,
+            namespace_id,
+            veth_subnet_prefix,
+            interface_id_in_use,
+            veth_id_in_use,
+            namespace_id_in_use,
+            veth_subnet_prefix_in_use
+        } )
+
+        // Add a tiny delay to prevent possible OOM when this logic fails for some reason
+        await wait( attempts * 10 )
+        attempts++
+
     }
 
     // Mark the ids as in use
@@ -238,12 +289,12 @@ export async function validate_wireguard_config( { miner_uid, peer_config, peer_
     // Get the endpoint host from the config
     let { 1: endpoint } = peer_config.match( /Endpoint ?= ?(.*)/ ) || []
     endpoint = `${ endpoint }`.trim().split( ':' )[ 0 ]
-    log.info( `${ log_tag } Parsed endpoint from wireguard config for peer ${ peer_id }:`, endpoint )
+    if( verbose ) log.info( `${ log_tag } Parsed endpoint from wireguard config for peer ${ peer_id }:`, endpoint )
 
     // Get the address from the config
     let { 1: address } = peer_config.match( /Address ?= ?(.*)/ ) || []
     address = `${ address }`.split( '/' )[ 0 ]
-    log.info( `${ log_tag } Parsed address from wireguard config for peer ${ peer_id }:`, address )
+    if( verbose ) log.info( `${ log_tag } Parsed address from wireguard config for peer ${ peer_id }:`, address )
 
     // Get other relevant wireguard info from config
     const privatekey = peer_config.match( /PrivateKey ?= ?(.*)/ )?.[ 1 ]?.trim()
@@ -268,7 +319,7 @@ export async function validate_wireguard_config( { miner_uid, peer_config, peer_
     }
     if( miner_ip && endpoint != miner_ip ) format_errors.push( `Miner supplied endpoint from ip that that does not beling to miner` )
 
-    log.info( `${ log_tag } Validating wireguard config for peer ${ peer_id }:`, {
+    if( verbose ) log.info( `${ log_tag } Validating wireguard config for peer ${ peer_id }:`, {
         address,
         endpoint,
         privatekey,
@@ -314,7 +365,7 @@ export async function validate_wireguard_config( { miner_uid, peer_config, peer_
 
     // If the address is not in CIDR notation, add /32
     if( !address.includes( '/' ) ) {
-        log.info( `${ log_tag } Wireguard config for peer ${ peer_id } address ${ address } is not in CIDR notation, adding /32` )
+        if( verbose ) log.info( `${ log_tag } Wireguard config for peer ${ peer_id } address ${ address } is not in CIDR notation, adding /32` )
         address = `${ address }/32`
         peer_config = peer_config.replace( /Address =.*/, `Address = ${ address }` )
     }
@@ -431,7 +482,7 @@ export async function validate_wireguard_config( { miner_uid, peer_config, peer_
 
         // Mark the ip address as in processing
         cache( `ip_being_processed_${ address }`, true, timeout * 1000 )
-        log.info( `${ log_tag } Marking ip address ${ address } as in processing` )
+        if( verbose ) log.info( `${ log_tag } Marking ip address ${ address } as in processing` )
 
         // Write the wireguard config to a file
         const config_cmd = await run( write_config_command, { silent: true, log_tag } )
@@ -441,14 +492,14 @@ export async function validate_wireguard_config( { miner_uid, peer_config, peer_
         const network_setup_commands = split_ml_commands( network_setup_command )
 
         for( const command of network_setup_commands ) {
-            await run( command, { silent: false, verbose: false, log_tag } )
+            await run( command, { silent: !verbose, verbose: false, log_tag } )
         }
     
 
         // Run the curl command
-        const { error, stderr, stdout } = await run( curl_command, { silent: false, verbose: true, log_tag } )
+        const { error, stderr, stdout } = await run( curl_command, { silent: !verbose, verbose, log_tag } )
         if( error || stderr ) {
-            log.warn( `${ log_tag } Error running curl command:`, error, stderr )
+            if( verbose ) log.warn( `${ log_tag } Error running curl command:`, error, stderr )
             return false
         }
         
@@ -460,7 +511,7 @@ export async function validate_wireguard_config( { miner_uid, peer_config, peer_
         }
 
         // Return the json response
-        log.info( `${ log_tag } Wireguard config for peer ${ peer_id } responded with:`, json )
+        if( verbose ) log.info( `${ log_tag } Wireguard config for peer ${ peer_id } responded with:`, json )
         return json
 
     } 
@@ -469,19 +520,19 @@ export async function validate_wireguard_config( { miner_uid, peer_config, peer_
     try {
 
         // Do pre-emptive cleanup in case a previous run messed up
-        log.info( `\n ${ log_tag } 🧹 Running pre-cleanup commands for peer ${ peer_id }` )
+        if( verbose ) log.info( `\n ${ log_tag } 🧹 Running pre-cleanup commands for peer ${ peer_id }` )
         await run_cleanup( { silent: true, log_tag } )
 
         // Solve the challenge from the miner ip
-        log.info( `\n ${ log_tag } 🔎 Running test commands for peer ${ peer_id }` )
+        if( verbose ) log.info( `\n ${ log_tag } 🔎 Running test commands for peer ${ peer_id }` )
         const stdout = await run_test()
 
         // Run cleanup command
-        log.info( `\n ${ log_tag } 🧹  Running cleanup commands for peer ${ peer_id }` )
-        await run_cleanup( { silent: false, log_tag } )
+        if( verbose ) log.info( `\n ${ log_tag } 🧹  Running cleanup commands for peer ${ peer_id }` )
+        await run_cleanup( { silent: !verbose, log_tag } )
 
         // Mark ids and ip as free again
-        log.info( `${ log_tag } Marking ids and ip ${ address } as free again` )
+        if( verbose ) log.info( `${ log_tag } Marking ids and ip ${ address } as free again` )
         cache( `interface_id_in_use_${ interface_id }`, false )
         cache( `veth_id_in_use_${ veth_id }`, false )
         cache( `namespace_id_in_use_${ namespace_id }`, false )
@@ -520,7 +571,7 @@ export async function validate_wireguard_config( { miner_uid, peer_config, peer_
 
     } catch ( e ) {
 
-        log.error( `${ log_tag } Error validating wireguard config for peer ${ peer_id }:`, e )
+        if( verbose ) log.error( `${ log_tag } Error validating wireguard config for peer ${ peer_id }:`, e )
         await save_miner_status( { miner_uid, status: 'offline' } )
         await run_cleanup( { silent: true, log_tag } )
         return { valid: false, message: `Error validating wireguard config for peer ${ peer_id }: ${ e.message }` }

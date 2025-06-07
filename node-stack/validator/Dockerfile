@@ -28,6 +28,8 @@ RUN apt update && apt install -y resolvconf || echo "resolvconf postinstall is e
 RUN echo '#!/bin/sh\nexit 0' > /var/lib/dpkg/info/resolvconf.postinst && chmod +x /var/lib/dpkg/info/resolvconf.postinst
 RUN dpkg --configure resolvconf
 
+# Memory default
+ENV VALIDATOR_MAX_PROCESS_RAM_MB=8192
 
 # Cachebuster
 ARG CACHEBUST=1
@@ -42,7 +44,7 @@ COPY routes ./routes
 EXPOSE 3000
 
 # Serve the app
-CMD ["node", "app.js"]
+CMD ["node", "--trace-gc", "app.js"]
 
 # Healthcheck call to /score, expect 200. Note that due to maxmind boot updates we need a long start period
 HEALTHCHECK --interval=10s --timeout=10s --start-period=600s --retries=3 CMD curl -f http://localhost:3000/ || exit 1
