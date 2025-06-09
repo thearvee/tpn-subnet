@@ -281,10 +281,10 @@ export async function validate_wireguard_config( { miner_uid, peer_config, peer_
     }
 
     // Mark the ids as in use
-    cache( `interface_id_in_use_${ interface_id }`, true )
-    cache( `veth_id_in_use_${ veth_id }`, true )
-    cache( `namespace_id_in_use_${ namespace_id }`, true )
-    cache( `veth_subnet_prefix_in_use_${ veth_subnet_prefix }`, true )
+    cache( `interface_id_in_use_${ interface_id }`, true, 120_000 )
+    cache( `veth_id_in_use_${ veth_id }`, true, 120_000 )
+    cache( `namespace_id_in_use_${ namespace_id }`, true, 120_000 )
+    cache( `veth_subnet_prefix_in_use_${ veth_subnet_prefix }`, true, 120_000 )
 
     // Get the endpoint host from the config
     let { 1: endpoint } = peer_config.match( /Endpoint ?= ?(.*)/ ) || []
@@ -295,6 +295,20 @@ export async function validate_wireguard_config( { miner_uid, peer_config, peer_
     let { 1: address } = peer_config.match( /Address ?= ?(.*)/ ) || []
     address = `${ address }`.split( '/' )[ 0 ]
     if( verbose ) log.info( `${ log_tag } Parsed address from wireguard config for peer ${ peer_id }:`, address )
+
+
+    // Create cache clearing helper
+    const clear_id_caches = () => {
+
+        // Mark ids and ip as free again
+        if( verbose ) log.info( `${ log_tag } Marking ids and ip ${ address } as free again` )
+        cache( `interface_id_in_use_${ interface_id }`, false )
+        cache( `veth_id_in_use_${ veth_id }`, false )
+        cache( `namespace_id_in_use_${ namespace_id }`, false )
+        cache( `veth_subnet_prefix_in_use_${ veth_subnet_prefix }`, false )
+        cache( `ip_being_processed_${ address }`, false )
+
+    }
 
     // Get other relevant wireguard info from config
     const privatekey = peer_config.match( /PrivateKey ?= ?(.*)/ )?.[ 1 ]?.trim()
@@ -315,6 +329,7 @@ export async function validate_wireguard_config( { miner_uid, peer_config, peer_
     if( format_errors.length ) {
         log.warn( `${ log_tag } Wireguard config for peer ${ peer_id } has format errors:`, format_errors )
         await save_miner_status( { miner_uid, status: 'misconfigured' } )
+        clear_id_caches()
         return { valid: false, message: `Wireguard config for peer ${ peer_id } has format errors: ${ format_errors.join( ', ' ) }` }
     }
     if( miner_ip && endpoint != miner_ip ) format_errors.push( `Miner supplied endpoint from ip that that does not beling to miner` )
@@ -336,11 +351,13 @@ export async function validate_wireguard_config( { miner_uid, peer_config, peer_
     if( !endpoint ) {
         log.warn( `${ log_tag } Wireguard config for peer ${ peer_id } is missing endpoint` )
         await save_miner_status( { miner_uid, status: 'misconfigured' } )
+        clear_id_caches()
         return { valid: false, message: `Wireguard config for peer ${ peer_id } is missing endpoint` }
     }
     if( !address ) {
         log.warn( `${ log_tag } Wireguard config for peer ${ peer_id } is missing address` )
         await save_miner_status( { miner_uid, status: 'misconfigured' } )
+        clear_id_caches()
         return { valid: false, message: `Wireguard config for peer ${ peer_id } is missing address` }
     }
 
@@ -350,6 +367,7 @@ export async function validate_wireguard_config( { miner_uid, peer_config, peer_
         if( stderr ) {
             log.warn( `${ log_tag } Error resolving endpoint ${ endpoint }:`, stderr )
             await save_miner_status( { miner_uid, status: 'misconfigured' } )
+            clear_id_caches()
             return { valid: false, message: `Error resolving endpoint ${ endpoint }: ${ stderr }` }
         }
         log.info( `${ log_tag } Resolved endpoint ${ endpoint } to ${ stdout }` )
@@ -360,6 +378,7 @@ export async function validate_wireguard_config( { miner_uid, peer_config, peer_
     if( !address.match( /\d*\.\d*\.\d*\.\d*/ ) ) {
         log.warn( `${ log_tag } Wireguard config for peer ${ peer_id } is missing address` )
         await save_miner_status( { miner_uid, status: 'misconfigured' } )
+        clear_id_caches()
         return { valid: false, message: `Wireguard config for peer ${ peer_id } is missing address` }
     }
 
@@ -531,13 +550,6 @@ export async function validate_wireguard_config( { miner_uid, peer_config, peer_
         if( verbose ) log.info( `\n ${ log_tag } 🧹  Running cleanup commands for peer ${ peer_id }` )
         await run_cleanup( { silent: !verbose, log_tag } )
 
-        // Mark ids and ip as free again
-        if( verbose ) log.info( `${ log_tag } Marking ids and ip ${ address } as free again` )
-        cache( `interface_id_in_use_${ interface_id }`, false )
-        cache( `veth_id_in_use_${ veth_id }`, false )
-        cache( `namespace_id_in_use_${ namespace_id }`, false )
-        cache( `veth_subnet_prefix_in_use_${ veth_subnet_prefix }`, false )
-        cache( `ip_being_processed_${ address }`, false )
 
         // On failure to get response, error out to catch block
         if( !stdout ) {
@@ -575,6 +587,11 @@ export async function validate_wireguard_config( { miner_uid, peer_config, peer_
         await save_miner_status( { miner_uid, status: 'offline' } )
         await run_cleanup( { silent: true, log_tag } )
         return { valid: false, message: `Error validating wireguard config for peer ${ peer_id }: ${ e.message }` }
+
+    } finally {
+
+        // Mark ids and ip as free again
+        clear_id_caches()
 
     }
 
