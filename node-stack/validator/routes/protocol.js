@@ -2,7 +2,7 @@ import { Router } from "express"
 import { cache, log, make_retryable, sanetise_string } from "mentie"
 import { request_is_local } from "../modules/network.js"
 import { save_balance } from "../modules/database.js"
-import { get_complete_tpn_cache } from "../modules/caching.js"
+import { get_complete_tpn_cache, save_tpn_cache_to_disk } from "../modules/caching.js"
 export const router = Router()
 
 
@@ -125,6 +125,9 @@ router.post( "/broadcast/miners", async ( req, res ) => {
         log.info( `Caching the country_to_uids list: `, Object.keys( country_to_uids ).length )
         cache( `miner_country_to_uids`, country_to_uids )
 
+        // Persist cache to disk
+        await save_tpn_cache_to_disk()
+
         return res.json( {
             ip_to_country,
             country_count,
@@ -181,6 +184,9 @@ router.post( "/broadcast/validators", async ( req, res ) => {
         log.info( `Caching validator ip data: `, valid_entries )
         cache( 'last_known_validators', valid_entries )
 
+        // Persist cache to disk
+        await save_tpn_cache_to_disk()
+
         return res.json( {
             valid_entries,
             success: true
@@ -233,6 +239,9 @@ router.post( `/broadcast/balances/miners`, async ( req, res ) => {
         // For each balance, save it to the database
         await Promise.all( valid_entries.map( async entry => save_balance( entry ) ) )
         log.info( `Saved ${ valid_entries.length } balances to database` )
+
+        // Persist cache to disk
+        await save_tpn_cache_to_disk()
 
         return res.json( {
             valid_entries,

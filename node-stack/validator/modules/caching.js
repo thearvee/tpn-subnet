@@ -1,4 +1,11 @@
 import { cache, log } from "mentie"
+import url from 'url'
+import { promises as fs } from 'fs'
+
+
+// Formulate disk path
+const __dirname = url.fileURLToPath( new URL( '.', import.meta.url ) )
+const cache_persistence_path = `${ __dirname }/../.tpn_cache.json`
 
 /**
  * Retrieves a value from the in-memory cache using the provided key.
@@ -98,5 +105,49 @@ export function get_complete_tpn_cache() {
 
     // Return all cache values
     return cache_values
+
+}
+
+/**
+ * Saves the complete TPN cache to disk at the configured path.
+ * This function serializes the cache to JSON and writes it to a file.
+ */
+export async function save_tpn_cache_to_disk() {
+
+    // Get the complete TPN cache
+    const tpn_cache = get_complete_tpn_cache()
+    log.info( `Saving TPN cache to disk at path: ${ cache_persistence_path }` )
+
+    // Write the cache to disk async
+    try {
+        await fs.writeFile( cache_persistence_path, JSON.stringify( tpn_cache, null, 2 ) )
+        log.info( `TPN cache saved to disk successfully` )
+    } catch ( e ) {
+        log.error( `Error saving TPN cache to disk:`, e )
+    }
+
+}
+
+/**
+ * Restores the TPN cache from disk at the configured path.
+ * This function reads the cache from a file and restores it to the in-memory cache.
+ */
+export async function restore_tpn_cache_from_disk() {
+
+    log.info( `Restoring TPN cache from disk at path: ${ cache_persistence_path }` )
+
+    // Read the cache from disk async
+    try {
+        const data = await fs.readFile( cache_persistence_path, 'utf8' )
+        const tpn_cache = JSON.parse( data )
+        log.info( `TPN cache restored from disk successfully` )
+
+        // Cache the values
+        cache.restore( tpn_cache )
+        log.info( `TPN cache restored to in-memory cache` )
+
+    } catch ( e ) {
+        log.error( `Error restoring TPN cache from disk:`, e )
+    }
 
 }
