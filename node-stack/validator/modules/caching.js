@@ -5,7 +5,7 @@ import { promises as fs } from 'fs'
 
 // Formulate disk path
 const __dirname = url.fileURLToPath( new URL( '.', import.meta.url ) )
-const cache_persistence_path = `${ __dirname }/../.tpn_cache.json`
+const cache_persistence_path = `${ __dirname }/../cache/.tpn_cache.json`
 
 /**
  * Retrieves a value from the in-memory cache using the provided key.

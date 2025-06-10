@@ -38,6 +38,7 @@ services:
     volumes:
       - maxmind_data:/app/node_modules/geoip-lite/data
       - ip2location_data:/app/ip2location_data
+      - validator_cache:/app/cache
     networks:
       - tpn_network
     labels:
@@ -88,6 +89,7 @@ volumes:
   maxmind_data:
   ip2location_data:
   postgres_data:
+  validator_cache:
 
 networks:
   tpn_network:
