@@ -17,7 +17,7 @@ router.get( "/config/countries", async ( req, res ) => {
         const country_code_to_name = get_tpn_cache( 'miner_country_code_to_name', {} )
 
         // Get the country code to miner uid mapping, and cross reference it with the last known miner statuses, so we can make a list of countries without miners whose status is not 'online'
-        const miner_uids = get_tpn_cache( 'miner_uids', [] )
+        // const miner_uids = get_tpn_cache( 'miner_uids', [] )
         const country_to_uids = get_tpn_cache( 'miner_country_to_uids', {} )
         const miner_statuses = await get_miner_statuses()
         
