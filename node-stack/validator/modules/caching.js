@@ -5,7 +5,8 @@ import { promises as fs } from 'fs'
 
 // Formulate disk path
 const __dirname = url.fileURLToPath( new URL( '.', import.meta.url ) )
-const cache_persistence_path = `${ __dirname }/../cache/.tpn_cache.json`
+const cache_dir = `${ __dirname }/../cache`
+const cache_persistence_path = `${ cache_dir }/.tpn_cache.json`
 
 /**
  * Retrieves a value from the in-memory cache using the provided key.
@@ -120,6 +121,7 @@ export async function save_tpn_cache_to_disk() {
 
     // Write the cache to disk async
     try {
+        await fs.mkdir( cache_dir, { recursive: true } )
         await fs.writeFile( cache_persistence_path, JSON.stringify( tpn_cache, null, 2 ) )
         log.info( `TPN cache saved to disk successfully` )
     } catch ( e ) {
