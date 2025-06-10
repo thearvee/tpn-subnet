@@ -13,16 +13,25 @@ async def fetch(url):
 
 # Wait until the / endpoint returns a 200 OK response
 async def wait_for_validator_container(validator_server_url: str):
+    max_retries = 10
+    retries = 0
     while True:
+
+        if retries >= max_retries:
+            bt.logging.error("Validator server not ready after maximum retries. Allowing unhealthy continuation of neuron logic.")
+            return
+
         try:
-            async with aiohttp.ClientSession() as session:
+            timeout = aiohttp.ClientTimeout(total=10)
+            async with aiohttp.ClientSession(timeout=timeout) as session:
                 async with session.get(validator_server_url) as response:
                     if response.status == 200:
                         bt.logging.info("Validator server is up and running.")
                         return
         except Exception as e:
             bt.logging.error(f"Validator server not ready yet: {e}")
-        await asyncio.sleep(5)  # Wait before retrying
+        retries += 1
+        await asyncio.sleep(10)  # Wait before retrying
 
 
 # Generate one challenge per miner_uid, appending ?miner_uid=<uid> to each request
