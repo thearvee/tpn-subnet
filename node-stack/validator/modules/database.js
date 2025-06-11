@@ -258,6 +258,7 @@ export async function get_miner_status( { miner_uid, from_timestamp=null, to_tim
             `SELECT status, updated FROM miner_status WHERE miner_uid = $1 ORDER BY updated DESC LIMIT 1`,
             [ miner_uid ]
         )
+        log.info( 'Query result:', result.rows )
         return result.rows.length > 0 ? result.rows[0] : {}
     }
 

@@ -107,9 +107,9 @@ export async function get_miner_statuses() {
     const miner_uids = get_tpn_cache( `miner_uids`, [] )
 
     // Get all last known statuses
-    const last_known_statuses = await Promise.all( miner_uids.map( async ( uid ) => {
-        const status = await get_miner_status( uid )
-        return { miner_uid: uid, ...status }
+    const last_known_statuses = await Promise.all( miner_uids.map( async ( miner_uid ) => {
+        const status = await get_miner_status( { miner_uid } )
+        return { miner_uid, ...status }
     } ) )
 
     // Grab the last known scores
@@ -119,10 +119,12 @@ export async function get_miner_statuses() {
     const formatted_statuses = last_known_statuses.reduce( ( acc, _status ) => {
 
         const { miner_uid, status='unknown', updated=0 } = _status
+        // log.info( `Last known status for miner ${ miner_uid }:`, { status, updated } )
         const { score='not in cache' } = stats[ miner_uid ] || {}
-        const updated_human = new Date( updated ).toISOString()
+        const updated_human = new Date( Number( updated ) ).toISOString()
         acc[ miner_uid ] = { status, score, updated, updated_human }
         return acc
+
     }, {} )
 
     // Cache last known statuses
