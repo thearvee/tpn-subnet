@@ -70,7 +70,7 @@ router.get( '/config/new', async ( req, res ) => {
     try {
 
         // Get request parameters
-        let { geo, lease_minutes, format='json', timeout_ms=5_000 } = req.query
+        let { geo, lease_minutes, format='json', timeout_ms=5_000, trace=false } = req.query
         log.info( `Request received for new config:`, { geo, lease_minutes } )
 
         // Validate request parameters
@@ -113,13 +113,13 @@ router.get( '/config/new', async ( req, res ) => {
 
         // Request configs from these miners until one succeeds
         let config = null
+        const errors = []
         for( let ip of ips ) {
 
             log.info( `Requesting config from miner:`, ip )
 
             // Sanetise potential ipv6 mapping of ipv4 address
             if( ip?.trim()?.startsWith( '::ffff:' ) ) ip = ip?.replace( '::ffff:', '' )
-
 
             // Create the config url
             let config_url = new URL( `http://${ ip }:3001/wireguard/new` )
@@ -155,6 +155,7 @@ router.get( '/config/new', async ( req, res ) => {
 
                 const text_response = await response?.clone()?.text()?.catch( e => e.message )
                 log.info( `Error requesting config from ${ ip }: ${ e.message }. Response body:`, text_response )
+                errors.push( { ip, error: e.message, response: text_response } )
 
                 continue
 
@@ -164,7 +165,10 @@ router.get( '/config/new', async ( req, res ) => {
         }
 
         // If no config was found, return an error 
-        if( !config ) return res.status( 404 ).json( { error: `No config found for country: ${ geo } (${ ips.length } miners)` } )
+        if( !config ) return res.status( 404 ).json( {
+            error: `No config found for country: ${ geo } (${ ips.length } miners)`,
+            ...trace ? { errors } : {}
+        } )
         log.info( `Config found for ${ geo }:`, config )
 
         // Return the config to the requester
