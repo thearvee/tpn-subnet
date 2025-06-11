@@ -107,9 +107,9 @@ export async function get_miner_statuses() {
     const miner_uids = get_tpn_cache( `miner_uids`, [] )
 
     // Get all last known statuses
-    const last_known_statuses = await Promise.all( miner_uids.map( async ( uid ) => {
-        const status = await get_miner_status( uid )
-        return { miner_uid: uid, ...status }
+    const last_known_statuses = await Promise.all( miner_uids.map( async ( miner_uid ) => {
+        const status = await get_miner_status( { miner_uid } )
+        return { miner_uid, ...status }
     } ) )
 
     // Grab the last known scores
