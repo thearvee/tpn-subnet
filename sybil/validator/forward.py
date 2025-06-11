@@ -109,7 +109,8 @@ async def forward(self):
         challenges = await generate_challenges(miner_uids=miner_uids, validator_server_url=self.validator_server_url)
         bt.logging.info(f"Batch {i+1} ==> Generated challenges:\n" + "\n".join([str(challenge) for challenge in challenges]))
         
-        if challenges is None:
+        # Check if challenges is None or an empty list
+        if challenges is None or len(challenges) == 0:
             bt.logging.error("Batch {i+1} ==> Failed to generate challenges")
             time.sleep(10)
             return
@@ -148,6 +149,15 @@ async def forward(self):
 
     # Update the scores based on the rewards. You may want to define your own update_scores function for custom behavior.
     bt.logging.info(f"Updating final scores: {all_rewards}")
-    self.update_scores(all_rewards, shuffled_miner_uids)
+
+    # Check that the score array is of equal length to the shuffled miner uids, only post updates to chain if so
+    if len(all_rewards) == len(shuffled_miner_uids):
+        bt.logging.info(f"Length match: {len(all_rewards)} rewards for {len(shuffled_miner_uids)} miner uids. Posting updates to chain.")
+
+        # Update the scores in the metagraph
+        self.update_scores(all_rewards, shuffled_miner_uids)
+
+    else:
+        bt.logging.error(f"Length mismatch: {len(all_rewards)} rewards for {len(shuffled_miner_uids)} miner uids. Not posting updates to chain.")
 
     time.sleep(10)

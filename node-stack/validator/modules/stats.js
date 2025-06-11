@@ -118,7 +118,7 @@ export async function get_miner_statuses() {
     // Format to uid to status mapping
     const formatted_statuses = last_known_statuses.reduce( ( acc, _status ) => {
 
-        const { miner_uid, status, updated } = _status
+        const { miner_uid, status='unknown', updated=0 } = _status
         const { score='not in cache' } = stats[ miner_uid ] || {}
         const updated_human = new Date( updated ).toISOString()
         acc[ miner_uid ] = { status, score, updated, updated_human }

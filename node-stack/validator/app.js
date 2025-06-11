@@ -12,6 +12,10 @@ log.info( `${ now } - Starting Sybil Network validator component version ${ vers
 import { check_system_warnings } from './modules/shell.js'
 await check_system_warnings()
 
+// Load the last cache backup from disk
+import { restore_tpn_cache_from_disk } from './modules/caching.js'
+await restore_tpn_cache_from_disk()
+
 // Initialize the database
 import { close_pool, init_tables } from './modules/database.js'
 log.info( 'Initializing database' )
