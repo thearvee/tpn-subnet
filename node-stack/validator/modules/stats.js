@@ -119,10 +119,12 @@ export async function get_miner_statuses() {
     const formatted_statuses = last_known_statuses.reduce( ( acc, _status ) => {
 
         const { miner_uid, status='unknown', updated=0 } = _status
+        log.info( `Last known status for miner ${ miner_uid }:`, { status, updated } )
         const { score='not in cache' } = stats[ miner_uid ] || {}
         const updated_human = new Date( updated ).toISOString()
         acc[ miner_uid ] = { status, score, updated, updated_human }
         return acc
+        
     }, {} )
 
     // Cache last known statuses
