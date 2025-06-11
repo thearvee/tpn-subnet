@@ -155,6 +155,7 @@ router.get( '/config/new', async ( req, res ) => {
 
                 const text_response = await response?.clone()?.text()?.catch( e => e.message )
                 log.info( `Error requesting config from ${ ip }: ${ e.message }. Response body:`, text_response )
+
                 continue
 
             }

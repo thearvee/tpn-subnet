@@ -1,7 +1,7 @@
 import { Router } from 'express'
 import { log, make_retryable } from 'mentie'
 import { get_valid_wireguard_config } from '../modules/wireguard.js'
-import { request_is_local } from '../modules/network.js'
+import { ip_from_req, request_is_local } from '../modules/network.js'
 import { is_validator } from '../modules/metagraph.js'
 export const router = Router()
 const { CI_MODE } = process.env
@@ -13,9 +13,10 @@ router.get( '/new', async ( req, res ) => {
     // Before anything else, check if this is a call from a validator or local machine
     const is_local = request_is_local( req )
     const validator = is_validator( req )
+    const { spoofable_ip, unspoofable_ip } = ip_from_req( req )
     if( !validator && !is_local ) {
         log.info( `Request is not from a validator, nor from local, returning 403` )
-        return res.status( 403 ).json( { error: 'Only validators may call this endpoint, please read the public API documentation' } )
+        return res.status( 403 ).json( { error: `Only validators may call this endpoint, please read the public API documentation`, spoofable_ip, unspoofable_ip } )
     }
     log.info( `Wireguard config request is from validator ${ validator.uid } with ip ${ validator.ip } (local: ${ is_local })` )
 

@@ -1,4 +1,4 @@
-import { log } from "mentie"
+import { cache, log } from "mentie"
 import { ip_from_req } from "./network.js"
 const { CI_MODE } = process.env
 
@@ -30,9 +30,13 @@ export function validator_count() {
 }
 
 export function validator_ips() {
+
+    // Check if validators are in cache, use it if so and fall back to hardcoded list if not
+    const cached_validators = cache( 'last_known_validators' )
+    const validators_to_use = cached_validators || validators
     
     // Remove testnet validators aand 0.0.0.0 entries
-    const ips = validators.filter( ( { uid, ip } ) => uid !== null && ip != '0.0.0.0' ).map( ( { ip } ) => ip )
+    const ips = validators_to_use.filter( ( { uid, ip } ) => uid !== null && ip != '0.0.0.0' ).map( ( { ip } ) => ip )
     return ips
 }
 
@@ -51,7 +55,6 @@ export function is_validator( request ) {
     // Check if input is ipv4 (very naively)
     const is_ipv4 = unspoofable_ip.match( /\d*.\d*.\d*.\d*/ )
     if( !is_ipv4 ) return false
-
 
     // Find first matching validator
     const validator = validators.find( val => val.ip == unspoofable_ip )

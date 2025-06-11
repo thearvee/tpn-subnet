@@ -6,7 +6,7 @@ const { version } = JSON.parse( await readFile( new URL( './package.json', impor
 log.info( `Starting TPN miner with version ${ version } and env`, process.env )
 
 // Initialise database
-import { init_tables } from './modules/database.js'
+import { close_pool, init_tables } from './modules/database.js'
 log.info( 'Initialising database tables' )
 await init_tables()
 log.info( 'Database tables initialised' )
@@ -28,13 +28,37 @@ app.use( '/challenge', challenge_response_router )
 import { router as wireguard_router } from './routes/wireguard.js'
 app.use( '/wireguard', wireguard_router )
 
+// Import and add protocol routes
+import { router as protocol_router } from './routes/protocol.js'
+app.use( '/protocol', protocol_router )
+
 // Start the server
 const { PORT=3001 } = process.env
 const server = app.listen( PORT, () => log.info( `Server started on port ${ PORT }` ) )
-const handle_close = () => {
-    log.info( 'Closing server' )
+
+const handle_close = async reason => {
+    log.info( 'Closing server, reason: ', reason || 'unknown' )
+    log.info( 'Shutting down gracefully...' )
     server.close()
+    await close_pool()
     process.exit( 0 )
 }
-process.on( 'SIGTERM', handle_close )
-process.on( 'SIGINT', handle_close )
+
+// Handle shutdown signals
+const shutdown_signals = [ 'SIGTERM', 'SIGINT', 'SIGQUIT' ]
+shutdown_signals.map( signal => {
+    log.info( `Listening for ${ signal } signal to shut down gracefully...` )
+    process.on( signal, async () => handle_close( signal ) )
+} )
+
+// Handle uncaught exceptions
+process.on( 'uncaughtException', async ( err ) => {
+    const now = new Date().toISOString()
+    log.error( `${ now } - Uncaught exception:`, err.message, err.stack )
+    await handle_close( 'uncaughtException' )
+} )
+process.on( 'unhandledRejection', async ( reason, promise ) => {
+    const now = new Date().toISOString()
+    log.error( `${ now } - Unhandled rejection at:`, promise, 'reason:', reason )
+    await handle_close( 'unhandledRejection' )
+} )
