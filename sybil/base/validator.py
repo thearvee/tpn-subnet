@@ -411,3 +411,5 @@ class BaseValidatorNeuron(BaseNeuron):
         # Load the state of the validator from file.
         state = np.load(self.config.neuron.full_path + "/state.npz")
         self.step = state["step"]
+        self.scores = state["scores"]
+        self.hotkeys = state["hotkeys"]
