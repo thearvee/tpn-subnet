@@ -282,6 +282,16 @@ router.post( "/:challenge/:response", async ( req, res ) => {
         log.info( `Time for miner ${ miner_uid } to solve ${ challenge }: ${ ms_to_solve } (${ solved_at })` )
         const { score, speed_score } = calculate_score( { uniqueness_score, ms_to_solve } )
 
+        // Memory cache miner uid score
+        let miner_scores = get_tpn_cache( `last_known_miner_scores`, {} )
+        const { country } = miner_ip_to_country[ unspoofable_ip ] || {}
+        if( !country ) {
+            log.warn( `[POST] No country found for miner ${ miner_uid } with IP ${ unspoofable_ip }, this indicates either a cheating miner or a misconfigured validator` )
+            return res.status( 500 ).json( { error: `No country found for miner ${ miner_uid } with IP ${ unspoofable_ip }`, score: 0, correct: false } )
+        }
+        miner_scores[ miner_uid ] = { score, timestamp: Date.now(), details, country, ip: unspoofable_ip }
+        log.info( `Saving miner ${ miner_uid } score to memory: `, miner_scores[ miner_uid ] )
+
         // Formulate and cache response
         const data = { correct, score, speed_score, uniqueness_score, country_uniqueness_score, solved_at, miner_uid }
         cache( `solution_score_${ challenge }`, data )
@@ -290,14 +300,6 @@ router.post( "/:challenge/:response", async ( req, res ) => {
         await save_challenge_response_score( { correct, challenge, score, speed_score, uniqueness_score, country_uniqueness_score, solved_at } )
         log.info( `[POST] Challenge ${ challenge } solved with score ${ score }` )
 
-        // Check that the miner_uid matches the expected ip address
-
-
-        // Memory cache miner uid score
-        let miner_scores = get_tpn_cache( `last_known_miner_scores`, {} )
-        const { country='not in cache.miner_ip_to_country' } = miner_ip_to_country[ unspoofable_ip ] || {}
-        miner_scores[ miner_uid ] = { score, timestamp: Date.now(), details, country, ip: unspoofable_ip }
-        log.info( `Saving miner ${ miner_uid } score to memory: `, miner_scores[ miner_uid ] )
 
         // Sort the scores by timestamp (latest to oldest)
         // format: { uid: { score, timestamp, details, country, ip } }
