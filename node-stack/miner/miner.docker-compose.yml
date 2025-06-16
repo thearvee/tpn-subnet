@@ -68,7 +68,7 @@ services:
     restart: unless-stopped
 
     autoheal:
-      container_name: tpn_validator_autoheal
+      container_name: tpn_miner_autoheal
       image: willfarrell/autoheal
       environment:
         - AUTOHEAL_CONTAINER_LABEL=autoheal # use service label autoheal: true to add
