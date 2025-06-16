@@ -4,10 +4,10 @@ This document details the basic concepts of the miner and validator containers, 
 
 The scoring flow is as follows:
 
-1. Validator neuron generates a challenge by calling the `/challenge/new` endpoint on the validator container
+1. Validator neuron generates a challenge by `GET`ting the `/challenge/new` endpoint on the validator container
 2. Validator neuron sends the challenge url to the miner neuron over http
-3. Miner neuron receives the solution to the challenge by opening the url that the validator provided
-4. The miner neuron sends the solution to the challenge to the validator and includes a valid wireguard configuration
+3. Miner neuron receives the solution to the challenge by `GET`ging the url that the validator provided
+4. The miner neuron `POST`s the solution to the challenge to the validator and includes a valid wireguard configuration
 5. The validator neuron validates the response by:
     1. Checking the response to the challenge and generating a node score based on geolocation, speed, etc
     2. Checking the wireguard configuration by:

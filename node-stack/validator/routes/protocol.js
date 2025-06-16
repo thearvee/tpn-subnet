@@ -63,6 +63,20 @@ router.post( "/broadcast/miners", async ( req, res ) => {
             return acc
         }, {} )
 
+        // Map ip to country into a mapping of uid to ip, and ip to uid
+        const ip_to_uid = Object.keys( ip_to_country ).reduce( ( acc, ip ) => {
+            const { country, uid } = ip_to_country[ ip ]
+            acc[ ip ] = uid
+            return acc
+        }, {} )
+
+        // Map uid to ip
+        const uid_to_ip = Object.keys( ip_to_country ).reduce( ( acc, ip ) => {
+            const { country, uid } = ip_to_country[ ip ]
+            acc[ uid ] = ip
+            return acc
+        }, {} )
+
         // Reduce the ip array to a mapping of country to count
         const country_count = country_annotated_ips.reduce( ( acc, { country } ) => {
             if( !acc[ country ] ) acc[ country ] = 1
@@ -124,6 +138,10 @@ router.post( "/broadcast/miners", async ( req, res ) => {
         cache( `miner_uids`, miner_uids )
         log.info( `Caching the country_to_uids list: `, Object.keys( country_to_uids ).length )
         cache( `miner_country_to_uids`, country_to_uids )
+        log.info( `Caching ip to uid mapping at key "miner_ip_to_uid":`, Object.keys( ip_to_uid ).length )
+        cache( `miner_ip_to_uid`, ip_to_uid )
+        log.info( `Caching uid to ip mapping at key "miner_uid_to_ip":`, Object.keys( uid_to_ip ).length )
+        cache( `miner_uid_to_ip`, uid_to_ip )
 
         // Persist cache to disk
         await save_tpn_cache_to_disk()
