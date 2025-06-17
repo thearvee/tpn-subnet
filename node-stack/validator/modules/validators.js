@@ -3,6 +3,22 @@ import { ip_from_req } from "./network.js"
 import { get_tpn_cache } from "./caching.js"
 const { CI_MODE } = process.env
 
+// This hardcoded validator list is a failover for when the neuron did not submit the latest validator ips
+const validators_fallback = [
+
+    // Live validators as on https://taostats.io/subnets/65/metagraph?order=stake%3Adesc
+    { uid: 117, ip: '34.130.136.222' },
+    { uid: 4, ip: '185.141.218.102' },
+    { uid: 47, ip: '161.35.91.172' },
+    { uid: 212, ip: '192.150.253.122' },
+    { uid: 0, ip: '185.189.44.166' },
+
+    // Testnet validators
+    { uid: null, ip: '165.232.93.107' },
+    { uid: null, ip: '159.223.6.225' }
+
+]
+
 const get_validators = async () => {
 
     // Get validators from cache
@@ -16,10 +32,18 @@ const get_validators = async () => {
         attempts++
     }
 
-    // Throw error if no validators
+    // Return fallback validators if no validators found in cache
     if( !validators?.length ) {
         log.error( `No validators found in cache` )
-        throw new Error( `No validators found in cache, this means something is wrong in the neuron` )
+        return validators_fallback
+    }
+
+    // For all validators to use, check that their ip is not 0.0.0.0, if it is override with hardcoded list above
+    for( const validator of validators ) {
+        if( validator.ip == '0.0.0.0' ) {
+            log.warn( `Validator ${ validator.uid } has ip 0.0.0.0, using hardcoded list instead` )
+            validator.ip = validators_fallback.find( val => val.uid == validator.uid )?.ip || '0.0.0.0'
+        }
     }
 
     return validators
