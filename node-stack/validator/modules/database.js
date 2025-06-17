@@ -166,7 +166,7 @@ export async function get_sma_for_miner_uid( { miner_uid, block_window=100 } ) {
 
     // If no hotkey or block is found, return 
     if( !hotkey || !block ) {
-        log.info( `No hotkey or block found for miner_uid ${ miner_uid }: `, result )
+        log.info( `No hotkey or block found for miner_uid ${ miner_uid }: `, result.rows )
         return {}
     }
 

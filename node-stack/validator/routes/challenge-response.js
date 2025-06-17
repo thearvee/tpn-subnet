@@ -20,7 +20,7 @@ router.get( "/new", async ( req, res ) => {
         if( !request_is_local( req ) ) return res.status( 403 ).json( { error: `Request not from localhost` } )
 
         // Get miner uid from get query
-        const { miner_uid='unknown' } = req.query
+        const { miner_uid } = req.query
 
         // If miner uid is not provided, warn
         if( !miner_uid ) log.warn( `No miner uid provided, this implies the neuron is misconfigured` )
@@ -119,7 +119,7 @@ router.get( "/:challenge/:response?", async ( req, res ) => {
 
         while( !scored_response && Date.now() - start  < timeout_ms ) {
 
-            log.info( `[GET] Attempt ${ attempt } at getting score for ${ challenge }` )
+            log.info( `[WHILE] [GET] Attempt ${ attempt } at getting score for ${ challenge }` )
 
             // Check for cached value
             const cached_value = cache( `solution_score_${ challenge }` )
@@ -135,6 +135,7 @@ router.get( "/:challenge/:response?", async ( req, res ) => {
             if( database_score && !scored_response?.error ) {
                 scored_response = database_score
                 cache( `solution_score_${ challenge }`, scored_response )
+                continue
             }
 
             // Wait and increment
