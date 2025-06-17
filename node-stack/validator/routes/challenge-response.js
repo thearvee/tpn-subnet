@@ -20,7 +20,7 @@ router.get( "/new", async ( req, res ) => {
         if( !request_is_local( req ) ) return res.status( 403 ).json( { error: `Request not from localhost` } )
 
         // Get miner uid from get query
-        const { miner_uid='unknown' } = req.query
+        const { miner_uid } = req.query
 
         // If miner uid is not provided, warn
         if( !miner_uid ) log.warn( `No miner uid provided, this implies the neuron is misconfigured` )
@@ -119,7 +119,7 @@ router.get( "/:challenge/:response?", async ( req, res ) => {
 
         while( !scored_response && Date.now() - start  < timeout_ms ) {
 
-            log.info( `[GET] Attempt ${ attempt } at getting score for ${ challenge }` )
+            log.info( `[WHILE] [GET] Attempt ${ attempt } at getting score for ${ challenge }` )
 
             // Check for cached value
             const cached_value = cache( `solution_score_${ challenge }` )
@@ -135,6 +135,7 @@ router.get( "/:challenge/:response?", async ( req, res ) => {
             if( database_score && !scored_response?.error ) {
                 scored_response = database_score
                 cache( `solution_score_${ challenge }`, scored_response )
+                continue
             }
 
             // Wait and increment
@@ -213,7 +214,7 @@ router.get( "/:challenge/:response?", async ( req, res ) => {
     }
 } )
 
-// Wireguard challenge response route
+// Wireguard challenge response route, called by the miner with a solution and wireguard config
 // :challenge only - return the response for the challenge
 // :challenge and :response - validate the response and return the score, expects a wireguard_config object in the request body
 router.post( "/:challenge/:response", async ( req, res ) => {
@@ -233,6 +234,20 @@ router.post( "/:challenge/:response", async ( req, res ) => {
         log.info( `[POST] [run=${ run }] ${ new Date().toString() } Challenge/response ${ challenge }/${ response } called by ${ caller }` )
         run++
 
+        // Check that the miner_uid that was provided matches the ip address we expect for it
+        const { unspoofable_ip, spoofable_ip } = ip_from_req( req )
+        const miner_uid_to_ip = get_tpn_cache( `miner_uid_to_ip`, {} )
+
+        // Find the expected ip
+        const expected_ip = miner_uid_to_ip[ miner_uid ]
+        // 🔥 Below is temp backwards compatibility, safe to refactor june 30th 2025
+        const miner_ip_to_country = get_tpn_cache( `miner_ip_to_country`, {} )
+        const _expected_ip = miner_ip_to_country[ miner_uid ]?.ip || expected_ip
+        if( _expected_ip != unspoofable_ip ) {
+            log.info( `[POST] Miner UID ${ miner_uid } does not match expected IP ${ expected_ip } vs actual ${ unspoofable_ip }` )
+            return res.status( 400 ).json( { error: `Miner UID ${ miner_uid } does not match expected IP ${ expected_ip } vs actual ${ unspoofable_ip }`, score: 0, correct: false } )
+        }
+
         // Extact wireguard config from request
         const { wireguard_config={} } = req.body || {}
         const { peer_config, peer_id, peer_slots, expires_at } = wireguard_config
@@ -249,9 +264,6 @@ router.post( "/:challenge/:response", async ( req, res ) => {
 
         // If not correct, return false
         if( !correct ) return res.json( { correct } )
-
-        // Get ip from request
-        const { unspoofable_ip, spoofable_ip } = ip_from_req( req )
 
         // Upon solution success, test the wireguard config
         const { valid: wireguard_valid, message='Unknown error validating wireguard config' } = await validate_wireguard_config( { miner_uid, peer_config, peer_id, miner_ip: unspoofable_ip } )
@@ -271,6 +283,16 @@ router.post( "/:challenge/:response", async ( req, res ) => {
         log.info( `Time for miner ${ miner_uid } to solve ${ challenge }: ${ ms_to_solve } (${ solved_at })` )
         const { score, speed_score } = calculate_score( { uniqueness_score, ms_to_solve } )
 
+        // Memory cache miner uid score
+        let miner_scores = get_tpn_cache( `last_known_miner_scores`, {} )
+        const { country } = miner_ip_to_country[ unspoofable_ip ] || {}
+        if( !country ) {
+            log.warn( `[POST] No country found for miner ${ miner_uid } with IP ${ unspoofable_ip }, this indicates either a cheating miner or a misconfigured validator` )
+            return res.status( 500 ).json( { error: `No country found for miner ${ miner_uid } with IP ${ unspoofable_ip }`, score: 0, correct: false } )
+        }
+        miner_scores[ miner_uid ] = { score, timestamp: Date.now(), details, country, ip: unspoofable_ip }
+        log.info( `Saving miner ${ miner_uid } score to memory: `, miner_scores[ miner_uid ] )
+
         // Formulate and cache response
         const data = { correct, score, speed_score, uniqueness_score, country_uniqueness_score, solved_at, miner_uid }
         cache( `solution_score_${ challenge }`, data )
@@ -279,12 +301,6 @@ router.post( "/:challenge/:response", async ( req, res ) => {
         await save_challenge_response_score( { correct, challenge, score, speed_score, uniqueness_score, country_uniqueness_score, solved_at } )
         log.info( `[POST] Challenge ${ challenge } solved with score ${ score }` )
 
-        // Memory cache miner uid score
-        let miner_scores = get_tpn_cache( `last_known_miner_scores`, {} )
-        const miner_ip_to_country = get_tpn_cache( `miner_ip_to_country`, {} )
-        const { country='not in cache.miner_ip_to_country' } = miner_ip_to_country[ unspoofable_ip ] || {}
-        miner_scores[ miner_uid ] = { score, timestamp: Date.now(), details, country, ip: unspoofable_ip }
-        log.info( `Saving miner ${ miner_uid } score to memory: `, miner_scores[ miner_uid ] )
 
         // Sort the scores by timestamp (latest to oldest)
         // format: { uid: { score, timestamp, details, country, ip } }

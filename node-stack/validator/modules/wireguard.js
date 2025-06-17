@@ -44,7 +44,7 @@ export async function wait_for_ip_free( { ip_address, timeout_s=test_timeout_sec
     const timeout = timeout_s * 1000
     const interval = 5000
     while( ip_taken && waited_for < timeout ) {
-        log.info( log_tag, `IP address ${ ip_address } is in use, waiting ${ interval / 1000 }s (waited for ${ waited_for / 1000 }s) for it to become free...` )
+        log.info( log_tag, `[WHILE] IP address ${ ip_address } is in use, waiting ${ interval / 1000 }s (waited for ${ waited_for / 1000 }s) for it to become free...` )
         await wait( interval )
         waited_for += interval
 
@@ -210,8 +210,10 @@ export async function validate_wireguard_config( { miner_uid, peer_config, peer_
     let namespace_id_in_use = cache( `namespace_id_in_use_${ namespace_id }` )
     let veth_subnet_prefix_in_use = cache( `veth_subnet_prefix_in_use_${ veth_subnet_prefix }` )
     let attempts = 1
-    const max_attempts = 500
+    const max_attempts = 60
     while( interface_id_in_use || veth_id_in_use || namespace_id_in_use || veth_subnet_prefix_in_use ) {
+
+        log.info( `[WHILE] Checking for free interfaces, veth, namespace, subnet prefix` )
 
         // If we have exceeded the max attempts, something is very wrong, error
         if( attempts > max_attempts ) {
@@ -275,7 +277,9 @@ export async function validate_wireguard_config( { miner_uid, peer_config, peer_
         } )
 
         // Add a tiny delay to prevent possible OOM when this logic fails for some reason
-        await wait( attempts * 10 )
+        const wait_time = attempts * 1000
+        log.info( `${ log_tag } Waiting ${ wait_time }ms before next attempt to generate unique ids for peer ${ peer_id }` )
+        await wait( wait_time )
         attempts++
 
     }

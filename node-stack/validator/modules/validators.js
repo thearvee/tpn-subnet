@@ -10,7 +10,8 @@ const get_validators = async () => {
     let attempts = 0
 
     while( !validators?.length && attempts < 5 ) {
-        await wait( 5000 )
+        log.info( `[ WHILE ] No validators found in cache, waiting 5 seconds and retrying...` )
+        await wait( 5_000 )
         validators = get_tpn_cache( 'last_known_validators' )
         attempts++
     }

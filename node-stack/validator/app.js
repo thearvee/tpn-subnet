@@ -25,7 +25,7 @@ log.info( 'Database initialized' )
 // Update maxmind
 import { update_maxmind } from './modules/update-maxmind.js'
 log.info( 'Updating MaxMind database' )
-if( !CI_MODE ) await update_maxmind().catch( e => log.error( e ) )
+if( !CI_MODE ) await update_maxmind().catch( e => log.error( `Error updating maxmind in root:`,  e ) )
 log.info( `Updating MaxMind database every ${ update_interval_ms / 1000 / 60 / 60 } hours` )
 setInterval( update_maxmind, update_interval_ms )
 

@@ -15,6 +15,9 @@ const pool = new Pool( {
     port: POSTGRES_PORT
 } )
 
+// Helper function to close the pool
+export const close_pool = async () => pool.end().then( () => log.info( 'Postgres pool closed' ) ).catch( e => log.error( 'Error closing Postgres pool:', e ) )
+
 export async function init_tables() {
 
     // In dev, delete old table

@@ -34,6 +34,12 @@ const cache_persistence_path = `${ cache_dir }/.tpn_cache.json`
  *
  * - `"miner_uids"`: `String[]`  
  *   List of all known miner UIDs.
+ * 
+ * - `"miner_uid_to_ip"`: `{ String: String }`
+ *  Map of miner UIDs to their IP addresses.
+ * 
+ * - `"miner_ip_to_uid"`: `{ String: String }`
+ * Map of miner IP addresses to their UIDs.
  *
  * - `"last_known_miner_scores"`:  
  *   `{ String: { score: Number, timestamp: Number, details: any, country: String, ip: String } }`  
@@ -95,7 +101,9 @@ export function get_complete_tpn_cache() {
         'miner_country_name_to_code',
         'miner_uids',
         'last_known_miner_scores',
-        'last_known_validators'
+        'last_known_validators',
+        'miner_uid_to_ip',
+        'miner_ip_to_uid',
     ]
 
     // Get all cache values
