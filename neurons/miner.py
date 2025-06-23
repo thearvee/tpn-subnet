@@ -175,11 +175,54 @@ class Miner(BaseMinerNeuron):
             f"Prioritizing {synapse.dendrite.hotkey} with value: {priority}"
         )
         return priority
+    
+    async def broadcast_validators(self):
+        """
+        Broadcast the validators to the validator server.
+        """
+        bt.logging.info(f"Broadcasting validators to {self.miner_server}/protocol/broadcast/validators")
+        validators_info = []
+        for uid in range(self.metagraph.n.item()):
+            if self.metagraph.validator_permit[uid]:
+                validators_info.append({
+                    "uid": uid,
+                    "ip": self.metagraph.axons[uid].ip,
+                    "stake": float(self.metagraph.S[uid].item()),
+                })
+        bt.logging.info(f"Submitting validators info: {len(validators_info)} validators")
+        try:     
+            async with aiohttp.ClientSession() as session:
+                async with session.post(
+                    f"{self.miner_server}/protocol/broadcast/validators",
+                    json={"validators": validators_info}
+                ) as resp:
+                    result = await resp.json()
+                    if result["success"]:
+                        bt.logging.info(f"Broadcasted validators info: {len(validators_info)} validators")
+                    else:
+                        bt.logging.error(f"Failed to broadcast validators info")
+        except Exception as e:
+            bt.logging.error(f"Failed to broadcast miners or validators info: {e}")
 
 
 # This is the main function, which runs the miner.
 if __name__ == "__main__":
     with Miner() as miner:
+        # Create event loop if not already running
+        try:
+            loop = asyncio.get_event_loop()
+        except RuntimeError:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+
+        async def periodic_broadcast():
+            while True:
+                await miner.broadcast_validators()
+                await asyncio.sleep(1800)  # 30 minutes between broadcasts
+
+        # Run the periodic broadcast in the background
+        loop.run_until_complete(periodic_broadcast())
+        
         while True:
             bt.logging.info(f"Miner running... {time.time()}")
             time.sleep(20)
