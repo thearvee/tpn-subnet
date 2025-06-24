@@ -244,13 +244,17 @@ router.post( "/:challenge/:response", async ( req, res ) => {
         // Get the expected miner uid
         const { unspoofable_ip, spoofable_ip } = ip_from_req( req )
         const miner_ip_to_uid = get_tpn_cache( `miner_ip_to_uid`, {} )
-        const miner_uid = miner_ip_to_uid[ unspoofable_ip ]
+        let miner_uid = miner_ip_to_uid[ unspoofable_ip ]
 
         // Edge case: cache is not populated yet
         const miner_ip_to_uid_cache_empty = Object.keys( miner_ip_to_uid ).length === 0
+        if( miner_ip_to_uid_cache_empty ) {
+            miner_uid = claimed_miner_uid
+            log.warn( `[POST] [ cheater ] Miner IP to UID cache is empty, using claimed miner uid ${ claimed_miner_uid }` )
+        }
 
         // If the claimed miner uid does not match the expected one, return an error
-        if( !miner_ip_to_uid_cache_empty && claimed_miner_uid != miner_uid ) {
+        if( claimed_miner_uid != miner_uid ) {
             log.info( `[POST] [ cheater ] Miner UID ${ claimed_miner_uid } does not match expected ${ miner_uid }` )
             return res.status( 400 ).json( { error: `Miner UID ${ claimed_miner_uid } does not match expected ${ miner_uid }`, score: 0, correct: false } )
         }
