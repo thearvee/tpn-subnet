@@ -184,7 +184,7 @@ export async function validate_wireguard_config( { miner_uid, peer_config, peer_
     // const { CI_MODE, CI_IP, PUBLIC_VALIDATOR_URL } = process.env
     // let [ ci_ip ] = CI_IP.split( '\n' ).filter( ip => ip.trim() ) || []
     // const base_url = CI_MODE ? `http://${ ci_ip }:3000` : PUBLIC_VALIDATOR_URL
-    const challenge = await generate_challenge()
+    const challenge = await generate_challenge( { miner_uid }  )
     const challenge_url = `${ base_url }/challenge/${ challenge }`
 
     // The peer_config in CI mode uses SERVERURL=miner, we should resolve that within this container because namespaces cannot use the docker DNS resolver
