@@ -22,8 +22,9 @@ router.get( "/new", async ( req, res ) => {
         // Get miner uid from get query
         const { miner_uid } = req.query
 
-        // If miner uid is not provided, warn
-        if( !miner_uid ) log.warn( `No miner uid provided, this implies the neuron is misconfigured` )
+        // If miner uid is not \d+ format, log warning
+        if( miner_uid && !/^\d+$/.test( miner_uid ) ) log.warn( `Miner uid is not a number, this implies the neuron is misconfigured: `, { miner_uid } )
+        if( !miner_uid ) log.warn( `No miner uid provided, this implies the neuron is misconfigured: `, { miner_uid } )
 
         // Generate a new challenge
         const challenge = await generate_challenge( { miner_uid } )
