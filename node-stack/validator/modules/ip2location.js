@@ -172,9 +172,12 @@ async function download_url_to_file( url, path ) {
         
         // Handle download failure
         download.on( 'error', error => {
-            fs.unlink( path )
-            log.error( `Error downloading the file ${ path }`, error )
-            reject( error )
+            fs.unlink( path, err => {
+                if( !err ) return
+                log.error( `Error downloading the file ${ path }`, error )
+                reject( error )
+            } )
+            
         } )
     } )
 
