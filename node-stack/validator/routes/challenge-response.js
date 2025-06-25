@@ -52,7 +52,7 @@ const calculate_score = ( { uniqueness_score, ms_to_solve } ) => {
 
     // Score based on delay, with a grace period, and a punishment per ms above it
     const s_to_solve = ms_to_solve / 1000
-    const grace_secs = 45
+    const grace_secs = 120
     const penalty = Math.min( 100, 1.1 ** ( grace_secs - s_to_solve ) )
     const speed_score = Math.sqrt( 100 - penalty )
     
