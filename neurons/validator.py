@@ -112,7 +112,7 @@ def check_validator_server(validator_server_url) -> bool:
     
 # The main function parses the configuration and runs the validator.
 if __name__ == "__main__":
-    validator = Valdiator()
+    validator = Validator()
     
     while not check_validator_server(validator.validator_server_url):
         bt.logging.info("Validator server is not running, waiting 10 seconds")
