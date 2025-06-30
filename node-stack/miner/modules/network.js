@@ -12,6 +12,7 @@ export function ip_from_req( request ) {
 
     // If unspoofable ip is a ipv6 address with a v4-mapped prefix, remove it
     unspoofable_ip = unspoofable_ip?.replace( '::ffff:', '' )
+    spoofable_ip = spoofable_ip?.replace( '::ffff:', '' )
     
     return { unspoofable_ip, spoofable_ip }
 }

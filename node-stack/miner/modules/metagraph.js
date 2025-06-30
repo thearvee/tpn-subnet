@@ -23,13 +23,22 @@ export function validator_count() {
     return validator_ips().length
 }
 
+/**
+ * Get valid validator IPs.
+ *
+ * Retrieves validators from cache or uses fallback.
+ * If an IP is '0.0.0.0', it replaces it with the fallback value.
+ * Returns an array of valid IP addresses.
+ *
+ * @returns {string[]} Valid IP addresses.
+ */
 export function validator_ips() {
 
     // Check if validators are in cache, use it if so and fall back to hardcoded list if not
     const cached_validators = cache( 'last_known_validators' )
     const validators_to_use = cached_validators || validators_fallback
 
-    // For all validators to use, check that their ip is not 0.0.0.0, if it is overrise with hardcoded list above
+    // For all validators to use, check that their ip is not 0.0.0.0, if it is override with hardcoded list above
     for( const validator of validators_to_use ) {
         if( validator.ip == '0.0.0.0' ) {
             log.warn( `Validator ${ validator.uid } has ip 0.0.0.0, using hardcoded list instead` )
@@ -37,11 +46,19 @@ export function validator_ips() {
         }
     }
     
-    // Remove testnet validators aand 0.0.0.0 entries
+    // Remove testnet validators and 0.0.0.0 entries
     const ips = validators_to_use.filter( ( { uid, ip } ) => uid !== null && ip != '0.0.0.0' ).map( ( { ip } ) => ip )
     return ips
 }
 
+/**
+ * Check if the request comes from a validator.
+ *
+ * Returns a mock validator in CI mode, or verifies the request's IP against known validators.
+ *
+ * @param {Object} request - The request object.
+ * @returns {(Object|boolean)} - Validator object if matched, otherwise false.
+ */
 export function is_validator( request ) {
 
     // In CI mode, bypass this check
@@ -59,8 +76,8 @@ export function is_validator( request ) {
     if( !is_ipv4 ) return false
 
     // Find first matching validator
-    const validator = validator_ips().find( ( { ip } ) => ip === unspoofable_ip )
+    const validator = validator_ips().find( ip => ip === unspoofable_ip )
 
-    return validator
+    return validator || false
 
 }
