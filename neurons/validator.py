@@ -45,9 +45,8 @@ class Validator(BaseValidatorNeuron):
 
     def __init__(self, config=None):
         super(Validator, self).__init__(config=config)
-
-        bt.logging.info("load_state()")
-        self.load_state()
+        
+        bt.logging.info(f"===> Validator initialized: {self.step}, {len(self.scores)}, {len(self.hotkeys)}")
 
         self.wandb_run_start = None
         if not self.config.wandb.off:

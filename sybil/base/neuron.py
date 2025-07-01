@@ -91,10 +91,13 @@ class BaseNeuron(ABC):
             self.wallet = bt.wallet(config=self.config)
             self.subtensor = bt.subtensor(config=self.config)
             self.metagraph = self.subtensor.metagraph(self.config.netuid)
-
+        
         bt.logging.info(f"Wallet: {self.wallet}")
         bt.logging.info(f"Subtensor: {self.subtensor}")
         bt.logging.info(f"Metagraph: {self.metagraph}")
+
+        self.init_state()
+        bt.logging.info(f"===> Initialized state: {self.step}, {len(self.scores)}, {len(self.hotkeys)}")
         
         self.validator_server_url = self.config.validator_server_url
 
@@ -108,7 +111,6 @@ class BaseNeuron(ABC):
         bt.logging.info(
             f"Running neuron on subnet: {self.config.netuid} with uid {self.uid} using network: {self.subtensor.chain_endpoint}"
         )
-        self.step = 0
 
     @abstractmethod
     async def forward(self, synapse: bt.Synapse) -> bt.Synapse:
@@ -118,7 +120,7 @@ class BaseNeuron(ABC):
     def run(self):
         ...
 
-    def sync(self, save_state: bool = True):
+    def sync(self):
         """
         Wrapper for synchronizing the state of the network for the given miner or validator.
         """
@@ -132,8 +134,7 @@ class BaseNeuron(ABC):
             self.set_weights()
 
         # Always save state.
-        if save_state:
-            self.save_state()
+        self.save_state()
 
     def check_registered(self):
         # --- Check for registration.

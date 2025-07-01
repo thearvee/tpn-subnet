@@ -25,6 +25,7 @@ import argparse
 import threading
 import bittensor as bt
 import requests
+import os
 
 from typing import List, Union
 from traceback import print_exception
@@ -63,12 +64,9 @@ class BaseValidatorNeuron(BaseNeuron):
             self.dendrite = bt.dendrite(wallet=self.wallet)
         bt.logging.info(f"Dendrite: {self.dendrite}")
 
-        # Set up initial scoring weights for validation
-        bt.logging.info("Building validation weights.")
-        self.scores = np.zeros(self.metagraph.n, dtype=np.float32)
-
         # Init sync with the network. Updates the metagraph.
-        self.sync(save_state=False)
+        self.resync_metagraph()
+        bt.logging.info(f"===> Resynced metagraph: {self.step}, {len(self.scores)}, {len(self.hotkeys)}")
 
         # # Serve axon to enable external connections.
         # if not self.config.neuron.axon_off:
@@ -297,10 +295,6 @@ class BaseValidatorNeuron(BaseNeuron):
         # Sync the metagraph.
         self.metagraph.sync(subtensor=self.subtensor)
 
-        # Check if the metagraph axon info has changed.
-        if previous_metagraph.axons == self.metagraph.axons:
-            return
-
         bt.logging.info(
             "Metagraph updated, re-syncing hotkeys, dendrite pool and moving averages"
         )
@@ -311,7 +305,7 @@ class BaseValidatorNeuron(BaseNeuron):
 
         # Check to see if the metagraph has changed size.
         # If so, we need to add new hotkeys and moving averages.
-        if len(self.hotkeys) < len(self.metagraph.hotkeys):
+        if len(self.hotkeys) < len(self.metagraph.hotkeys) or len(self.scores) < len(self.metagraph.hotkeys):
             # Update the size of the moving average scores.
             new_moving_average = np.zeros((self.metagraph.n))
             min_len = min(len(self.hotkeys), len(self.scores))
@@ -320,6 +314,10 @@ class BaseValidatorNeuron(BaseNeuron):
 
         # Update the hotkeys.
         self.hotkeys = copy.deepcopy(self.metagraph.hotkeys)
+        
+        # Check if the metagraph axon info has changed.
+        if previous_metagraph.axons == self.metagraph.axons:
+            return
         
         # Get balances from the database
         neurons: List[bt.NeuronInfo] = self.metagraph.neurons
@@ -381,6 +379,14 @@ class BaseValidatorNeuron(BaseNeuron):
         # Compute forward pass rewards, assumes uids are mutually exclusive.
         # shape: [ metagraph.n ]
         scattered_rewards: np.ndarray = np.zeros_like(self.scores)
+
+        bt.logging.info(f"Scores: {len(self.scores)}")
+        bt.logging.info(f"Scattered rewards: {len(scattered_rewards)}")
+        bt.logging.info(f"Uids array: {len(uids_array)}")
+        bt.logging.info(f"Rewards: {len(rewards)}")
+        
+        bt.logging.info(f"Uids array: {uids_array}")
+
         scattered_rewards[uids_array] = rewards
         bt.logging.debug(f"Scattered rewards: {rewards}")
 
@@ -413,3 +419,14 @@ class BaseValidatorNeuron(BaseNeuron):
         self.step = state["step"]
         self.scores = state["scores"]
         self.hotkeys = state["hotkeys"]
+        
+    def init_state(self):
+        if os.path.exists(self.config.neuron.full_path + "/state.npz"):
+            state = np.load(self.config.neuron.full_path + "/state.npz")
+            self.step = state["step"]
+            self.scores = state["scores"]
+            self.hotkeys = state["hotkeys"]
+        else:
+            self.step = 0
+            self.scores = np.zeros(1, dtype=np.float32)
+            self.hotkeys = []
