@@ -2,9 +2,11 @@
 import 'dotenv/config'
 import { log } from 'mentie'
 import { readFile } from 'fs/promises'
+import { get_git_branch_and_hash } from './modules/metagraph.js'
 const { version } = JSON.parse( await readFile( new URL( './package.json', import.meta.url ) ) )
-log.info( `Starting TPN miner with version ${ version } and env`, process.env )
+const { branch, hash } = await get_git_branch_and_hash()
 const last_start = new Date().toISOString()
+log.info( `${ last_start } - Starting TPN miner component version ${ version } (${ branch }/${ hash })` )
 
 // Initialise database
 import { close_pool, init_tables } from './modules/database.js'
@@ -22,7 +24,9 @@ app.get( '/', ( req, res ) => {
         notice: `I am a TPN Network miner component running v${ version }`,
         info: 'https://tpn.taofu.xyz/',
         version,
-        last_start
+        last_start,
+        branch,
+        hash
     } )
 } )
 
