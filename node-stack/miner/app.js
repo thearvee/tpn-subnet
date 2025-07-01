@@ -4,6 +4,7 @@ import { log } from 'mentie'
 import { readFile } from 'fs/promises'
 const { version } = JSON.parse( await readFile( new URL( './package.json', import.meta.url ) ) )
 log.info( `Starting TPN miner with version ${ version } and env`, process.env )
+const last_start = new Date().toISOString()
 
 // Initialise database
 import { close_pool, init_tables } from './modules/database.js'
@@ -17,7 +18,12 @@ log.info( `Setting up routes` )
 
 // Identify self on /
 app.get( '/', ( req, res ) => {
-    res.send( `I am a TPN Network miner component running v${ version }` )
+    return res.json( {
+        notice: `I am a TPN Network miner component running v${ version }`,
+        info: 'https://tpn.taofu.xyz/',
+        version,
+        last_start
+    } )
 } )
 
 // Import challenge/response router
