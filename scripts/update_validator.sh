@@ -74,10 +74,21 @@ else
     echo "Autoupdate disabled, skipping crontab check."
 fi
 
+# If we are on development branch, git stash before pulling
+if [ "$(git -C "$TPN_DIR" rev-parse --abbrev-ref HEAD)" = "development" ]; then
+    echo "On development branch, stashing changes before pulling."
+    git stash
+fi 
 
 # Update the TPN repository
 cd "$TPN_DIR" || exit 1
 git pull 2>&1 | tee /dev/stderr | grep -c "Already up to date."; REPO_UP_TO_DATE=$?
+
+# On dev branch, pop the stash if it was created
+if [ "$(git -C "$TPN_DIR" rev-parse --abbrev-ref HEAD)" = "development" ] && [ -n "$(git stash list)" ]; then
+    echo "Popping stash after pull on development branch."
+    git stash pop
+fi
 
 # If force_restart flag is true, pretend repo is not up to date
 if [ "$FORCE_RESTART" = "true" ]; then
