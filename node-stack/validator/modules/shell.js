@@ -91,3 +91,28 @@ export async function check_system_warnings() {
     }
 
 }
+
+/**
+ * Get current Git branch and short commit hash.
+ * @returns {Promise<{ branch: string, hash: string }>} An object containing the branch name and short commit hash.
+ */
+export async function get_git_branch_and_hash() {
+    try {
+        const branch = await new Promise( ( resolve, reject ) => {
+            exec( 'git rev-parse --abbrev-ref HEAD', ( error, stdout ) => {
+                if( error ) return reject( error )
+                resolve( stdout.trim() )
+            } )
+        } )
+        const hash = await new Promise( ( resolve, reject ) => {
+            exec( 'git rev-parse --short HEAD', ( error, stdout ) => {
+                if( error ) return reject( error )
+                resolve( stdout.trim() )
+            } )
+        } )
+        return { branch, hash }
+    } catch ( e ) {
+        log.error( `Failed to get git branch and hash: ${ e.message }` )
+        return { branch: 'unknown', hash: 'unknown' }
+    }
+}
