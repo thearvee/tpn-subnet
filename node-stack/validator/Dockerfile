@@ -30,6 +30,7 @@ RUN dpkg --configure resolvconf
 
 # Install git
 RUN apt update && apt install -y git
+RUN git config --global --add safe.directory /app
 
 # Memory default
 ENV VALIDATOR_MAX_PROCESS_RAM_MB=8192
