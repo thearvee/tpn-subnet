@@ -39,6 +39,7 @@ services:
       - maxmind_data:/app/node_modules/geoip-lite/data
       - ip2location_data:/app/ip2location_data
       - validator_cache:/app/cache
+      - ../../.git:/app/.git:ro
     networks:
       - tpn_network
     labels:
