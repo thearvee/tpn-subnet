@@ -196,3 +196,6 @@ class BaseMinerNeuron(BaseNeuron):
 
         # Sync the metagraph.
         self.metagraph.sync(subtensor=self.subtensor)
+        
+    def init_state(self):
+        self.step = 0
