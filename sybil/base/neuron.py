@@ -97,7 +97,6 @@ class BaseNeuron(ABC):
         bt.logging.info(f"Metagraph: {self.metagraph}")
 
         self.init_state()
-        bt.logging.info(f"===> Initialized state: {self.step}, {len(self.scores)}, {len(self.hotkeys)}")
         
         self.validator_server_url = self.config.validator_server_url
 
