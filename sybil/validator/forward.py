@@ -41,16 +41,16 @@ async def forward(self):
     miners_info = []
     validators_info = []
     for uid in range(self.metagraph.n.item()):
-        if self.metagraph.axons[uid].is_serving:
-            miners_info.append({
-                "uid": uid,
-                "ip": self.metagraph.axons[uid].ip,
-            })
-        elif self.metagraph.validator_permit[uid]:
+        if self.metagraph.validator_permit[uid]:
             validators_info.append({
                 "uid": uid,
                 "ip": self.metagraph.axons[uid].ip,
                 "stake": float(self.metagraph.S[uid].item()),
+            })
+        elif self.metagraph.axons[uid].is_serving:
+            miners_info.append({
+                "uid": uid,
+                "ip": self.metagraph.axons[uid].ip,
             })
     try:
         async with aiohttp.ClientSession() as session:
