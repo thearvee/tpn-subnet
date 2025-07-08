@@ -228,6 +228,7 @@ router.post( "/:challenge/:response", async ( req, res ) => {
         // Extract challenge and response from request
         const { miner_uid: claimed_miner_uid } = req.query
         const { challenge, response } = req.params
+        const warnings = []
         const caller = request_is_local( req ) ? 'validator' : 'miner'
         if( !challenge || !response ) return res.status( 400 ).json( { error: 'Missing challenge or response' } )
 
@@ -245,6 +246,24 @@ router.post( "/:challenge/:response", async ( req, res ) => {
         const { unspoofable_ip, spoofable_ip } = ip_from_req( req )
         const miner_ip_to_uid = get_tpn_cache( `miner_ip_to_uid`, {} )
         let miner_uid = miner_ip_to_uid[ unspoofable_ip ]
+
+
+        // Check that the miner version is up to date
+        const miner_metadata = await fetch( `http://${ unspoofable_ip }/` ).then( res => res.json() ).catch( e => ( { error: e.message } ) )
+        const minimum_version = [ '0', '0', '31' ]
+        if( miner_metadata.error ) {
+            log.warn( `[POST] [ cheater ] Miner metadata fetch failed for ${ unspoofable_ip }: `, miner_metadata.error )
+            return res.status( 500 ).json( { error: `Miner metadata fetch failed for ${ unspoofable_ip }, this usually means an out of date miner. Error: ${ miner_metadata.error }`, score: 0, correct: false } )  
+        }
+        const { version='', branch='unknown', commit='unknown' } = miner_metadata
+        const miner_version = version.split( '.' )
+        const is_miner_version_valid = minimum_version.every( ( value, index ) => ( miner_version[index] || '0' ) >= value )
+        if( !is_miner_version_valid ) {
+            log.warn( `[POST] [ cheater ] Miner version ${ miner_metadata.version } is not up to date, minimum version is ${ minimum_version.join( '.' ) }` )
+            return res.status( 400 ).json( { error: `Miner version ${ miner_metadata.version } is not up to date, minimum version is ${ minimum_version.join( '.' ) }`, score: 0, correct: false } )
+        }
+        if( branch != 'main' ) warnings.push( `Miner branch is ${ branch }, this is not the main branch. This will be punished soon.` )
+        if( commit == 'unknown' ) warnings.push( `Miner commit is ${ commit }, this means your miner is misconfigured. This will be punished soon.` )
 
         // Edge case: cache is not populated yet
         const miner_ip_to_uid_cache_empty = Object.keys( miner_ip_to_uid ).length === 0
@@ -309,7 +328,7 @@ router.post( "/:challenge/:response", async ( req, res ) => {
         log.info( `Saving miner ${ miner_uid } score to memory: `, miner_scores[ miner_uid ] )
 
         // Formulate and cache response
-        const data = { correct, score, speed_score, uniqueness_score, country_uniqueness_score, solved_at, miner_uid }
+        const data = { correct, score, speed_score, uniqueness_score, country_uniqueness_score, solved_at, miner_uid, warnings }
         cache( `solution_score_${ challenge }`, data )
         
         // Save score to database
