@@ -40,16 +40,18 @@ export function validator_ips() {
     const validators_to_use = cached_validators || validators_fallback
 
     // For all validators to use, check that their ip is not 0.0.0.0, if it is override with hardcoded list above
-    for( const validator of validators_to_use ) {
+    const sane_validators = validators_to_use.map( ( { ip, uid } ) => {
+        let validator = { ip, uid }
         if( validator.ip == '0.0.0.0' ) {
             log.warn( `Validator ${ validator.uid } has ip 0.0.0.0, using hardcoded list instead` )
             validator.ip = validators_fallback.find( val => val.uid == validator.uid )?.ip || '0.0.0.0'
         }
-    }
+        return validator
+    } )
     
     // Remove testnet validators and 0.0.0.0 entries
-    const ips = validators_to_use.filter( ( { uid, ip } ) => uid !== null && ip != '0.0.0.0' ).map( ( { ip } ) => ip )
-    return ips
+    const validator_ips = sane_validators.filter( ( { uid, ip } ) => uid !== null && ip != '0.0.0.0' ).map( ( { ip } ) => ip )
+    return validator_ips
 }
 
 /**
