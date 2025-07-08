@@ -30,13 +30,17 @@ router.get( '/new', async ( req, res ) => {
         // Check if properties are valid
         if( !geo || !lease_minutes ) return res.status( 400 ).json( { error: 'Missing geo or lease_minutes' } )
 
+        // Convert lease_minutes to number and validate
+        const lease_minutes_num = parseFloat( lease_minutes )
+        if( isNaN( lease_minutes_num ) ) return res.status( 400 ).json( { error: 'lease_minutes must be a valid number' } )
+
         // Lease must be between 5 and 60 minutes
         const lease_min = CI_MODE ? .1 : .5
         const lease_max = 60
-        if( lease_min > lease_minutes || lease_minutes > lease_max ) return res.status( 400 ).json( { error: `Lease must be between ${ lease_min } and ${ lease_max } minutes` } )
+        if( lease_min > lease_minutes_num || lease_minutes_num > lease_max ) return res.status( 400 ).json( { error: `Lease must be between ${ lease_min } and ${ lease_max } minutes` } )
         
         // Get a valid WireGuard configuration, note: this endpoint should never receive the validator-dedicated files (used for challenge-response), so we are NOT setting the validator property
-        const { peer_config, peer_id, peer_slots, expires_at } = await get_valid_wireguard_config( { validator: null, lease_minutes } )
+        const { peer_config, peer_id, peer_slots, expires_at } = await get_valid_wireguard_config( { validator: null, lease_minutes: lease_minutes_num } )
 
         return res.json( { peer_slots, peer_config, peer_id, expires_at } )
 
@@ -44,7 +48,6 @@ router.get( '/new', async ( req, res ) => {
 
     try {
 
-        const { CI_MODE } = process.env
         const retry_times = CI_MODE ? 1 : 2
         const retryable_handler = await make_retryable( handle_route, { retry_times, cooldown_in_s: 2, cooldown_entropy: true } )
         return retryable_handler()

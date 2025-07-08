@@ -2,14 +2,15 @@
 import 'dotenv/config'
 const { CI_MODE } = process.env
 import { cache, log } from 'mentie'
+import { get_git_branch_and_hash, check_system_warnings } from './modules/shell.js'
 const update_interval_ms = 1000 * 60 * 60 * 24 // 24 hours
 import { readFile } from 'fs/promises'
 const { version } = JSON.parse( await readFile( new URL( './package.json', import.meta.url ) ) )
-const now = new Date().toISOString()
-log.info( `${ now } - Starting Sybil Network validator component version ${ version }` )
+const { branch, hash } = await get_git_branch_and_hash()
+const last_start = new Date().toISOString()
+log.info( `${ last_start } - Starting TPN validator component version ${ version } (${ branch }/${ hash })` )
 
 // Check system resources
-import { check_system_warnings } from './modules/shell.js'
 await check_system_warnings()
 
 // Load the last cache backup from disk
@@ -46,7 +47,14 @@ import { app } from './routes/server.js'
 
 // Root route responds with identity
 app.get( '/', ( req, res ) => {
-    res.send( `I am a TPN Network validator component running v${ version }` )
+    return res.json( {
+        notice: `I am a TPN Network validator component running v${ version }`,
+        info: 'https://tpn.taofu.xyz/',
+        version,
+        last_start,
+        branch,
+        hash
+    } )
 } )
 
 // Import and add scoring routes. This is a debugging route that is not actually used by the neurons

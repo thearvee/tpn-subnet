@@ -21,6 +21,7 @@
 import os
 import time
 import datetime
+import requests
 
 # Bittensor
 import bittensor as bt
@@ -44,9 +45,8 @@ class Validator(BaseValidatorNeuron):
 
     def __init__(self, config=None):
         super(Validator, self).__init__(config=config)
-
-        bt.logging.info("load_state()")
-        self.load_state()
+        
+        bt.logging.info(f"===> Validator initialized: {self.step}, {len(self.scores)}, {len(self.hotkeys)}")
 
         self.wandb_run_start = None
         if not self.config.wandb.off:
@@ -97,10 +97,32 @@ class Validator(BaseValidatorNeuron):
         # TODO(developer): Rewrite this function based on your protocol definition.
         return await forward(self)
 
-
+def check_validator_server(validator_server_url) -> bool:
+    try:
+        with requests.get(f"{validator_server_url}/") as resp:
+            if resp.ok:
+                bt.logging.info("Validator server is running")
+            else:
+                bt.logging.error(f"Validator server returned error: {resp.status_code}")
+                return False
+        return True
+    except Exception as e:
+        bt.logging.error(f"Failed to connect to validator server: {e}")
+        return False
+    
 # The main function parses the configuration and runs the validator.
 if __name__ == "__main__":
-    with Validator() as validator:
+    validator = Validator()
+    
+    while not check_validator_server(validator.validator_server_url):
+        bt.logging.info("Validator server is not running, waiting 10 seconds")
+        time.sleep(10)
+    
+    with validator:
         while True:
+            if not check_validator_server(validator.validator_server_url):
+                bt.logging.error("Validator server is not running, exiting")
+                exit(1)
+                
             bt.logging.info(f"Validator running... {time.time()}")
-            time.sleep(5)
+            time.sleep(10)

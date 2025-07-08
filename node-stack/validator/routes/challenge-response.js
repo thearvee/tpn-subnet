@@ -52,7 +52,7 @@ const calculate_score = ( { uniqueness_score, ms_to_solve } ) => {
 
     // Score based on delay, with a grace period, and a punishment per ms above it
     const s_to_solve = ms_to_solve / 1000
-    const grace_secs = 45
+    const grace_secs = 120
     const penalty = Math.min( 100, 1.1 ** ( grace_secs - s_to_solve ) )
     const speed_score = Math.sqrt( 100 - penalty )
     
@@ -244,7 +244,14 @@ router.post( "/:challenge/:response", async ( req, res ) => {
         // Get the expected miner uid
         const { unspoofable_ip, spoofable_ip } = ip_from_req( req )
         const miner_ip_to_uid = get_tpn_cache( `miner_ip_to_uid`, {} )
-        const miner_uid = miner_ip_to_uid[ unspoofable_ip ]
+        let miner_uid = miner_ip_to_uid[ unspoofable_ip ]
+
+        // Edge case: cache is not populated yet
+        const miner_ip_to_uid_cache_empty = Object.keys( miner_ip_to_uid ).length === 0
+        if( miner_ip_to_uid_cache_empty ) {
+            miner_uid = claimed_miner_uid
+            log.warn( `[POST] [ cheater ] Miner IP to UID cache is empty, using claimed miner uid ${ claimed_miner_uid }` )
+        }
 
         // If the claimed miner uid does not match the expected one, return an error
         if( claimed_miner_uid != miner_uid ) {

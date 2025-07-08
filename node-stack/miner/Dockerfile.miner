@@ -12,10 +12,15 @@ RUN npm i -g npm
 RUN npm ci --omit=dev
 
 # Run available security updates
+ENV DEBIAN_FRONTEND=noninteractive
 RUN apt update && apt upgrade -y
 
 # Install curl for the healthcheck
 RUN apt update && apt install -y curl docker.io
+
+# Install git
+RUN apt update && apt install -y git
+RUN git config --global --add safe.directory /app
 
 # Cachebust
 ARG CACHEBUST=1

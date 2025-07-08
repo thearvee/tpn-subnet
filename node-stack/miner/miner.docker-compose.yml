@@ -15,6 +15,7 @@ services:
     volumes:
       - ./wireguard:/app/wireguard
       - /var/run/docker.sock:/var/run/docker.sock
+      - ../../.git:/app/.git:ro
     depends_on:
       - wireguard
     environment:

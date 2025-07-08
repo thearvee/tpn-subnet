@@ -28,6 +28,10 @@ RUN apt update && apt install -y resolvconf || echo "resolvconf postinstall is e
 RUN echo '#!/bin/sh\nexit 0' > /var/lib/dpkg/info/resolvconf.postinst && chmod +x /var/lib/dpkg/info/resolvconf.postinst
 RUN dpkg --configure resolvconf
 
+# Install git
+RUN apt update && apt install -y git
+RUN git config --global --add safe.directory /app
+
 # Memory default
 ENV VALIDATOR_MAX_PROCESS_RAM_MB=8192
 
