@@ -68,6 +68,7 @@ class BaseValidatorNeuron(BaseNeuron):
         self.resync_metagraph()
         bt.logging.info(f"===> Resynced metagraph: {self.step}, {len(self.scores)}, {len(self.hotkeys)}")
 
+        self.serve_axon()
         # # Serve axon to enable external connections.
         # if not self.config.neuron.axon_off:
         #     self.serve_axon()
