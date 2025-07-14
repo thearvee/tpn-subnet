@@ -1,0 +1,10 @@
+{
+  "devDependencies": {
+    "airier": "^0.0.9",
+    "husky": "^9.1.7"
+  },
+  "scripts": {
+    "lint": "eslint --fix src",
+    "prepare": "husky"
+  }
+}
