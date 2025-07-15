@@ -41,7 +41,6 @@ The TPN stack consists of the following basic container configuration
 
 - `tpn-internal` - a network that has internal connectivity only and cannot reach the internet not be reached from it
 - `tpn-external` - which will only contain the reverse proxy server
-- `tpn-neuron` - which will allow requests from the neuron but not the outside world
 
 Note that the network ip subnets will be set manually so we can deterministically detect local requests in the TPN container.
 

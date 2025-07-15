@@ -1,0 +1,202 @@
+version: '3.8'
+
+services:
+  # Main TPN Federated Application Container
+  tpn-federated:
+    image: tpn-federated:latest
+    container_name: tpn-federated
+    restart: unless-stopped
+    environment:
+      # Shared - All node types
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      - POSTGRES_HOST=postgres
+      - POSTGRES_USER=${POSTGRES_USER:-tpn}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - NODE_OPTIONS=--max-old-space-size=${CONTAINER_MAX_PROCESS_RAM_MB:-8192}
+      
+      # Validator and Mining pool
+      - SERVER_PROTOCOL=${SERVER_PROTOCOL:-https}
+      - SERVER_PUBLIC_URL=${SERVER_PUBLIC_URL}
+      - SERVER_PUBLIC_PORT=${SERVER_PUBLIC_PORT:-443}
+      - MAXMIND_LICENSE_KEY=${MAXMIND_LICENSE_KEY}
+      - IP2LOCATION_DOWNLOAD_TOKEN=${IP2LOCATION_DOWNLOAD_TOKEN}
+      
+      # Mining pool only
+      - MINING_POOL_WEBSITE_URL=${MINING_POOL_WEBSITE_URL}
+      - MINING_POOL_REWARDS=${MINING_POOL_REWARDS}
+      
+      # Worker only
+      - MINING_POOL=${MINING_POOL}
+      - PAYMENT_ADDRESS_EVM=${PAYMENT_ADDRESS_EVM}
+      - PAYMENT_ADDRESS_BITTENSOR=${PAYMENT_ADDRESS_BITTENSOR}
+      - BROADCAST_MESSAGE=${BROADCAST_MESSAGE}
+      - CONTACT_METHOD=${CONTACT_METHOD}
+    volumes:
+      - ./config/tpn:/app/config
+      - maxmind_data:/app/node_modules/geoip-lite/data
+      - ip2location_data:/app/ip2location_data
+      - container_cache:/app/cache
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - tpn-internal
+    ports:
+      - "127.0.0.1:3000:3000" # Make this container available from localhost so the neuron can access it
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Reverse Proxy (SWAG)
+  swag:
+    image: lscr.io/linuxserver/swag:latest
+    container_name: swag
+    restart: unless-stopped
+    cap_add:
+      - NET_ADMIN
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=${TZ:-UTC}
+      - URL=${SWAG_DOMAIN_NAME}
+      - VALIDATION=${SWAG_VALIDATION:-http}
+      - SUBDOMAINS=${SWAG_SUBDOMAINS:-www}
+      - CERTPROVIDER=${SWAG_CERTPROVIDER:-}
+      - DNSPLUGIN=${SWAG_DNSPLUGIN:-}
+      - PROPAGATION=${SWAG_PROPAGATION:-}
+      - EMAIL=${SWAG_EMAIL}
+      - ONLY_SUBDOMAINS=${SWAG_ONLY_SUBDOMAINS:-false}
+      - EXTRA_DOMAINS=${SWAG_EXTRA_DOMAINS:-}
+      - STAGING=${SWAG_STAGING:-false}
+      - DISABLE_SSL=${SWAG_DISABLE_SSL:-false}
+    volumes:
+      - ./swag:/config
+      - ./config/nginx:/config/nginx/site-confs
+    ports:
+      - "80:80"
+      - "443:443"
+    networks:
+      - tpn-external
+      - tpn-internal
+    depends_on:
+      tpn-federated:
+        condition: service_healthy
+
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: postgres
+    restart: unless-stopped
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB:-tpn}
+      - POSTGRES_USER=${POSTGRES_USER:-tpn}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./config/postgres/init:/docker-entrypoint-initdb.d
+    networks:
+      - tpn-internal
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-tpn} -d ${POSTGRES_DB:-tpn}"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  # Watchtower - Automatic Updates
+  watchtower:
+    image: containrrr/watchtower:latest
+    container_name: watchtower
+    restart: unless-stopped
+    environment:
+      - WATCHTOWER_CLEANUP=true
+      - WATCHTOWER_POLL_INTERVAL=${WATCHTOWER_POLL_INTERVAL:-3600}
+      - WATCHTOWER_INCLUDE_STOPPED=true
+      - WATCHTOWER_REVIVE_STOPPED=false
+      - WATCHTOWER_NOTIFICATIONS=${WATCHTOWER_NOTIFICATIONS:-}
+      - WATCHTOWER_NOTIFICATION_URL=${WATCHTOWER_NOTIFICATION_URL:-}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - tpn-internal
+
+  # Autoheal - Container Health Monitor and Restarter
+  autoheal:
+    image: willfarrell/autoheal:latest
+    container_name: autoheal
+    restart: unless-stopped
+    environment:
+      - AUTOHEAL_CONTAINER_LABEL=all
+      - AUTOHEAL_INTERVAL=${AUTOHEAL_INTERVAL:-5}
+      - AUTOHEAL_START_PERIOD=${AUTOHEAL_START_PERIOD:-0}
+      - AUTOHEAL_DEFAULT_STOP_TIMEOUT=${AUTOHEAL_DEFAULT_STOP_TIMEOUT:-10}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - tpn-internal
+
+  # WireGuard VPN Container (Worker-specific)
+  # This container is only needed for worker nodes
+  wireguard:
+    image: taofuprotocol/wireguard:latest
+    container_name: wireguard
+    restart: unless-stopped
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=${TZ:-UTC}
+      - SERVERURL=${WIREGUARD_SERVERURL:-auto}
+      - SERVERPORT=${WIREGUARD_SERVERPORT:-51820}
+      - PEERS=${WIREGUARD_PEERS:-1}
+      - PEERDNS=${WIREGUARD_PEERDNS:-auto}
+      - INTERNAL_SUBNET=${WIREGUARD_INTERNAL_SUBNET:-10.13.13.0}
+      - ALLOWEDIPS=${WIREGUARD_ALLOWEDIPS:-0.0.0.0/0}
+      - LOG_CONFS=${WIREGUARD_LOG_CONFS:-true}
+    volumes:
+      - wireguard_config:/config
+      - /lib/modules:/lib/modules:ro
+    ports:
+      - "${WIREGUARD_SERVERPORT:-51820}:51820/udp"
+    sysctls:
+      - net.ipv4.conf.all.src_valid_mark=1
+    networks:
+      - tpn-internal
+    profiles:
+      - worker
+    healthcheck:
+      test: ["CMD", "wg", "show"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+networks:
+  # Internal network - has internal connectivity only, cannot reach internet or be reached from it
+  tpn-internal:
+    driver: bridge
+    internal: true
+    ipam:
+      config:
+        - subnet: ${TPN_INTERNAL_SUBNET:-172.20.0.0/16}
+          gateway: ${TPN_INTERNAL_GATEWAY:-172.20.0.1}
+
+  # External network - only contains the reverse proxy server
+  tpn-external:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: ${TPN_EXTERNAL_SUBNET:-172.21.0.0/16}
+          gateway: ${TPN_EXTERNAL_GATEWAY:-172.21.0.1}
+
+volumes:
+  postgres_data:
+  maxmind_data:
+  ip2location_data:
+  container_cache:
+  wireguard_config:

@@ -143,3 +143,6 @@ database.sqlite
 *.BIN
 *.zip
 ip2location_data
+
+# Docker volumes and configs
+./swag
