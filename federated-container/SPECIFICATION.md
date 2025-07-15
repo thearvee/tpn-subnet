@@ -59,7 +59,7 @@ The validator checks the mining pool performance by asking it for worker configs
   - [ ] Reward the mean uniqueness score times the amount of workers, where each worker is scored as x% unique based on the network topology
   - [ ] Give a score boost to mining pools that have locked capital in an EVM contract, where:
     - `score = min( 100, score * ( 1 + boost/100 ) )`
-    - `boost = max( boost ceiling - stake rank )`
+    - `boost = max( boost ceiling - stake rank, 0 )`
     - `stake rank` is a simple ranking of the mining pools according to the amount staked in the contract
     - `boost ceiling` is the maximum amount of boost, probably in the range of 10-20
 - [ ] Serve consumers with worker config files based on their input parameters
