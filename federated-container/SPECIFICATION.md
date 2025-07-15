@@ -41,6 +41,7 @@ The TPN stack consists of the following basic container configuration
 
 - `tpn-internal` - a network that has internal connectivity only and cannot reach the internet not be reached from it
 - `tpn-external` - which will only contain the reverse proxy server
+- `tpn-neuron` - which will allow requests from the neuron but not the outside world
 
 Note that the network ip subnets will be set manually so we can deterministically detect local requests in the TPN container.
 
@@ -80,7 +81,7 @@ function sample_size( { uptime_confidence_fraction=.99, expected_proportion_up=.
     const sample_size = ( z_score**2 * expected_proportion_up * ( 1- expected_proportion_up ) ) / error_margin**2
 
     // Do a finite population correction
-    const fpc_sample_size = sample_size / ( 1 + ( sample_size - 1 ) / node_count )
+    const fpc_sample_size = sample_size / ( 1 + ( ( sample_size - 1 ) / node_count ) )
 
     return Math.ceil( fpc_sample_size )
 
@@ -96,8 +97,8 @@ function sample_size( { uptime_confidence_fraction=.99, expected_proportion_up=.
 
 ### Validator environment variables
 
-- `SERVER_PROTOCOL` - the protocol at which the pool should be called
-- `SERVER_PUBLIC_URL` - the public url at which the mining pool can be reached on the internet
+- `SERVER_PROTOCOL` - the protocol at which the validator should be called
+- `SERVER_PUBLIC_URL` - the public url at which the validator can be reached on the internet
 - `SERVER_PUBLIC_PORT` - the port at which the public url should be called
 - `MAXMIND_LICENSE_KEY` - maxmind license key
 - `IP2LOCATION_DOWNLOAD_TOKEN` - ip2location token
@@ -144,7 +145,7 @@ The worker registers itself with a TPN mining pool and then serves config files 
 
 Additional containers in the worker:
 
-- `taofuprotocol/wireguard` wireguard container, potentially multiple so as to have multiple subnets available
+- `taofuprotocol/wireguard` wireguard container, potentially multiple so as to have multiple ip subnet ranges and redundant containers available
 
 ### Worker responsibilities
 
