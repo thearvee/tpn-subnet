@@ -18,10 +18,9 @@
 	"eslint.run": "onType",
 	"explorer.fileNesting.enabled": true,
 	"explorer.fileNesting.patterns": {
-		"vite.config.js": "*.js,.babelrc,.nvmrc,index.html,.gitignore",
 		".env": ".env*,.*.json",
 		"firebase.json": "fire*,.fire*",
-		"package.json": "package-lock.json, yarn.lock, pnpm-lock.yaml,.eslint*,config.*,.npm*,.nvm*,.ncu*",
+		"package.json": "package-lock.json, yarn.lock, pnpm-lock.yaml,.eslint*,config.*,.npm*,.nvm*,.ncu*,.gitignore,.babelrc",
 		"README.md": "*.md,LICENSE",
 	}
 }
