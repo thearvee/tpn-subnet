@@ -20,10 +20,8 @@ The TPN stack consists of the following basic container configuration
 
 ### `tpn-federated` shared endpoints
 
-- `POST /protocol/broadcast/miners`
-  - Receive miner data from neuron (worker exempt)
-- `POST /protocol/broadcast/validators`
-  - Receive validator data from neuron (worker exempt)
+- `POST /protocol/broadcast/neurons`
+  - Receive neuron data so we are aware of all validators and miners in the network (worker exempt)
 - `GET /protocol/stats`
   - Returns TPN cache for debugging and visibility
 - `GET /`
@@ -158,7 +156,7 @@ Additional containers in the worker:
 ### Worker environment variables
 
 - `MINING_POOL` - may be an ipv4, a uid (int), or the string 'auto'
-- `PAYMENT_ADDRESS_EVM` - is an EVM compatible payment address
-- `PAYMENT_ADDRESS_BITTENSOR` - is a Bittensor address to receive payments on
+- `PAYMENT_ADDRESS_EVM` *optional* - is an EVM compatible payment address
+- `PAYMENT_ADDRESS_BITTENSOR` *optional* - is a Bittensor address to receive payments on
 - `BROADCAST_MESSAGE` *optional* - is an arbitraty string that will be returned on the `/` endpoint
 - `CONTACT_METHOD` *optional* - is any contact method in case the mining pool wants to contact a miner
