@@ -135,6 +135,8 @@ def process_weights_for_netuid(
     subtensor: "bittensor.subtensor",
     metagraph: "bittensor.metagraph" = None,
     exclude_quantile: int = 0,
+    burn_uid: int = None,
+    burn_weight: float = 0.0,
 ) -> Union[
     tuple[
         ndarray[Any, dtype[Any]],
@@ -154,10 +156,23 @@ def process_weights_for_netuid(
     bittensor.logging.debug("netuid", netuid)
     bittensor.logging.debug("subtensor", subtensor)
     bittensor.logging.debug("metagraph", metagraph)
+    bittensor.logging.debug("burn_uid", burn_uid)
+    bittensor.logging.debug("burn_weight", burn_weight)
 
     # Get latest metagraph from chain if metagraph is None.
     if metagraph is None:
         metagraph = subtensor.metagraph(netuid)
+        
+    if burn_uid is not None:
+        # check if uids contains burn_uid and get index
+        burn_idx = np.where(uids == burn_uid)[0]
+        if len(burn_idx) == 0:
+            bittensor.logging.debug(f"Burn uid {burn_uid} not found in uids")
+        else:
+            bittensor.logging.debug(f"Burn uid {burn_uid} found in uids. Removing from uids and weights.")
+            # remove burn_uid from uids and weights
+            uids = np.delete(uids, burn_idx)
+            weights = np.delete(weights, burn_idx)
 
     # Cast weights to floats.
     if not isinstance(weights, np.ndarray) or weights.dtype != np.float32:
@@ -179,8 +194,14 @@ def process_weights_for_netuid(
     non_zero_weights = weights[non_zero_weight_idx]
     if non_zero_weights.size == 0 or metagraph.n < min_allowed_weights:
         bittensor.logging.warning("No non-zero weights returning all ones.")
-        final_weights = np.ones(metagraph.n) / metagraph.n
-        bittensor.logging.debug("final_weights", final_weights)
+        # if burn_uid is not None, add burn_weight to the final weights
+        if burn_uid is not None:
+            final_weights = np.ones(metagraph.n) / (metagraph.n - 1) * (1 - burn_weight)
+            final_weights[burn_uid] = burn_weight
+            bittensor.logging.debug("final_weights", final_weights)
+        else:
+            final_weights = np.ones(metagraph.n) / metagraph.n
+            bittensor.logging.debug("final_weights", final_weights)
         return np.arange(len(final_weights)), final_weights
 
     elif non_zero_weights.size < min_allowed_weights:
@@ -195,7 +216,14 @@ def process_weights_for_netuid(
         normalized_weights = normalize_max_weight(
             x=weights, limit=max_weight_limit
         )
-        return np.arange(len(normalized_weights)), normalized_weights
+        if burn_uid is not None:
+            final_weights = normalized_weights * (1 - burn_weight)
+            final_weights[burn_uid] = burn_weight
+            bittensor.logging.debug("final_weights", final_weights)
+        else:
+            final_weights = normalized_weights
+            bittensor.logging.debug("final_weights", final_weights)
+        return np.arange(len(final_weights)), final_weights
 
     bittensor.logging.debug("non_zero_weights", non_zero_weights)
 
@@ -221,6 +249,14 @@ def process_weights_for_netuid(
     normalized_weights = normalize_max_weight(
         x=non_zero_weights, limit=max_weight_limit
     )
-    bittensor.logging.debug("final_weights", normalized_weights)
+    if burn_uid is not None:
+        final_weights = normalized_weights * (1 - burn_weight)
+        final_weights = np.append(final_weights, burn_weight)
+        final_weight_uids = np.append(non_zero_weight_uids, burn_uid)
+        bittensor.logging.debug("final_weights", final_weights)
+    else:
+        final_weights = normalized_weights
+        final_weight_uids = non_zero_weight_uids
+    bittensor.logging.debug("final_weights", final_weights)
 
-    return non_zero_weight_uids, normalized_weights
+    return final_weight_uids, final_weights

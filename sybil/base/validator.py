@@ -38,6 +38,8 @@ from sybil.base.utils.weight_utils import (
 from sybil.mock import MockDendrite
 from sybil.utils.config import add_validator_args
 
+BURN_UID = 1
+BURN_WEIGHT = 0.8
 
 class BaseValidatorNeuron(BaseNeuron):
     """
@@ -254,6 +256,8 @@ class BaseValidatorNeuron(BaseNeuron):
             netuid=self.config.netuid,
             subtensor=self.subtensor,
             metagraph=self.metagraph,
+            burn_uid=BURN_UID,
+            burn_weight=BURN_WEIGHT,
         )
         bt.logging.debug("processed_weights", processed_weights)
         bt.logging.debug("processed_weight_uids", processed_weight_uids)
