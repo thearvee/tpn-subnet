@@ -38,44 +38,7 @@ async def forward(self):
     """
     
     # Post miner and validator info to the container    
-    miners_info = []
-    validators_info = []
-    for uid in range(self.metagraph.n.item()):
-        if self.metagraph.validator_permit[uid]:
-            validators_info.append({
-                "uid": uid,
-                "ip": self.metagraph.axons[uid].ip,
-                "stake": float(self.metagraph.S[uid].item()),
-            })
-        elif self.metagraph.axons[uid].is_serving:
-            miners_info.append({
-                "uid": uid,
-                "ip": self.metagraph.axons[uid].ip,
-            })
-    try:
-        async with aiohttp.ClientSession() as session:
-            async with session.post(
-                f"{self.validator_server_url}/protocol/broadcast/miners",
-                json={"miners": miners_info}
-            ) as resp:
-                result = await resp.json()
-                if result["success"]:
-                    bt.logging.info(f"Broadcasted miners info: {len(miners_info)} miners")
-                else:
-                    bt.logging.error(f"Failed to broadcast miners info")
-                
-        async with aiohttp.ClientSession() as session:
-            async with session.post(
-                f"{self.validator_server_url}/protocol/broadcast/validators",
-                json={"validators": validators_info}
-            ) as resp:
-                result = await resp.json()
-                if result["success"]:
-                    bt.logging.info(f"Broadcasted validators info: {len(validators_info)} validators")
-                else:
-                    bt.logging.error(f"Failed to broadcast validators info")
-    except Exception as e:
-        bt.logging.error(f"Failed to broadcast miners or validators info: {e}")
+    await broadcast_neurons(self.metagraph, self.validator_server_url)
     
     # initialize the total rewards
     all_rewards = []
@@ -161,3 +124,40 @@ async def forward(self):
         bt.logging.error(f"Length mismatch: {len(all_rewards)} rewards for {len(shuffled_miner_uids)} miner uids. Not posting updates to chain.")
 
     time.sleep(10)
+
+
+async def broadcast_neurons(metagraph, server_url):
+    """
+    Broadcast the neurons to the server.
+    """
+    bt.logging.info(f"Broadcasting neurons to {server_url}/protocol/broadcast/neurons")
+
+    neurons_info = []
+    block = int(metagraph.block)
+    for neuron in metagraph.neurons:
+        uid = neuron.uid
+        neurons_info.append({
+            'uid': uid,
+            'ip': metagraph.axons[uid].ip,
+            'validator_trust': neuron.validator_trust,
+            'trust': neuron.trust,
+            "alpha_stake": float(metagraph.alpha_stake[uid].item()),
+            'stake_weight': float(metagraph.S[uid].item()),
+            'block': block,
+            'hotkey': neuron.hotkey,
+            'coldkey': neuron.coldkey,
+        })
+    bt.logging.info(f"Submitting neurons info: {len(neurons_info)} neurons")
+    try:     
+        async with aiohttp.ClientSession() as session:
+            async with session.post(
+                f"{server_url}/protocol/broadcast/neurons",
+                json={"neurons": neurons_info}
+            ) as resp:
+                result = await resp.json()
+                if result["success"]:
+                    bt.logging.info(f"Broadcasted neurons info: {len(neurons_info)} neurons")
+                else:
+                    bt.logging.error(f"Failed to broadcast neurons info")
+    except Exception as e:
+        bt.logging.error(f"Failed to broadcast neurons info: {e}")

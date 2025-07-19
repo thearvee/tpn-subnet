@@ -176,33 +176,41 @@ class Miner(BaseMinerNeuron):
         )
         return priority
     
-    async def broadcast_validators(self):
+    async def broadcast_neurons(self):
         """
-        Broadcast the validators to the validator server.
+        Broadcast the neurons to the miner server.
         """
-        bt.logging.info(f"Broadcasting validators to {self.miner_server}/protocol/broadcast/validators")
-        validators_info = []
-        for uid in range(self.metagraph.n.item()):
-            if self.metagraph.validator_permit[uid]:
-                validators_info.append({
-                    "uid": uid,
-                    "ip": self.metagraph.axons[uid].ip,
-                    "stake": float(self.metagraph.S[uid].item()),
-                })
-        bt.logging.info(f"Submitting validators info: {len(validators_info)} validators")
+        bt.logging.info(f"Broadcasting neurons to {self.miner_server}/protocol/broadcast/neurons")
+
+        neurons_info = []
+        block = int(self.metagraph.block)
+        for neuron in self.metagraph.neurons:
+            uid = neuron.uid
+            neurons_info.append({
+                'uid': uid,
+                'ip': self.metagraph.axons[uid].ip,
+                'validator_trust': neuron.validator_trust,
+                'trust': neuron.trust,
+                "alpha_stake": float(self.metagraph.alpha_stake[uid].item()),
+                'stake_weight': float(self.metagraph.S[uid].item()),
+                'block': block,
+                'hotkey': neuron.hotkey,
+                'coldkey': neuron.coldkey,
+            })
+        bt.logging.info(f"Submitting neurons info: {len(neurons_info)} neurons")
         try:     
             async with aiohttp.ClientSession() as session:
                 async with session.post(
-                    f"{self.miner_server}/protocol/broadcast/validators",
-                    json={"validators": validators_info}
+                    f"{self.miner_server}/protocol/broadcast/neurons",
+                    json={"neurons": neurons_info}
                 ) as resp:
                     result = await resp.json()
                     if result["success"]:
-                        bt.logging.info(f"Broadcasted validators info: {len(validators_info)} validators")
+                        bt.logging.info(f"Broadcasted neurons info: {len(neurons_info)} neurons")
                     else:
-                        bt.logging.error(f"Failed to broadcast validators info")
+                        bt.logging.error(f"Failed to broadcast neurons info")
         except Exception as e:
-            bt.logging.error(f"Failed to broadcast miners or validators info: {e}")
+            bt.logging.error(f"Failed to broadcast neurons info: {e}")
 
 
 # This is the main function, which runs the miner.
@@ -217,7 +225,7 @@ if __name__ == "__main__":
 
         async def periodic_broadcast():
             while True:
-                await miner.broadcast_validators()
+                await miner.broadcast_neurons()
                 await asyncio.sleep(1800)  # 30 minutes between broadcasts
 
         # Run the periodic broadcast in the background
