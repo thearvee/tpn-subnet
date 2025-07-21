@@ -9,7 +9,7 @@ export const router = Router()
  * Route to handle neuron broadcasts
  * @params {Object} req.body.neurons - Array of neuron objects with properties: uid, ip, validator_trust, trust, stake, block, hotkey, coldkey, balance
  */
-router.post( "/broadcast/neurons", ( req, res ) => {
+router.post( "/broadcast/neurons", async ( req, res ) => {
 
     if( !request_is_local( req ) ) return res.status( 403 ).json( { error: `Request not from localhost` } )
 
@@ -193,7 +193,7 @@ router.post( "/broadcast/neurons", ( req, res ) => {
 
     try {
 
-        const retryable_handler = make_retryable( handle_route, { retry_times: 2, cooldown_in_s: 10, cooldown_entropy: false } )
+        const retryable_handler = await make_retryable( handle_route, { retry_times: 2, cooldown_in_s: 10, cooldown_entropy: false } )
         return retryable_handler()
         
     } catch ( e ) {
