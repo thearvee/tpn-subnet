@@ -38,11 +38,17 @@ router.post( "/broadcast/neurons", async ( req, res ) => {
         if( valid_entries.length == 0 ) throw new Error( `No valid neurons provided` )
 
         // Split the validators, miners, and weight copiers
-        const { validators=[], miners=[], weight_copiers=[] } = valid_entries.reduce( ( acc, entry ) => {
+        const { validators=[], miners=[], weight_copiers=[], excluded=[] } = valid_entries.reduce( ( acc, entry ) => {
 
-            const { validator_trust=0, ip } = entry
+            const { validator_trust=0, ip, excluded=false } = entry
             const zero_ip = ip == '0.0.0.0'
             const valid_ip = is_ipv4( ip ) && !zero_ip
+
+            // If the entry is excluded, skip it
+            if( excluded ) {
+                acc.excluded.push( entry )
+                return acc
+            }
 
             // If you have validator trust, you are a validator or weight copier
             if( validator_trust > 0 ) {
@@ -60,9 +66,9 @@ router.post( "/broadcast/neurons", async ( req, res ) => {
 
             return acc
 
-        }, { validators: [], miners: [], weight_copiers: [] } )
+        }, { validators: [], miners: [], weight_copiers: [], excluded: [] } )
 
-        log.info( `Found ${ validators.length } validators, ${ miners.length } miners, and ${ weight_copiers.length } weight copiers` )
+        log.info( `Found ${ validators.length } validators, ${ miners.length } miners, ${ excluded.length } excluded, and ${ weight_copiers.length } weight copiers` )
 
         // ///////////////////////////
         // 🤖 Cache validators to memory
