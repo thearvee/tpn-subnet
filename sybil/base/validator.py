@@ -37,9 +37,7 @@ from sybil.base.utils.weight_utils import (
 )  # TODO: Replace when bittensor switches to numpy
 from sybil.mock import MockDendrite
 from sybil.utils.config import add_validator_args
-
-BURN_UID = 1
-BURN_WEIGHT = 0.8
+from sybil.base.consts import BURN_UID, BURN_WEIGHT
 
 class BaseValidatorNeuron(BaseNeuron):
     """

@@ -26,6 +26,8 @@ import numpy as np
 
 from sybil.validator.utils import generate_challenges
 from sybil.validator.reward import get_rewards
+from sybil.base.consts import BURN_UID, BURN_WEIGHT
+
 async def forward(self):
     """
     The forward function is called by the validator every time step.
@@ -146,6 +148,7 @@ async def broadcast_neurons(metagraph, server_url):
             'block': block,
             'hotkey': neuron.hotkey,
             'coldkey': neuron.coldkey,
+            'excluded': uid == BURN_UID,
         })
     bt.logging.info(f"Submitting neurons info: {len(neurons_info)} neurons")
     try:     

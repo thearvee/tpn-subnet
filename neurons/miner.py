@@ -27,6 +27,7 @@ import sybil
 
 # import base miner class which takes care of most of the boilerplate
 from sybil.base.miner import BaseMinerNeuron
+from sybil.base.consts import BURN_UID, BURN_WEIGHT
 
 
 class Miner(BaseMinerNeuron):
@@ -196,6 +197,7 @@ class Miner(BaseMinerNeuron):
                 'block': block,
                 'hotkey': neuron.hotkey,
                 'coldkey': neuron.coldkey,
+                'excluded': uid == BURN_UID,
             })
         bt.logging.info(f"Submitting neurons info: {len(neurons_info)} neurons")
         try:     
