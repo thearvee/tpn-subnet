@@ -24,13 +24,13 @@ router.post( "/broadcast/neurons", async ( req, res ) => {
 
         // Sanetise the entry data
         valid_entries = valid_entries.map( entry => {
-            const { uid, ip, validator_trust, stake, balance } = entry
+            const { uid, ip, validator_trust, alpha_stake, stake_weight } = entry
             return {
                 uid: Number( uid ),
                 ip: sanetise_ipv4( { ip, validate: true } ) || '0.0.0.0',
                 validator_trust: Number( validator_trust ),
-                stake: Number( stake ),
-                balance: Number( balance )
+                alpha_stake: Number( alpha_stake ),
+                stake_weight: Number( stake_weight )
             }
         } )
 
