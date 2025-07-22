@@ -40,13 +40,20 @@ app.get( '/', ( req, res ) => {
 // /////////////////////////////*/
 
 // Protocol routes
-import { router as protocol_router } from './routes/protocol.js'
+import { router as protocol_router } from './routes/protocol/neurons.js'
+import { router as stats_router } from './routes/protocol/stats.js'
 app.use( '/protocol', protocol_router )
+app.use( '/protocol', stats_router )
 
 // Listen to requests
 const server = app.listen( 3000, () => {
     console.log( `Server running, serving from base url ${ base_url }` )
 } )
+
+/* ///////////////////////////////
+// Termination handling
+// /////////////////////////////*/
+
 const handle_close = async reason => {
     log.info( 'Closing server, reason: ', reason || 'unknown' )
     log.info( 'Shutting down gracefully...' )
@@ -54,10 +61,6 @@ const handle_close = async reason => {
     // await close_pool()
     process.exit( 0 )
 }
-
-/* ///////////////////////////////
-// Termination handling
-// /////////////////////////////*/
 
 // Handle shutdown signals
 const shutdown_signals = [ 'SIGTERM', 'SIGINT', 'SIGQUIT' ]

@@ -1,9 +1,9 @@
 import { Router } from "express"
 import { cache, is_ipv4, log, make_retryable, require_props, sanetise_ipv4, sanetise_string } from "mentie"
-import { request_is_local } from "../modules/networking/network.js"
-import { save_tpn_cache_to_disk } from "../modules/caching.js"
-import { validators_ip_fallback } from "../modules/networking/validators.js"
-import { cooldown_in_s, retry_times } from "../modules/networking/routing.js"
+import { request_is_local } from "../../modules/networking/network.js"
+import { save_tpn_cache_to_disk } from "../../modules/caching.js"
+import { validators_ip_fallback } from "../../modules/networking/validators.js"
+import { cooldown_in_s, retry_times } from "../../modules/networking/routing.js"
 export const router = Router()
 
 /**

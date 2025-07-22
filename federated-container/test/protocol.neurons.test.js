@@ -1,6 +1,6 @@
 import { test, describe } from 'node:test'
 import assert from 'node:assert'
-import { fetch_json } from './_helpers.js'
+import { json } from './_helpers.js'
 import {
     BASE_URL,
     validNeurons,
@@ -19,9 +19,7 @@ describe( '/protocol/broadcast/neurons endpoint', () => {
     describe( 'Success cases', () => {
 
         test( 'should accept valid neuron data with validators and miners', async () => {
-            const { response, data } = await fetch_json( `${ BASE_URL }/protocol/broadcast/neurons`, {
-                body: JSON.stringify( { neurons: validNeurons } )
-            } )
+            const { response, data } = await json.post( `${ BASE_URL }/protocol/broadcast/neurons`, { neurons: validNeurons } )
 
             assert.strictEqual( response.status, 200 )
             assert.strictEqual( data.success, true )
@@ -31,9 +29,7 @@ describe( '/protocol/broadcast/neurons endpoint', () => {
         } )
 
         test( 'should handle weight copiers (validators with no IP)', async () => {
-            const { response, data } = await fetch_json( `${ BASE_URL }/protocol/broadcast/neurons`, {
-                body: JSON.stringify( { neurons: [ weightCopierNeuron ] } )
-            } )
+            const { response, data } = await json.post( `${ BASE_URL }/protocol/broadcast/neurons`, { neurons: [ weightCopierNeuron ] } )
 
             assert.strictEqual( response.status, 200 )
             assert.strictEqual( data.success, true )
@@ -45,9 +41,7 @@ describe( '/protocol/broadcast/neurons endpoint', () => {
         } )
 
         test( 'should sanitize IP addresses correctly', async () => {
-            const { response, data } = await fetch_json( `${ BASE_URL }/protocol/broadcast/neurons`, {
-                body: JSON.stringify( { neurons: [ neuronWithBadIP ] } )
-            } )
+            const { response, data } = await json.post( `${ BASE_URL }/protocol/broadcast/neurons`, { neurons: [ neuronWithBadIP ] } )
 
             assert.strictEqual( response.status, 200 )
             assert.strictEqual( data.success, true )
@@ -55,9 +49,7 @@ describe( '/protocol/broadcast/neurons endpoint', () => {
         } )
 
         test( 'should handle empty neurons array gracefully', async () => {
-            const { response, data } = await fetch_json( `${ BASE_URL }/protocol/broadcast/neurons`, {
-                body: JSON.stringify( { neurons: [] } )
-            } )
+            const { response, data } = await json.post( `${ BASE_URL }/protocol/broadcast/neurons`, { neurons: [] } )
 
             assert.strictEqual( response.status, 200 )
             assert.ok( data.error )
@@ -67,9 +59,7 @@ describe( '/protocol/broadcast/neurons endpoint', () => {
 
     describe( 'Failure cases', () => {
         test( 'should handle missing required properties', async () => {
-            const { response, data } = await fetch_json( `${ BASE_URL }/protocol/broadcast/neurons`, {
-                body: JSON.stringify( { neurons: [ incompleteNeuron ] } )
-            } )
+            const { response, data } = await json.post( `${ BASE_URL }/protocol/broadcast/neurons`, { neurons: [ incompleteNeuron ] } )
 
             assert.strictEqual( response.status, 200 )
             assert.ok( data.error )
@@ -77,9 +67,7 @@ describe( '/protocol/broadcast/neurons endpoint', () => {
         } )
 
         test( 'should handle invalid IP addresses', async () => {
-            const { response, data } = await fetch_json( `${ BASE_URL }/protocol/broadcast/neurons`, {
-                body: JSON.stringify( { neurons: [ neuronWithInvalidIP ] } )
-            } )
+            const { response, data } = await json.post( `${ BASE_URL }/protocol/broadcast/neurons`, { neurons: [ neuronWithInvalidIP ] } )
 
             assert.strictEqual( response.status, 200 )
             // Should still process but convert invalid IP to 0.0.0.0
@@ -88,7 +76,7 @@ describe( '/protocol/broadcast/neurons endpoint', () => {
         } )
 
         test( 'should handle malformed request body', async () => {
-            const { response } = await fetch_json( `${ BASE_URL }/protocol/broadcast/neurons`, {
+            const { response } = await json.post( `${ BASE_URL }/protocol/broadcast/neurons`, {}, {
                 body: 'invalid json'
             } )
 
@@ -96,9 +84,7 @@ describe( '/protocol/broadcast/neurons endpoint', () => {
         } )
 
         test( 'should handle missing neurons property', async () => {
-            const { response, data } = await fetch_json( `${ BASE_URL }/protocol/broadcast/neurons`, {
-                body: JSON.stringify( {} )
-            } )
+            const { response, data } = await json.post( `${ BASE_URL }/protocol/broadcast/neurons`, {} )
 
             assert.strictEqual( response.status, 200 )
             assert.ok( data.error )
@@ -106,9 +92,7 @@ describe( '/protocol/broadcast/neurons endpoint', () => {
         } )
 
         test( 'should handle neurons with null values', async () => {
-            const { response, data } = await fetch_json( `${ BASE_URL }/protocol/broadcast/neurons`, {
-                body: JSON.stringify( { neurons: [ neuronWithNulls ] } )
-            } )
+            const { response, data } = await json.post( `${ BASE_URL }/protocol/broadcast/neurons`, { neurons: [ neuronWithNulls ] } )
 
             assert.strictEqual( response.status, 200 )
             assert.ok( data.error )
@@ -119,9 +103,7 @@ describe( '/protocol/broadcast/neurons endpoint', () => {
         test( 'should handle very large neuron arrays', async () => {
             const largeNeuronArray = generateLargeNeuronArray( 100 )
 
-            const { response, data } = await fetch_json( `${ BASE_URL }/protocol/broadcast/neurons`, {
-                body: JSON.stringify( { neurons: largeNeuronArray } )
-            } )
+            const { response, data } = await json.post( `${ BASE_URL }/protocol/broadcast/neurons`, { neurons: largeNeuronArray } )
 
             assert.strictEqual( response.status, 200 )
             assert.strictEqual( data.success, true )
@@ -130,9 +112,7 @@ describe( '/protocol/broadcast/neurons endpoint', () => {
         } )
 
         test( 'should handle neurons with zero values', async () => {
-            const { response, data } = await fetch_json( `${ BASE_URL }/protocol/broadcast/neurons`, {
-                body: JSON.stringify( { neurons: [ neuronWithZeros ] } )
-            } )
+            const { response, data } = await json.post( `${ BASE_URL }/protocol/broadcast/neurons`, { neurons: [ neuronWithZeros ] } )
 
             assert.strictEqual( response.status, 200 )
             assert.strictEqual( data.success, true )
@@ -140,9 +120,7 @@ describe( '/protocol/broadcast/neurons endpoint', () => {
         } )
 
         test( 'should handle mixed valid and invalid neurons', async () => {
-            const { response, data } = await fetch_json( `${ BASE_URL }/protocol/broadcast/neurons`, {
-                body: JSON.stringify( { neurons: mixedNeurons } )
-            } )
+            const { response, data } = await json.post( `${ BASE_URL }/protocol/broadcast/neurons`, { neurons: mixedNeurons } )
 
             assert.strictEqual( response.status, 200 )
             assert.strictEqual( data.success, true )

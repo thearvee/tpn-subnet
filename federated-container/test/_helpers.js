@@ -1,14 +1,13 @@
 // Test helpers for HTTP requests
 
 /**
- * Fetch helper that handles both JSON and non-JSON responses
+ * Core fetch helper that handles both JSON and non-JSON responses
  * @param {string} url - The URL to fetch
  * @param {Object} options - Fetch options (method, body, etc.)
  * @returns {Object} - Object with response, data, and error handling
  */
-export async function fetch_json( url, options = {} ) {
+async function fetch_json_core( url, options = {} ) {
     const defaultOptions = {
-        method: 'POST',
         headers: {
             'Content-Type': 'application/json'
         },
@@ -47,3 +46,61 @@ export async function fetch_json( url, options = {} ) {
         }
     }
 }
+
+/**
+ * Convenient JSON API wrapper
+ */
+export const json = {
+    /**
+     * GET request
+     * @param {string} url - The URL to fetch
+     * @param {Object} options - Additional fetch options (headers, etc.)
+     * @returns {Object} - Object with response, data, and error handling
+     */
+    get: ( url, options = {} ) => {
+        return fetch_json_core( url, { method: 'GET', ...options } )
+    },
+
+    /**
+     * POST request
+     * @param {string} url - The URL to fetch
+     * @param {Object} data - Data to send in the request body (will be JSON.stringify'd)
+     * @param {Object} options - Additional fetch options (headers, etc.)
+     * @returns {Object} - Object with response, data, and error handling
+     */
+    post: ( url, data = {}, options = {} ) => {
+        return fetch_json_core( url, { 
+            method: 'POST', 
+            body: JSON.stringify( data ),
+            ...options 
+        } )
+    },
+
+    /**
+     * PUT request
+     * @param {string} url - The URL to fetch
+     * @param {Object} data - Data to send in the request body (will be JSON.stringify'd)
+     * @param {Object} options - Additional fetch options (headers, etc.)
+     * @returns {Object} - Object with response, data, and error handling
+     */
+    put: ( url, data = {}, options = {} ) => {
+        return fetch_json_core( url, { 
+            method: 'PUT', 
+            body: JSON.stringify( data ),
+            ...options 
+        } )
+    },
+
+    /**
+     * DELETE request
+     * @param {string} url - The URL to fetch
+     * @param {Object} options - Additional fetch options (headers, etc.)
+     * @returns {Object} - Object with response, data, and error handling
+     */
+    delete: ( url, options = {} ) => {
+        return fetch_json_core( url, { method: 'DELETE', ...options } )
+    }
+}
+
+// Keep the old fetch_json for backward compatibility
+export const fetch_json = json.post
