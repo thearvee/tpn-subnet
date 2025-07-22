@@ -16,6 +16,7 @@ services:
       - ./wireguard:/app/wireguard
       - /var/run/docker.sock:/var/run/docker.sock
       - ../../.git:/app/.git:ro
+      - miner_cache:/app/cache
     depends_on:
       - wireguard
     environment:
@@ -97,6 +98,7 @@ services:
 
 volumes:
   postgres_data:
+  miner_cache:
 
 networks:
   tpn_network:
