@@ -13,10 +13,13 @@
     "lint": "eslint --fix src",
     "prepare": "husky",
     "start": "RUN_MODE=oneshot node --env-file .env.development app.js",
-    "start:validator": "RUN_MODE=validator nodemon -- --env-file .env.development app.js"
+    "start:validator": "RUN_MODE=validator nodemon --ext json,js --env-file .env.development app.js",
+    "test": "node --test test/*.test.js",
+    "test:watch": "node --test --watch test/*.test.js"
   },
   "dependencies": {
     "express": "^5.1.0",
+    "geoip-lite": "^1.4.10",
     "mentie": "^0.3.17"
   }
 }

@@ -1,12 +1,14 @@
 import { Router } from "express"
 import { cache, is_ipv4, log, make_retryable, require_props, sanetise_ipv4, sanetise_string } from "mentie"
-import { request_is_local } from "../modules/network.js"
+import { request_is_local } from "../modules/networking/network.js"
 import { save_tpn_cache_to_disk } from "../modules/caching.js"
+import { validators_ip_fallback } from "../modules/networking/validators.js"
+import { cooldown_in_s, retry_times } from "../modules/networking/routing.js"
 export const router = Router()
 
 /**
  * Route to handle neuron broadcasts
- * @params {Object} req.body.neurons - Array of neuron objects with properties: uid, ip, validator_trust, trust, stake, block, hotkey, coldkey, balance
+ * @params {Object} req.body.neurons - Array of neuron objects with properties: uid, ip, validator_trust, trust, alpha_stake, stake_weight, block, hotkey, coldkey
  */
 router.post( "/broadcast/neurons", async ( req, res ) => {
 
@@ -15,7 +17,7 @@ router.post( "/broadcast/neurons", async ( req, res ) => {
     const handle_route = async () => {
 
         // Get neurons from the request
-        const { neurons = [] } = req.body || {}
+        const { neurons=[] } = req.body || {}
 
         // Validate that all properties are present
         let valid_entries = neurons.filter( entry => require_props( entry, [ 'uid', 'ip', 'validator_trust', 'trust', 'alpha_stake', 'stake_weight', 'block', 'hotkey', 'coldkey' ], false ) )
@@ -23,7 +25,12 @@ router.post( "/broadcast/neurons", async ( req, res ) => {
 
         // Sanetise the entry data
         valid_entries = valid_entries.map( entry => {
-            const { uid, ip, validator_trust, alpha_stake, stake_weight } = entry
+            const { uid, validator_trust, alpha_stake, stake_weight } = entry
+            let { ip } = entry
+
+            // If null ip check if we have fallback
+            if( ip == '0.0.0.0' ) ip = validators_ip_fallback[ uid ]?.ip || ip
+            
             return {
                 uid: Number( uid ),
                 ip: sanetise_ipv4( { ip, validate: true } ) || '0.0.0.0',
@@ -37,9 +44,9 @@ router.post( "/broadcast/neurons", async ( req, res ) => {
         if( valid_entries.length == 0 ) throw new Error( `No valid neurons provided` )
 
         // Split the validators, miners, and weight copiers
-        const { validators = [], miners = [], weight_copiers = [], excluded = [] } = valid_entries.reduce( ( acc, entry ) => {
+        const { validators=[], miners=[], weight_copiers=[], excluded=[] } = valid_entries.reduce( ( acc, entry ) => {
 
-            const { validator_trust = 0, ip, excluded = false } = entry
+            const { validator_trust=0, ip, excluded=false } = entry
             const zero_ip = ip == '0.0.0.0'
             const valid_ip = is_ipv4( ip ) && !zero_ip
 
@@ -90,7 +97,7 @@ router.post( "/broadcast/neurons", async ( req, res ) => {
 
             } catch ( e ) {
 
-                log.error( `Error looking up country for ip ${ miner.ip }`, e )
+                log.warn( `Error looking up country for ip ${ miner.ip }`, e )
                 return { ...miner, country: 'unknown' }
 
             }
@@ -122,7 +129,7 @@ router.post( "/broadcast/neurons", async ( req, res ) => {
             if( !acc[ country ] ) acc[ country ] = 1
             else acc[ country ] += 1
             return acc
-        }, {} )
+        } , {} )
 
         // Reduce the ip array to a mapping of country to ips
         const country_to_ips = country_annotated_ips.reduce( ( acc, { ip, country } ) => {
@@ -143,10 +150,16 @@ router.post( "/broadcast/neurons", async ( req, res ) => {
         const country_codes = Object.keys( country_count )
         const country_code_to_name = country_codes.reduce( ( acc, code ) => {
 
-            // Get the country name
-            const name = sanetise_string( region_names.of( code ) )
-            if( !name ) return acc
-            acc[ code ] = name
+            try {
+                // Get the country name
+                const name = sanetise_string( region_names.of( code ) )
+                if( !name ) return acc
+
+                acc[ code ] = name
+            } catch ( e ) {
+                log.warn( `Error getting country name for code ${ code }`, e )
+            }
+            
             return acc
 
         }, {} )
@@ -170,9 +183,9 @@ router.post( "/broadcast/neurons", async ( req, res ) => {
         cache( `miner_country_count`, country_count )
         log.info( `Caching country to ips data at key "miner_country_to_ips"` )
         cache( `miner_country_to_ips`, country_to_ips )
-        log.info( `Caching country code to name data at key "miner_country_code_to_name":`, country_code_to_name.length )
+        log.info( `Caching country code to name data at key "miner_country_code_to_name":`, Object.keys( country_code_to_name ).length )
         cache( `miner_country_code_to_name`, country_code_to_name )
-        log.info( `Caching country name to code data at key "miner_country_name_to_code":`, country_name_to_code.length )
+        log.info( `Caching country name to code data at key "miner_country_name_to_code":`, Object.keys( country_name_to_code ).length )
         cache( `miner_country_name_to_code`, country_name_to_code )
         log.info( `Caching miner uids to "miner_uids":`, miner_uids.length )
         cache( `miner_uids`, miner_uids )
@@ -187,22 +200,23 @@ router.post( "/broadcast/neurons", async ( req, res ) => {
         await save_tpn_cache_to_disk()
 
         // Return some stats
-        return res.json( {
+        return {
             validators: validators.length,
             miners: miners.length,
             weight_copiers: weight_copiers.length,
             success: true,
-        } )
+        }
 
     }
 
     try {
 
-        const retryable_handler = await make_retryable( handle_route, { retry_times: 2, cooldown_in_s: 10, cooldown_entropy: false } )
-        return retryable_handler()
-
+        const retryable_handler = await make_retryable( handle_route, { retry_times, cooldown_in_s } )
+        const response_data = await retryable_handler()
+        return res.json( response_data )
+ 
     } catch ( e ) {
-
+        
         log.warn( `Error handling neuron broadcast. Error:`, e )
         return res.status( 200 ).json( { error: e.message } )
 

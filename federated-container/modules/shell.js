@@ -15,7 +15,7 @@ import { log } from 'mentie'
  *   - `stdout` (string|null): The standard output of the command, or null if empty.
  *   - `stderr` (string|null): The standard error output of the command, or null if empty.
  */
-export async function run( command, { silent=false, verbose=false, log_tag=`[ ${ Date.now() } ] ` }={} ) {
+export async function run( command, { silent=true, verbose=false, log_tag=`[ ${ Date.now() } ] ` }={} ) {
 
     return new Promise( ( resolve ) => {
 
