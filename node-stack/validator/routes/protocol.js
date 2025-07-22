@@ -3,6 +3,7 @@ import { cache, is_ipv4, log, make_retryable, require_props, sanetise_ipv4, sane
 import { request_is_local } from "../modules/network.js"
 import { save_balance } from "../modules/database.js"
 import { get_complete_tpn_cache, save_tpn_cache_to_disk } from "../modules/caching.js"
+import { validators_ip_fallback } from "../modules/validators.js"
 export const router = Router()
 
 /**
@@ -24,7 +25,12 @@ router.post( "/broadcast/neurons", async ( req, res ) => {
 
         // Sanetise the entry data
         valid_entries = valid_entries.map( entry => {
-            const { uid, ip, validator_trust, alpha_stake, stake_weight } = entry
+            const { uid, validator_trust, alpha_stake, stake_weight } = entry
+            let { ip } = entry
+
+            // If null ip check if we have fallback
+            if( ip == '0.0.0.0' ) ip = validators_ip_fallback[ uid ]?.ip || ip
+            
             return {
                 uid: Number( uid ),
                 ip: sanetise_ipv4( { ip, validate: true } ) || '0.0.0.0',
@@ -144,10 +150,14 @@ router.post( "/broadcast/neurons", async ( req, res ) => {
         const country_codes = Object.keys( country_count )
         const country_code_to_name = country_codes.reduce( ( acc, code ) => {
 
-            // Get the country name
-            const name = sanetise_string( region_names.of( code ) )
-            if( !name ) return acc
-            acc[ code ] = name
+            try {
+                // Get the country name
+                const name = sanetise_string( region_names.of( code ) )
+                if( !name ) return acc
+                acc[ code ] = name
+            } catch ( e ) {
+                log.error( `Error getting country name for code ${ code }`, e )
+            }
             return acc
 
         }, {} )
