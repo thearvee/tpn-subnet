@@ -250,14 +250,14 @@ router.post( "/:challenge/:response", async ( req, res ) => {
 
         // Check that the miner version is up to date
         const miner_metadata = await fetch( `http://${ unspoofable_ip }/` ).then( res => res.json() ).catch( e => ( { error: e.message } ) )
-        const minimum_version = [ '0', '0', '31' ]
+        const minimum_version = [ 0, 0, 31 ]
         if( miner_metadata.error ) {
             log.warn( `[POST] [ cheater ] Miner metadata fetch failed for ${ unspoofable_ip }: `, miner_metadata.error )
             return res.status( 500 ).json( { error: `Miner metadata fetch failed for ${ unspoofable_ip }, this usually means an out of date miner. Error: ${ miner_metadata.error }`, score: 0, correct: false } )  
         }
         const { version='', branch='unknown', commit='unknown' } = miner_metadata
-        const miner_version = version.split( '.' )
-        const is_miner_version_valid = minimum_version.every( ( value, index ) => ( miner_version[index] || '0' ) >= value )
+        const miner_version = version.split( '.' ).map( v => parseInt( v, 10 ) )
+        const is_miner_version_valid = minimum_version.every( ( value, index ) => ( miner_version[index] || 0 ) >= value )
         if( !is_miner_version_valid ) {
             log.warn( `[POST] [ cheater ] Miner version ${ miner_metadata.version } is not up to date, minimum version is ${ minimum_version.join( '.' ) }` )
             return res.status( 400 ).json( { error: `Miner version ${ miner_metadata.version } is not up to date, minimum version is ${ minimum_version.join( '.' ) }`, score: 0, correct: false } )
