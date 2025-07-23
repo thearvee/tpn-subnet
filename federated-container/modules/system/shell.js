@@ -1,5 +1,5 @@
 import { exec } from 'child_process'
-import { log } from 'mentie'
+import { cache, log } from 'mentie'
 
 
 /**
@@ -119,17 +119,24 @@ export async function check_system_warnings() {
  * @returns {Promise<{ branch: string, hash: string }>} An object containing the branch name and short commit hash.
  */
 export async function get_git_branch_and_hash() {
+
     try {
-        const branch = await new Promise( ( resolve, reject ) => {
+        const cache_branch = cache( 'git_branch' )
+        const cache_hash = cache( 'git_hash' )
+        const branch = cache_branch || await new Promise( ( resolve, reject ) => {
             exec( 'git rev-parse --abbrev-ref HEAD', ( error, stdout ) => {
                 if( error ) return reject( error )
-                resolve( stdout.trim() )
+                const branch_name = stdout.trim()
+                cache( 'git_branch', branch_name )
+                resolve( branch_name )
             } )
         } )
-        const hash = await new Promise( ( resolve, reject ) => {
+        const hash = cache_hash || await new Promise( ( resolve, reject ) => {
             exec( 'git rev-parse --short HEAD', ( error, stdout ) => {
                 if( error ) return reject( error )
-                resolve( stdout.trim() )
+                const commit_hash = stdout.trim()
+                cache( 'git_hash', commit_hash )
+                resolve( commit_hash )
             } )
         } )
         return { branch, hash }
