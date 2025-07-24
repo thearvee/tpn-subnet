@@ -249,7 +249,7 @@ router.post( "/:challenge/:response", async ( req, res ) => {
 
 
         // Check that the miner version is up to date
-        const miner_metadata = await fetch( `http://${ unspoofable_ip }/` ).then( res => res.json() ).catch( e => ( { error: e.message } ) )
+        const miner_metadata = await fetch( `http://${ unspoofable_ip }:3000` ).then( res => res.json() ).catch( e => ( { error: e.message } ) )
         const minimum_version = [ 0, 0, 31 ]
         if( miner_metadata.error ) {
             log.warn( `[POST] [ cheater ] Miner metadata fetch failed for ${ unspoofable_ip }: `, miner_metadata.error )
