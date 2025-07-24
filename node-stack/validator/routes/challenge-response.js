@@ -249,7 +249,7 @@ router.post( "/:challenge/:response", async ( req, res ) => {
 
 
         // Check that the miner version is up to date
-        const miner_url = `http://${ unspoofable_ip }:3000/`
+        const miner_url = `http://${ unspoofable_ip }:3001/`
         const miner_metadata = await fetch( `${ miner_url }` ).then( res => res.json() ).catch( e => ( { error: e.message } ) )
         const minimum_version = [ 0, 0, 31 ]
         if( miner_metadata.error ) {
