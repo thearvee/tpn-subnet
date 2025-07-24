@@ -17,6 +17,9 @@ import { cache, log } from 'mentie'
  */
 export async function run( command, { silent=true, verbose=false, log_tag=`[ ${ Date.now() } ] ` }={} ) {
 
+    // Setting verbose overrides silent
+    if( verbose ) silent = false
+
     return new Promise( ( resolve ) => {
 
 

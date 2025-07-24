@@ -19,6 +19,10 @@ log.info( `${ last_start } - Starting TPN ${ RUN_MODE } component version ${ ver
 // Check system resources
 await check_system_warnings()
 
+// Initialize database
+import { init_database } from './modules/database/init.js'
+await init_database()
+
 // Import express
 import { app } from './modules/networking/server.js'
 import { base_url } from "./modules/networking/url.js"

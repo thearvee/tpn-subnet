@@ -20,6 +20,7 @@
   "dependencies": {
     "express": "^5.1.0",
     "geoip-lite": "^1.4.10",
-    "mentie": "^0.3.17"
+    "mentie": "^0.3.17",
+    "pg": "^8.16.3"
   }
 }

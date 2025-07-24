@@ -1,4 +1,5 @@
 import { log } from "mentie"
+import { close_pool } from "../database/postgres.js"
 
 export function handle_exit_gracefully( server ) {
 
@@ -6,7 +7,7 @@ export function handle_exit_gracefully( server ) {
         log.info( 'Closing server, reason: ', reason || 'unknown' )
         log.info( 'Shutting down gracefully...' )
         server.close()
-        // await close_pool()
+        await close_pool()
         process.exit( 0 )
     }
 

@@ -50,6 +50,12 @@ const get_validators = async () => {
 
 }
 
+/**
+ * Checks if request came from known validator ip
+ * @param {Object} request - The request object
+ * @returns {Promise<{ uid: number, ip: string }>} An object containing the validator's uid and ip address.
+ * @description Checks if the request is from a validator by matching
+ */
 export async function is_validator_request( request ) {
 
     // In CI mode, bypass this check
@@ -69,6 +75,7 @@ export async function is_validator_request( request ) {
     // Find first matching validator
     const validators = await get_validators()
     const validator = validators.find( val => val.ip == unspoofable_ip )
+    if( validator ) return validator
 
     // Check if ip is override ip
     if( validators_ip_overrides.includes( unspoofable_ip ) ) {
@@ -76,6 +83,7 @@ export async function is_validator_request( request ) {
         return { uid: Infinity, ip: unspoofable_ip }
     }
 
-    return validator
+    // If no validator found, return false
+    return {}
 
 }
