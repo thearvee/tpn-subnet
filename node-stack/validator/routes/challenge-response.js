@@ -249,11 +249,12 @@ router.post( "/:challenge/:response", async ( req, res ) => {
 
 
         // Check that the miner version is up to date
-        const miner_metadata = await fetch( `http://${ unspoofable_ip }:3000` ).then( res => res.json() ).catch( e => ( { error: e.message } ) )
+        const miner_url = `http://${ unspoofable_ip }:3000/`
+        const miner_metadata = await fetch( `${ miner_url }` ).then( res => res.json() ).catch( e => ( { error: e.message } ) )
         const minimum_version = [ 0, 0, 31 ]
         if( miner_metadata.error ) {
-            log.warn( `[POST] [ cheater ] Miner metadata fetch failed for ${ unspoofable_ip }: `, miner_metadata.error )
-            return res.status( 500 ).json( { error: `Miner metadata fetch failed for ${ unspoofable_ip }, this usually means an out of date miner. Error: ${ miner_metadata.error }`, score: 0, correct: false } )  
+            log.warn( `[POST] [ cheater ] Miner metadata fetch failed for ${ miner_url }: `, miner_metadata.error )
+            return res.status( 500 ).json( { error: `Miner metadata fetch failed for ${ miner_url }, this usually means an out of date miner. Error: ${ miner_metadata.error }`, score: 0, correct: false } )
         }
         const { version='', branch='unknown', commit='unknown' } = miner_metadata
         const miner_version = version.split( '.' ).map( v => parseInt( v, 10 ) )
