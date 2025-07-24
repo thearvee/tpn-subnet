@@ -37,7 +37,7 @@ from sybil.base.utils.weight_utils import (
 )  # TODO: Replace when bittensor switches to numpy
 from sybil.mock import MockDendrite
 from sybil.utils.config import add_validator_args
-
+from sybil.base.consts import BURN_UID, BURN_WEIGHT
 
 class BaseValidatorNeuron(BaseNeuron):
     """
@@ -68,6 +68,7 @@ class BaseValidatorNeuron(BaseNeuron):
         self.resync_metagraph()
         bt.logging.info(f"===> Resynced metagraph: {self.step}, {len(self.scores)}, {len(self.hotkeys)}")
 
+        self.serve_axon()
         # # Serve axon to enable external connections.
         # if not self.config.neuron.axon_off:
         #     self.serve_axon()
@@ -253,6 +254,8 @@ class BaseValidatorNeuron(BaseNeuron):
             netuid=self.config.netuid,
             subtensor=self.subtensor,
             metagraph=self.metagraph,
+            burn_uid=BURN_UID,
+            burn_weight=BURN_WEIGHT,
         )
         bt.logging.debug("processed_weights", processed_weights)
         bt.logging.debug("processed_weight_uids", processed_weight_uids)
