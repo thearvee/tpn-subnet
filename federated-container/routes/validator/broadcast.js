@@ -1,8 +1,8 @@
 import { Router } from 'express'
-import { is_ipv4, log, make_retryable, sanetise_ipv4 } from 'mentie'
+import { log, make_retryable, sanetise_ipv4 } from 'mentie'
 import { cooldown_in_s, retry_times } from "../../modules/networking/routing.js"
 import { is_validator_request } from '../../modules/networking/validators.js'
-import { get_tpn_cache } from '../../modules/caching.js'
+import { is_valid_worker } from '../../modules/validations.js'
 
 
 const router = Router()
@@ -24,19 +24,14 @@ router.post( '/workers', async ( req, res ) => {
         log.info( `Received ${ workers.length } workers from validator ${ uid }@${ ip }` )
 
         // Clean up the worker data
-        const miner_country_code_to_name = get_tpn_cache( 'miner_country_code_to_name', {} )
         workers = workers.reduce( ( acc, worker ) => {
 
-            let { ip, country } = worker || {}
-            
-            // Skip workers with invalid data
-            const valid_ip = is_ipv4( ip )
-            const valid_country = miner_country_code_to_name[ country ] !== undefined
-            if( !valid_ip ) log.info( `Worker ip ${ ip } is invalid` )
-            if( !valid_country ) log.info( `Worker country ${ country } is invalid` )
-            if( !valid_ip || !valid_country ) return acc
+            // Skip invalid
+            if( !is_valid_worker( worker ) ) return acc
 
+            
             // Sanetise the IP address
+            let { ip, country } = worker || {}
             ip = sanetise_ipv4( { ip, validate: true } )
             acc.push( { ip, country } )
 
@@ -46,7 +41,7 @@ router.post( '/workers', async ( req, res ) => {
         log.info( `Sanetised worker data, ${ workers.length } valid entries` )
 
         // Save workers to database
-        ...
+        
 
     }
 

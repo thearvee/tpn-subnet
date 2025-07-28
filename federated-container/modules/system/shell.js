@@ -3,9 +3,7 @@ import { cache, log } from 'mentie'
 
 
 /**
- * Executes a shell command asynchronously and logs the output based on the provided options.
- *
- * @param {string} command - The shell command to execute.
+ * Executes a shell command asynchronously and logs the output based on the provided options. 
  * @param {Object} [options={}] - Options to control the execution and logging behavior.
  * @param {boolean} [options.silent=false] - If true, suppresses all logging.
  * @param {boolean} [options.verbose=false] - If true, logs detailed output including errors, stdout, and stderr.
