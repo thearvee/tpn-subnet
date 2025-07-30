@@ -27,7 +27,6 @@ export async function write_workers( { workers, mining_pool_uid, mining_pool_ip 
     const values = valid_workers.map( ( { ip, country_code } ) => [
         ip, country_code, 'NOW()', mining_pool_uid, mining_pool_ip
     ] )
-    
     const query = format( `
         INSERT INTO workers (ip, country_code, updated_at, mining_pool_uid, mining_pool_ip)
         VALUES %L
@@ -41,7 +40,7 @@ export async function write_workers( { workers, mining_pool_uid, mining_pool_ip 
     // Execute the query
     try {
         const result = await pool.query( query )
-        log.info( `Wrote ${ result.rowCount } workers to database` )
+        log.info( `Wrote ${ result.rowCount } workers to database for mining pool ${ mining_pool_uid }@${ mining_pool_ip }` )
         return { success: true, count: result.rowCount }
     } catch ( e ) {
         throw new Error( `Error writing workers to database: ${ e.message }` )

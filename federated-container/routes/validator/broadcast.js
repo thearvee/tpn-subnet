@@ -3,6 +3,7 @@ import { log, make_retryable, sanetise_ipv4 } from 'mentie'
 import { cooldown_in_s, retry_times } from "../../modules/networking/routing.js"
 import { is_validator_request } from '../../modules/networking/validators.js'
 import { is_valid_worker } from '../../modules/validations.js'
+import { write_workers } from '../../modules/database/workers.js'
 
 
 const router = Router()
@@ -14,14 +15,14 @@ const router = Router()
 router.post( '/workers', async ( req, res ) => {
 
     // This endpoint is only for validators
-    const { uid, ip } = is_validator_request( req )
-    if( !uid ) return res.status( 403 ).json( { error: `Requester ${ ip } not a known validator` } )
+    const { uid: mining_pool_uid, ip: mining_pool_ip } = is_validator_request( req )
+    if( !mining_pool_uid ) return res.status( 403 ).json( { error: `Requester ${ mining_pool_ip } not a known validator` } )
 
     const handle_route = async () => {
 
         // Get workers from the request
         let { workers=[] } = req.body || {}
-        log.info( `Received ${ workers.length } workers from validator ${ uid }@${ ip }` )
+        log.info( `Received ${ workers.length } workers from validator ${ mining_pool_uid }@${ mining_pool_ip }` )
 
         // Clean up the worker data
         workers = workers.reduce( ( acc, worker ) => {
@@ -41,8 +42,9 @@ router.post( '/workers', async ( req, res ) => {
         log.info( `Sanetised worker data, ${ workers.length } valid entries` )
 
         // Save workers to database
+        const write_result = await write_workers( { workers, mining_pool_uid, mining_pool_ip } )
+        return { ...write_result, mining_pool_uid, mining_pool_ip }
         
-
     }
 
     try {

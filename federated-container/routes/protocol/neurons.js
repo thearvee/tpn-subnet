@@ -214,7 +214,7 @@ router.post( "/broadcast/neurons", async ( req, res ) => {
         const retryable_handler = await make_retryable( handle_route, { retry_times, cooldown_in_s } )
         const response_data = await retryable_handler()
         return res.json( response_data )
- 
+
     } catch ( e ) {
         
         log.warn( `Error handling neuron broadcast. Error:`, e )
