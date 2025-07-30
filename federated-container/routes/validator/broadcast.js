@@ -5,8 +5,7 @@ import { is_validator_request } from '../../modules/networking/validators.js'
 import { is_valid_worker } from '../../modules/validations.js'
 import { write_workers } from '../../modules/database/workers.js'
 
-
-const router = Router()
+export const router = Router()
 
 /**
  * Handle the submission of worker lists from mining pools
@@ -44,7 +43,7 @@ router.post( '/workers', async ( req, res ) => {
         // Save workers to database
         const write_result = await write_workers( { workers, mining_pool_uid, mining_pool_ip } )
         return { ...write_result, mining_pool_uid, mining_pool_ip }
-        
+
     }
 
     try {

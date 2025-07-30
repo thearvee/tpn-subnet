@@ -41,6 +41,10 @@ import { router as stats_router } from './routes/protocol/stats.js'
 app.use( '/protocol', protocol_router )
 app.use( '/protocol', stats_router )
 
+// Validator routes
+import { router as validator_broadcast_router } from './routes/validator/broadcast.js'
+app.use( '/validator/broadcast', validator_broadcast_router )
+
 /* ///////////////////////////////
 // Start server
 // /////////////////////////////*/
