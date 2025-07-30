@@ -8,21 +8,27 @@
     "airier": "^0.0.9",
     "eslint-plugin-import": "^2.32.0",
     "husky": "^9.1.7",
-    "nodemon": "^3.1.10"
+    "nodemon": "^3.1.10",
+    "start-server-and-test": "^2.0.12"
   },
   "scripts": {
     "lint": "eslint --fix src",
     "prepare": "husky",
     "start": "RUN_MODE=oneshot node --env-file .env.development app.js",
-    "start:validator": "RUN_MODE=validator nodemon --ext json,js --env-file .env.development app.js",
-    "test": "node --test test/*.test.js",
+    "start:dev": "RUN_MODE=validator nodemon --ext json,js --env-file .env.development app.js",
+    "start:validator": "RUN_MODE=validator node --env-file .env.development app.js",
+    "test": "start-server-and-test start:dev http://localhost:3000 test:once",
+    "test:once": "node --test --test-concurrency=1 test/*.test.js",
     "test:watch": "node --test --watch test/*.test.js"
   },
   "dependencies": {
     "express": "^5.1.0",
     "geoip-lite": "^1.4.10",
+    "ip2location-nodejs": "^9.6.3",
     "mentie": "^0.3.17",
     "node-pg-format": "^1.3.5",
-    "pg": "^8.16.3"
+    "pg": "^8.16.3",
+    "pg-format": "^1.0.4",
+    "unzipper": "^0.12.3"
   }
 }

@@ -14,7 +14,7 @@ export const router = Router()
 router.post( '/workers', async ( req, res ) => {
 
     // This endpoint is only for validators
-    const { uid: mining_pool_uid, ip: mining_pool_ip } = is_validator_request( req )
+    const { uid: mining_pool_uid, ip: mining_pool_ip } = await is_validator_request( req )
     if( !mining_pool_uid ) return res.status( 403 ).json( { error: `Requester ${ mining_pool_ip } not a known validator` } )
 
     const handle_route = async () => {
@@ -31,9 +31,9 @@ router.post( '/workers', async ( req, res ) => {
 
             
             // Sanetise the IP address
-            let { ip, country } = worker || {}
+            let { ip, country_code } = worker || {}
             ip = sanetise_ipv4( { ip, validate: true } )
-            acc.push( { ip, country } )
+            acc.push( { ip, country_code } )
 
             return acc
 

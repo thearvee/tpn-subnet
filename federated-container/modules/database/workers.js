@@ -15,7 +15,7 @@ export async function write_workers( { workers, mining_pool_uid, mining_pool_ip 
     if( !pool ) throw new Error( `Postgres pool not available` )
 
     // Validate input
-    const [ invalid_workers, valid_workers ] = workers.reduce( ( acc, worker ) => {
+    const [ valid_workers, invalid_workers ] = workers.reduce( ( acc, worker ) => {
         if( is_valid_worker( worker ) ) acc[0].push( worker )
         else acc[1].push( worker )
         return acc
@@ -25,14 +25,14 @@ export async function write_workers( { workers, mining_pool_uid, mining_pool_ip 
 
     // Prepare the query with pg-format
     const values = valid_workers.map( ( { ip, country_code } ) => [
-        ip, country_code, 'NOW()', mining_pool_uid, mining_pool_ip
+        ip, country_code, Date.now(), mining_pool_uid, mining_pool_ip
     ] )
     const query = format( `
         INSERT INTO workers (ip, country_code, updated_at, mining_pool_uid, mining_pool_ip)
         VALUES %L
         ON CONFLICT (ip) DO UPDATE SET
             country_code = EXCLUDED.country_code,
-            updated_at = NOW(),
+            updated_at = EXCLUDED.updated_at,
             mining_pool_uid = EXCLUDED.mining_pool_uid,
             mining_pool_ip = EXCLUDED.mining_pool_ip
     `, values )

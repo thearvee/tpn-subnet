@@ -61,7 +61,7 @@ export async function is_validator_request( request ) {
     // In CI mode, bypass this check
     if( CI_MODE ) {
         log.info( `CI_MODE is enabled, bypassing validator check` )
-        return { uid: Infinity, ip: 'mock.mock.mock.mock' }
+        return { uid: 99999, ip: 'mock.mock.mock.mock' }
     }
 
     // Get the ip of the originating request

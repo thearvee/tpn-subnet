@@ -1,9 +1,9 @@
 import { log } from "mentie"
 
-const { PUBLIC_URL, PUBLIC_VALIDATOR_URL, PUBLIC_PORT=3000, CI_MODE } = process.env
+const { SERVER_PUBLIC_URL, SERVER_PUBLIC_PORT=3000, CI_MODE } = process.env
 
 // Base url based on environment
-let base_url = `${ PUBLIC_VALIDATOR_URL || PUBLIC_URL }`.trim()
+let base_url = `${ SERVER_PUBLIC_URL }`.trim()
 
 // If the base url contains a trailing port, remove it
 if( base_url.match( /:\d+$/ ) ) {
@@ -24,11 +24,11 @@ base_url = `${ base_url }`.replace( /\/$/, '' )
 // Check if public url has a port
 const has_port = `${ base_url }`.match( /:\d+$/ )
 
-if( has_port && PUBLIC_PORT ) log.error( `You specified a PUBLIC_PORT=${ PUBLIC_PORT } but your base url ${ base_url } also has a port specified, this will break!` )
+if( has_port && SERVER_PUBLIC_PORT ) log.error( `You specified a SERVER_PUBLIC_PORT=${ SERVER_PUBLIC_PORT } but your base url ${ base_url } also has a port specified, this will break!` )
 
-if( PUBLIC_PORT && !base_url.includes( `:${ PUBLIC_PORT }` ) ) {
-    log.info( `Adding port ${ PUBLIC_PORT } to base url` )
-    base_url = `${ base_url }:${ PUBLIC_PORT }`
+if( SERVER_PUBLIC_PORT && !base_url.includes( `:${ SERVER_PUBLIC_PORT }` ) ) {
+    log.info( `Adding port ${ SERVER_PUBLIC_PORT } to base url` )
+    base_url = `${ base_url }:${ SERVER_PUBLIC_PORT }`
 }
 
 export { base_url }

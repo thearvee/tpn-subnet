@@ -1,5 +1,7 @@
-import { is_ipv4, require_props } from "mentie"
+import { is_ipv4, log, require_props } from "mentie"
 import { get_tpn_cache } from "./caching.js"
+
+const { CI_MODE } = process.env
 
 /**
  * Validates if a worker object has the required properties and a valid IPv4 address.
@@ -9,17 +11,28 @@ import { get_tpn_cache } from "./caching.js"
 export const is_valid_worker = ( worker ) => {
 
     if( !worker || typeof worker !== 'object' ) return false
+    const { ip, country_code } = worker
+
+    const has_required_props = require_props( worker, [ 'ip', 'country_code' ], false )
+    if( !has_required_props ) {
+        log.info( `Worker object is missing required properties:`, worker )
+        return false
+    }
     
-    const has_required_props = require_props( worker, [ 'ip', 'country_code' ] )
-    if( !has_required_props ) return false
-    
-    const valid_ip = is_ipv4( worker.ip )
-    if( !valid_ip ) return false
+    const valid_ip = is_ipv4( ip )
+    if( !valid_ip ) {
+        log.info( `Worker IP is not a valid IPv4 address: ${ ip }` )
+        return false
+    }
 
     // Check if country code is valid
     const miner_country_code_to_name = get_tpn_cache( 'miner_country_code_to_name', {} )
-    const valid_country = miner_country_code_to_name[ worker.country_code ] !== undefined
-    if( !valid_country ) return false
+    let valid_country = miner_country_code_to_name[ country_code ] !== undefined
+    if( CI_MODE && typeof country_code === 'string' && country_code.length > 0 ) valid_country = true
+    if( !valid_country ) {
+        log.info( `Worker country code is not valid: ${ country_code }` )
+        return false
+    }
 
     return true
 

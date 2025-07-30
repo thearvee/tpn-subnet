@@ -29,7 +29,7 @@ export const validNeurons = [
 
 export const validatorNeuron = {
     uid: 1,
-    ip: '192.168.1.1',
+    ip: '8.8.8.8', // Google DNS - US
     validator_trust: 0.8,
     trust: 0.7,
     alpha_stake: 1000,
@@ -41,7 +41,7 @@ export const validatorNeuron = {
 
 export const minerNeuron = {
     uid: 2,
-    ip: '192.168.1.2',
+    ip: '1.1.1.1', // Cloudflare DNS - US
     validator_trust: 0,
     trust: 0.6,
     alpha_stake: 800,
@@ -119,9 +119,19 @@ export const neuronWithZeros = {
 
 // Generate large neuron array for performance testing
 export const generateLargeNeuronArray = ( size = 1000 ) => {
+    // Use real public IP addresses that can be geo-located
+    const publicIPs = [
+        '8.8.8.8',    // Google DNS - US
+        '1.1.1.1',    // Cloudflare - US  
+        '208.67.222.222', // OpenDNS - US
+        '9.9.9.9',    // Quad9 - US
+        '8.8.4.4',    // Google secondary - US
+        '1.0.0.1',    // Cloudflare secondary - US
+    ]
+    
     return Array.from( { length: size }, ( _, i ) => ( {
         uid: i + 1,
-        ip: `203.0.113.${ i % 254 + 1 }`, // Use TEST-NET-3 public IP range (RFC 5737)
+        ip: publicIPs[i % publicIPs.length],
         validator_trust: i % 2 === 0 ? 0.8 : 0,
         trust: 0.7,
         alpha_stake: 1000,
@@ -136,4 +146,27 @@ export const mixedNeurons = [
     validatorNeuron,
     incompleteNeuron,
     minerNeuron
+]
+
+// Worker test fixtures
+export const validWorkers = [
+    { ip: '8.8.8.8', country_code: 'US' },      // Should match cache entry
+    { ip: '1.1.1.1', country_code: 'US' },     // Should match cache entry  
+    { ip: '208.67.222.222', country_code: 'US' } // Should match cache entry
+]
+
+export const invalidWorkers = [
+    { ip: 'invalid_ip', country_code: 'US' },
+    { ip: '192.168.1.1', country_code: 'INVALID' },
+    { ip: '', country_code: 'US' },
+    { country_code: 'US' }, // missing ip
+    { ip: '192.168.1.1' }, // missing country_code
+    null,
+    undefined,
+    {}
+]
+
+export const mixedWorkers = [
+    ...validWorkers,
+    ...invalidWorkers.slice( 0, 3 ) // Include some invalid ones
 ]

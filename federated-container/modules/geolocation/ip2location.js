@@ -1,16 +1,16 @@
 import { IP2Location } from "ip2location-nodejs"
 import fs from "fs"
 import { normalize } from "path"
-import url from "url"
 import https from "https"
 import { cache, log } from "mentie"
 import unzipper from "unzipper"
-import { datacenter_patterns } from "./scoring.js"
-import { get_tpn_cache } from "./caching.js"
+import { get_tpn_cache } from "../caching.js"
+import { datacenter_patterns } from "./helpers.js"
 
 // Configurations
-const __dirname = url.fileURLToPath( new URL( '.', import.meta.url ) )
-const database_folder = normalize( `${ __dirname }/../ip2location_data` )
+const { CI_MODE } = process.env
+const { dirname } = import.meta
+const database_folder = normalize( `${ dirname }/../../${ CI_MODE ? '.ip2location_data_local' : 'ip2location_data' }` )
 const database_file_name = `IP2LOCATION-LITE-ASN.IPV6.BIN`
 const database_file_location = `${ database_folder }/${ database_file_name }`
 const database_max_age_ms = 1000 * 60 * 60 * 24 * 2
@@ -109,6 +109,9 @@ async function download_url_to_file( url, path ) {
     // Download the file
     log.info( `Downloading the file ${ path } from ${ url }` )
     return new Promise( ( resolve, reject ) => {
+
+        // In CI mode do not download
+        if( CI_MODE ) return log.info( `🤡 Skipping ip2location download in CI mode` )
 
         // Get the file
         const download = https.get( url, response => {
@@ -224,7 +227,7 @@ export async function is_data_center( ip_address ) {
 
     // Check that database file exists
     if( !fs.existsSync( database_file_location ) ) {
-        if( process.env.CI_MODE ) return 'ci.ci.ci.ci'
+        if( CI_MODE ) return 'ci.ci.ci.ci'
         throw new Error( `Database file ${ database_file_location } does not exist` )
     }
 

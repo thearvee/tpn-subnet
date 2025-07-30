@@ -68,7 +68,7 @@ const cache_persistence_path = `${ cache_dir }/.tpn_cache.json`
 export function get_tpn_cache( key, default_value=undefined ) {
 
     // Log the cache lookup
-    log.info( `Retrieving cache for key: ${ key }` )
+    // log.info( `Retrieving cache for key: ${ key }` )
 
     // Get cache value
     const cache_value = cache( key )

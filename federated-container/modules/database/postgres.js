@@ -1,4 +1,5 @@
 import postgres from 'pg'
+import { default as _format } from 'pg-format'
 import { log, wait } from 'mentie'
 import { run } from '../system/shell.js'
 
@@ -21,13 +22,31 @@ export async function get_pg_pool() {
     if( CI_MODE ) {
         log.info( `CI mode detected, checking if postgres container is running` )
         const container_name = `tpn_ci_postgres`
+        const first_boot = !_pool
         try {
+
+            // Check if docker is running
+            let { stdout: docker_info } = await run( `docker info` )
+            while( docker_info?.includes( 'Cannot connect to the Docker daemon' ) ) {
+                log.info( `Waiting for Docker to start...` )
+                await run( `open --hide --background -a Docker` )
+                await wait( 10_000 )
+                const { stdout } = await run( `docker info` )
+                docker_info = stdout
+            }
+
             // Check if the container is running
             const { stdout } = await run( `docker ps` )
             const is_running = stdout?.includes( container_name )
-            if( is_running ) await run( `docker stop ${ container_name  }` )
-            log.info( `Postgres container not running, starting it up` )
-            await run( `docker run -d --rm --name ${ container_name } \\
+
+            // If running, and this is the first boot, refresh the container
+            if( !is_running ) {
+                // if( first_boot ) {
+                //     log.info( `🗑️ Postgres container is running, recreating it to clear out old data` )
+                //     await run( `docker stop ${ container_name  }` )
+                // }
+                log.info( `Postgres container not running, starting it up` )
+                await run( `docker run -d --rm --name ${ container_name } \\
                             -e POSTGRES_USER=${ POSTGRES_USER } \\
                             -e POSTGRES_PASSWORD=${ POSTGRES_PASSWORD } \\
                             -e POSTGRES_DB=${ POSTGRES_DB } \\
@@ -35,7 +54,8 @@ export async function get_pg_pool() {
                             --health-interval=10s \\
                             --health-timeout=5s \\
                             --health-retries=5 \\
-                            -p ${ POSTGRES_PORT }:5432 postgres:latest` )
+                            -p ${ POSTGRES_PORT }:5432 postgres:latest`, { verbose: true } )
+            }
             let is_healthy = false
             while( !is_healthy ) {
                 const { stdout } = await run( `docker inspect --format='{{json .State.Health.Status}}' ${ container_name }` )
@@ -84,8 +104,22 @@ export const close_pool = async () => _pool?.end?.().then( () => log.info( 'Post
 
 /**
  * Format a query using node-pg-format
+ * @param {string} query - The SQL query string with placeholders, see https://www.npmjs.com/package/pg-format
+ * @param {Array} values - The values to format into the query
+ * @returns {string} The formatted query string
+ * @throws {Error} If there is an error formatting the query
 */
-export const format = ( query, ...values ) => {
+export const format = ( query, values ) => {
     log.info( `Formatting query:`, query, `with ${ values.length } values` )
-    return postgres.format( query, values )
+    try {
+        const formatted = _format( query, values )
+        return formatted
+    } catch ( e ) {
+        log.error( `Error formatting query:`, {
+            e,
+            query,
+            values: values.length
+        } )
+        throw new Error( `Failed to format query: ${ e.message }` )
+    }
 }

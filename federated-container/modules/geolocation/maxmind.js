@@ -1,19 +1,9 @@
 import { log } from "mentie"
-
-// Check for license key
-const { MAXMIND_LICENSE_KEY } = process.env
-if( !MAXMIND_LICENSE_KEY ) {
-    log.error( 'MAXMIND_LICENSE_KEY is required' )
-}
-
 import { spawn } from 'child_process'
-
-// Spawn a child process that runs "npm run-script updatedb license_key=YOUR_LICENSE_KEY"
-// in the "node_modules/geoip-lite" directory.
-import url from 'url'
-import { get_timestamp, set_timestamp } from "./database.js"
-const __dirname = url.fileURLToPath( new URL( '.', import.meta.url ) )
-
+import { get_timestamp, set_timestamp } from "../database/timestamps.js"
+import { geolocation_update_interval_ms } from "./helpers.js"
+const { dirname } = import.meta
+const { MAXMIND_LICENSE_KEY, CI_MODE } = process.env
 
 /**
  * Initiates the Maxmind update process by spawning a child process that runs the "updatedb" npm script.
@@ -26,8 +16,14 @@ const __dirname = url.fileURLToPath( new URL( '.', import.meta.url ) )
  */
 function start_maxmind_update( { on_err, on_close }={} ) {
 
+    // Check for license key
+    if( !MAXMIND_LICENSE_KEY ) throw new Error( 'MAXMIND_LICENSE_KEY is required' )
+
+    // In CI mode do not update Maxmind
+    if( CI_MODE ) return log.info( `🤡 Skipping Maxmind update in CI mode` )
+
     const updateProcess = spawn( 'npm', [ 'run-script', 'updatedb', `license_key=${ MAXMIND_LICENSE_KEY }` ], {
-        cwd: `${ __dirname }/../node_modules/geoip-lite`, // run in the geoip-lite directory
+        cwd: `${ dirname }/../../node_modules/geoip-lite`, // run in the geoip-lite directory
         shell: true // use shell for command
     } )
         
@@ -52,6 +48,9 @@ function start_maxmind_update( { on_err, on_close }={} ) {
  */
 export async function update_maxmind() {
 
+    // Check for license key
+    if( !MAXMIND_LICENSE_KEY ) log.error( `MAXMIND_LICENSE_KEY is not set, Maxmind database will not be updated this WILL REDUCE YOUR EMISSIONS` )
+
     // Load geoip-lite
     const { default: geoip } = await import( 'geoip-lite' )
 
@@ -64,8 +63,8 @@ export async function update_maxmind() {
         log.info( `Maxmind database is not functioning yet: `, e )
     }
 
-    // Check if we should update based on timestamp
-    const update_min_interval_ms = 1000 * 60 * 60 * .5 // 30 minutes
+    // Check if we should skip update based on timestamp, this is due to restarts possibly retriggering updates
+    const update_min_interval_ms = geolocation_update_interval_ms / 2
     const last_update = await get_timestamp( { label: 'last_maxmind_update' } )
     const now = Date.now()
     const time_since_last_update = now - last_update
@@ -77,7 +76,7 @@ export async function update_maxmind() {
 
     // If maxmind is ok, update in the background
     if( maxmind_db_ok ) {
-        log.info( `Maxmind database is functioning, updating in the background` )
+        log.info( `✅ Maxmind database is functioning, updating in the background` )
         start_maxmind_update( {
             on_err: ( data ) => {
                 log.error( `Maxmind update error:`, data.toString() )
@@ -97,7 +96,7 @@ export async function update_maxmind() {
     // If maxmind is not ok, we need to wait for the update to complete
     if( !maxmind_db_ok ) return new Promise( ( resolve, reject ) => {
 
-        log.info( `Maxmind database is not yet functioning, updating in a blocking way now` )
+        log.info( `🛑 Maxmind database is not yet functioning, updating in a blocking way now` )
 
         start_maxmind_update( {
 
