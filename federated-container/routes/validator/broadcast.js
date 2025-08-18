@@ -28,7 +28,6 @@ router.post( '/workers', async ( req, res ) => {
 
             // Skip invalid
             if( !is_valid_worker( worker ) ) return acc
-
             
             // Sanetise the IP address
             let { ip, country_code } = worker || {}

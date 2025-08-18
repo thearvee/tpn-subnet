@@ -41,8 +41,8 @@ import { app } from './modules/networking/server.js'
 import { base_url } from "./modules/networking/url.js"
 
 // Root route responds with identity
-import { router as index_router } from './routes/index.js'
-app.use( '/', index_router )
+import { router as health_router } from './routes/health.js'
+app.use( '/', health_router )
 
 /* ///////////////////////////////
 // Routes

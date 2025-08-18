@@ -77,7 +77,7 @@ export async function update_maxmind() {
     // If maxmind is ok, update in the background
     if( maxmind_db_ok ) {
         log.info( `✅ Maxmind database is functioning, updating in the background` )
-        start_maxmind_update( {
+        void start_maxmind_update( {
             on_err: ( data ) => {
                 log.error( `Maxmind update error:`, data.toString() )
             },

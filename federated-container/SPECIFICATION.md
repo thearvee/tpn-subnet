@@ -2,9 +2,9 @@
 
 The federated version of TPN fundamentally changes how we operate. We will have 3 kinds of nodes in the network:
 
-- Validators - these are validators in the Bittensor network and set the emission weigts
-- Mining pools - these are miners in the Bittensor network and allow workers to serve config files
-- Workers - these are off-chain nodes that offer VPN config files to the TPN network trough mining pools
+- [ ] Validators - these are validators in the Bittensor network and set the emission weigts
+- [ ] Mining pools - these are miners in the Bittensor network and allow workers to serve config files
+- [ ] Workers - these are off-chain nodes that offer VPN config files to the TPN network trough mining pools
 
 These nodes will be controlled through the same codebase to make it easier to share code and deploy docker images. Much of the code can be recycled after refactoring.
 
@@ -12,35 +12,35 @@ These nodes will be controlled through the same codebase to make it easier to sh
 
 The TPN stack consists of the following basic container configuration
 
-- `tpn-federated` container
-- `lscr.io/linuxserver/swag` reverse proxy container
-- `postgres` database container
-- `watchtower` update checker
-- `willfarrell/autoheal` container restarter 
+- [x] `tpn-federated` container
+- [x] `lscr.io/linuxserver/swag` reverse proxy container
+- [x] `postgres` database container
+- [x] `watchtower` update checker
+- [x] `willfarrell/autoheal` container restarter 
 
 ### `tpn-federated` shared endpoints
 
-- `POST /protocol/broadcast/neurons`
-  - Receive neuron data so we are aware of all validators and miners in the network (worker exempt)
-- `GET /protocol/stats`
-  - Returns TPN cache for debugging and visibility
-- `GET /`
-  - Health endpoint that returns current versions and uptime info
+- [x] `POST /protocol/broadcast/neurons`
+  - [x] Receive neuron data so we are aware of all validators and miners in the network (worker exempt)
+- [x] `GET /protocol/stats`
+  - [x] Returns TPN cache for debugging and visibility
+- [x] `GET /`
+  - [x] Health endpoint that returns current versions and uptime info
 
 ### `tpn-federated` shared environment variables
 
-- `LOG_LEVEL` *optional* - info, warn, error
-- `POSTGRES_HOST` *optional* - postgres host
-- `POSTGRES_USER` *optional* - postgres user
-- `POSTGRES_PASSWORD` *optional* - postgres password
-- `NODE_OPTIONS` - runtime configs
+- [x] `LOG_LEVEL` *optional* - info, warn, error
+- [x] `POSTGRES_HOST` *optional* - postgres host
+- [x] `POSTGRES_USER` *optional* - postgres user
+- [x] `POSTGRES_PASSWORD` *optional* - postgres password
+- [x] `NODE_OPTIONS` - runtime configs
 
 ### Docker networks
 
-- `tpn-internal` - a network that has internal connectivity only and cannot reach the internet not be reached from it
-- `tpn-external` - which will only contain the reverse proxy server
+- [x] `tpn-internal` - a network that has internal connectivity only and cannot reach the internet not be reached from it
+- [x] `tpn-external` - which will only contain the reverse proxy server
 
-Note that the network ip subnets will be set manually so we can deterministically detect local requests in the TPN container.
+Note that the network ip subnets will be set explicitly (manually with a default) so we can deterministically detect local requests in the TPN container.
 
 ----------------------------------------------------------------------------------------------------
 
@@ -50,16 +50,16 @@ The validator checks the mining pool performance by asking it for worker configs
 
 ### Validator responsibilities
 
-- [ ] Periodically query mining pools for their full worker list and checking a random sample for uptime
+- [ ] Periodically query mining pools for their full worker list and checking a random sample for uptime, make sure it only queries workers whose last submitted status was up so as to not punish pools for workers that are known to be down
   - [ ] The sample size is determined by [Cochranes formula](https://en.wikipedia.org/wiki/Cochran%27s_theorem)
   - [ ] The up status of a worker is verified by asking a worker to open a challenge/response endpoint on the validator itself
 - [ ] Score mining pools based on their performance metrics
   - [ ] Reward the mean uniqueness score times the amount of workers, where each worker is scored as x% unique based on the network topology
   - [ ] Give a score boost to mining pools that have locked capital in an EVM contract, where:
-    - `score = min( 100, score * ( 1 + boost/100 ) )`
-    - `boost = max( boost ceiling - stake rank, 0 )`
-    - `stake rank` is a simple ranking of the mining pools according to the amount staked in the contract
-    - `boost ceiling` is the maximum amount of boost, probably in the range of 10-20
+  - [ ] `score = min( 100, score * ( 1 + boost/100 ) )`
+  - [ ] `boost = max( boost ceiling - stake rank, 0 )`
+  - [ ] `stake rank` is a simple ranking of the mining pools according to the amount staked in the contract
+  - [ ] `boost ceiling` is the maximum amount of boost, probably in the range of 10-20
 - [ ] Serve consumers with worker config files based on their input parameters
 
 ```js
@@ -87,18 +87,20 @@ function sample_size( { uptime_confidence_fraction=.99, expected_proportion_up=.
 
 ### Validator endpoints
 
-- `GET /api/config/new?lease_seconds=100&format=text|json&geo=netherlands|NL&whitelist=1.1.1.1,2.2.2.2&blacklist=3.3.3.3`
-  - Get a config, similar to what the mining pools expose, but with logic to select the best miner for the query
-- `GET /api/countries?format=code|name`
-  - All countries based on merged list of mining pool
+- [x] `POST /validator/broadcast/workers/`
+  - [x] Allows mining pools to submit their current workers. This may be done at any time by the mining pool (including faster than the cochrane query by the validator)
+- [ ] `GET /api/config/new?lease_seconds=100&format=text|json&geo=netherlands|NL&whitelist=1.1.1.1,2.2.2.2&blacklist=3.3.3.3`
+  - [ ] Get a config, similar to what the mining pools expose, but with logic to select the best miner for the query
+- [ ] `GET /api/countries?format=code|name`
+  - [ ] All countries based on merged list of mining pool
 
 ### Validator environment variables
 
-- `SERVER_PROTOCOL` - the protocol at which the validator should be called
-- `SERVER_PUBLIC_URL` - the public url at which the validator can be reached on the internet
-- `SERVER_PUBLIC_PORT` - the port at which the public url should be called
-- `MAXMIND_LICENSE_KEY` - maxmind license key
-- `IP2LOCATION_DOWNLOAD_TOKEN` - ip2location token
+- [ ] `SERVER_PROTOCOL` - the protocol at which the validator should be called
+- [ ] `SERVER_PUBLIC_URL` - the public url at which the validator can be reached on the internet
+- [ ] `SERVER_PUBLIC_PORT` - the port at which the public url should be called
+- [ ] `MAXMIND_LICENSE_KEY` - maxmind license key
+- [ ] `IP2LOCATION_DOWNLOAD_TOKEN` - ip2location token
 
 ----------------------------------------------------------------------------------------------------
 
@@ -119,20 +121,20 @@ The mining pool keeps track of all workers that are registered to it. Periodical
 
 ### Mining pool endpoints
 
-- `GET /pool/config/new?lease_seconds=100&format=text|json&geo=netherlands|NL&whitelist=1.1.1.1,2.2.2.2&blacklist=3.3.3.3`
-  - Validators may call this only. Retreives a config file with those parameters.
-- `GET /pool/countries?format=code|name`
-  - List all available countries based on the workers of this pool
+- [ ] `GET /pool/config/new?lease_seconds=100&format=text|json&geo=netherlands|NL&whitelist=1.1.1.1,2.2.2.2&blacklist=3.3.3.3`
+  - [ ] Validators may call this only. Retreives a config file with those parameters.
+- [ ] `GET /pool/countries?format=code|name`
+  - [ ] List all available countries based on the workers of this pool
 
 ### Mining pool environment variables
 
-- `SERVER_PROTOCOL` - the protocol at which the pool should be called
-- `SERVER_PUBLIC_URL` - the public url at which the mining pool can be reached on the internet
-- `SERVER_PUBLIC_PORT` - the port at which the public url should be called
-- `MAXMIND_LICENSE_KEY` - maxmind license key
-- `IP2LOCATION_DOWNLOAD_TOKEN` - ip2location token
-- `MINING_POOL_WEBSITE_URL` - the url where worker managers can see the terms of this mining pool
-- `MINING_POOL_REWARDS` - a short message describing how this mining pool pays the workers
+- [ ] `SERVER_PROTOCOL` - the protocol at which the pool should be called
+- [ ] `SERVER_PUBLIC_URL` - the public url at which the mining pool can be reached on the internet
+- [ ] `SERVER_PUBLIC_PORT` - the port at which the public url should be called
+- [ ] `MAXMIND_LICENSE_KEY` - maxmind license key
+- [ ] `IP2LOCATION_DOWNLOAD_TOKEN` - ip2location token
+- [ ] `MINING_POOL_WEBSITE_URL` - the url where worker managers can see the terms of this mining pool
+- [ ] `MINING_POOL_REWARDS` - a short message describing how this mining pool pays the workers
 
 ----------------------------------------------------------------------------------------------------
 
@@ -142,7 +144,7 @@ The worker registers itself with a TPN mining pool and then serves config files 
 
 Additional containers in the worker:
 
-- `taofuprotocol/wireguard` wireguard container, potentially multiple so as to have multiple ip subnet ranges and redundant containers available
+- [ ] `taofuprotocol/wireguard` wireguard container, potentially multiple so as to have multiple ip subnet ranges and redundant containers available
 
 ### Worker responsibilities
 
@@ -151,12 +153,12 @@ Additional containers in the worker:
 
 ### Worker endpoints
 
-- `GET /worker/config/new?lease_seconds=Number`
+- [ ] `GET /worker/config/new?lease_seconds=Number`
 
 ### Worker environment variables
 
-- `MINING_POOL` - may be an ipv4, a uid (int), or the string 'auto'
-- `PAYMENT_ADDRESS_EVM` *optional* - is an EVM compatible payment address
-- `PAYMENT_ADDRESS_BITTENSOR` *optional* - is a Bittensor address to receive payments on
-- `BROADCAST_MESSAGE` *optional* - is an arbitraty string that will be returned on the `/` endpoint
-- `CONTACT_METHOD` *optional* - is any contact method in case the mining pool wants to contact a miner
+- [ ] `MINING_POOL` - may be an ipv4, a uid (int), or the string 'auto'
+- [ ] `PAYMENT_ADDRESS_EVM` *optional* - is an EVM compatible payment address
+- [ ] `PAYMENT_ADDRESS_BITTENSOR` *optional* - is a Bittensor address to receive payments on
+- [ ] `BROADCAST_MESSAGE` *optional* - is an arbitraty string that will be returned on the `/` endpoint
+- [ ] `CONTACT_METHOD` *optional* - is any contact method in case the mining pool wants to contact a miner

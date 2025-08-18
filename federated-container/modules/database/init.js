@@ -10,6 +10,7 @@ export async function init_database() {
         log.info( 'Dropping old tables in CI mode' )
         await pool.query( `DROP TABLE IF EXISTS workers` )
         await pool.query( `DROP TABLE IF EXISTS timestamps` )
+        await pool.query( `DROP TABLE IF EXISTS worker_broadcast_metadata` )
     }
 
     // Create the WORKERS table if it doesn't exist
@@ -23,6 +24,16 @@ export async function init_database() {
             )
     ` )
     log.info( `✅ Workers table initialized` )
+
+    // Create WORKER_BROADCAST_METADATA table if it does not exist yet
+    await pool.query( `
+        CREATE TABLE IF NOT EXISTS worker_broadcast_metadata (
+            mining_pool_uid_ip_combolabel TEXT NOT NULL PRIMARY KEY,
+            last_known_worker_pool_size BIGINT NOT NULL,
+            updated BIGINT NOT NULL
+        )
+    ` )
+    log.info( `✅ Worker broadcast metadata table initialized` )
 
     // Create the TIMESTAMPS table if it doesn't exist
     await pool.query( `

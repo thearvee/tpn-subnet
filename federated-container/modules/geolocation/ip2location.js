@@ -111,7 +111,10 @@ async function download_url_to_file( url, path ) {
     return new Promise( ( resolve, reject ) => {
 
         // In CI mode do not download
-        if( CI_MODE ) return log.info( `🤡 Skipping ip2location download in CI mode` )
+        if( CI_MODE ) {
+            log.info( `🤡 Skipping ip2location download in CI mode` )
+            return resolve()
+        }
 
         // Get the file
         const download = https.get( url, response => {

@@ -37,11 +37,27 @@ export async function write_workers( { workers, mining_pool_uid, mining_pool_ip 
             mining_pool_ip = EXCLUDED.mining_pool_ip
     `, values )
 
+    // Save broadcast metadata
+    const broadcast_metadata = {
+        mining_pool_uid_ip_combolabel: `${ mining_pool_uid }@${ mining_pool_ip }`,
+        last_known_worker_pool_size: workers.length,
+        updated: Date.now()
+    }
+    const metadata_query = `
+        INSERT INTO worker_broadcast_metadata (mining_pool_uid_ip_combolabel, last_known_worker_pool_size, updated)
+        VALUES ($1, $2, $3)
+        ON CONFLICT (mining_pool_uid_ip_combolabel) DO UPDATE SET
+            last_known_worker_pool_size = EXCLUDED.last_known_worker_pool_size,
+            updated = EXCLUDED.updated
+    `
+
+
     // Execute the query
     try {
-        const result = await pool.query( query )
-        log.info( `Wrote ${ result.rowCount } workers to database for mining pool ${ mining_pool_uid }@${ mining_pool_ip }` )
-        return { success: true, count: result.rowCount }
+        const worker_write_result = await pool.query( query )
+        await pool.query( metadata_query, [ broadcast_metadata.mining_pool_uid_ip_combolabel, broadcast_metadata.last_known_worker_pool_size, broadcast_metadata.updated ] )
+        log.info( `Wrote ${ worker_write_result.rowCount } workers to database for mining pool ${ mining_pool_uid }@${ mining_pool_ip } with metadata: `, broadcast_metadata )
+        return { success: true, count: worker_write_result.rowCount, broadcast_metadata }
     } catch ( e ) {
         throw new Error( `Error writing workers to database: ${ e.message }` )
     }
