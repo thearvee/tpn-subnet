@@ -215,6 +215,21 @@ class Miner(BaseMinerNeuron):
             bt.logging.error(f"Failed to broadcast neurons info: {e}")
 
 
+def check_if_miner_registered(neuron):
+    """
+    Check if the miner is registered in the metagraph.
+    """
+    
+    subtensor = bt.subtensor(config=neuron.config)
+    metagraph = subtensor.metagraph(neuron.config.netuid)
+
+    is_registered = neuron.wallet.hotkey.ss58_address in metagraph.hotkeys
+    if not is_registered:
+        bt.logging.error(f"Miner {neuron.wallet.hotkey.ss58_address} is not registered in the metagraph")
+        exit()
+    else:
+        bt.logging.info(f"Neuron registration check passed")
+
 # This is the main function, which runs the miner.
 if __name__ == "__main__":
     with Miner() as miner:
@@ -226,9 +241,13 @@ if __name__ == "__main__":
             asyncio.set_event_loop(loop)
 
         async def periodic_broadcast():
+            last_broadcast = None
             while True:
-                await miner.broadcast_neurons()
-                await asyncio.sleep(1800)  # 30 minutes between broadcasts
+                check_if_miner_registered(miner)
+                if last_broadcast is None or time.time() - last_broadcast > 1800:
+                    await miner.broadcast_neurons()
+                    last_broadcast = time.time()
+                await asyncio.sleep(60)  # 60 seconds between broadcasts
 
         # Run the periodic broadcast in the background
         loop.run_until_complete(periodic_broadcast())
