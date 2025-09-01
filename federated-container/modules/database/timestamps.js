@@ -15,7 +15,6 @@ export async function get_timestamp( { label } ) {
 
     // Get the postgres pool
     const pool = await get_pg_pool()
-    if( !pool ) throw new Error( `Postgres pool not available` )
 
     // Retrieve the timestamp for the given label
     const result = await pool.query(
@@ -41,7 +40,6 @@ export async function set_timestamp( { label, timestamp } ) {
 
     // Get the postgres pool
     const pool = await get_pg_pool()
-    if( !pool ) throw new Error( `Postgres pool not available` )
 
     // Insert or update the timestamp record
     await pool.query(

@@ -1,9 +1,11 @@
 import { Router } from 'express'
-import { log, make_retryable, sanetise_ipv4 } from 'mentie'
+import { log, make_retryable, sanetise_ipv4, sanetise_string } from 'mentie'
 import { cooldown_in_s, retry_times } from "../../modules/networking/routing.js"
-import { is_validator_request } from '../../modules/networking/validators.js'
 import { is_valid_worker } from '../../modules/validations.js'
 import { write_workers } from '../../modules/database/workers.js'
+import { is_miner_request } from '../../modules/networking/miners.js'
+import { write_mining_pool_metadata } from '../../modules/database/mining_pools.js'
+import { map_ips_to_geodata } from '../../modules/geolocation/ip_mapping.js'
 
 export const router = Router()
 
@@ -13,9 +15,9 @@ export const router = Router()
  */
 router.post( '/workers', async ( req, res ) => {
 
-    // This endpoint is only for validators
-    const { uid: mining_pool_uid, ip: mining_pool_ip } = await is_validator_request( req )
-    if( !mining_pool_uid ) return res.status( 403 ).json( { error: `Requester ${ mining_pool_ip } not a known validator` } )
+    // This endpoint is only for miners
+    const { uid: mining_pool_uid, ip: mining_pool_ip } = await is_miner_request( req )
+    if( !mining_pool_uid ) return res.status( 403 ).json( { error: `Requester ${ mining_pool_ip } not a known miner` } )
 
     const handle_route = async () => {
 
@@ -39,8 +41,12 @@ router.post( '/workers', async ( req, res ) => {
         }, [] )
         log.info( `Sanetised worker data, ${ workers.length } valid entries` )
 
+        // Save worker ips to cache
+        const ips = workers.map( worker => worker.ip )
+        await map_ips_to_geodata( { ips, cache_prefix: `worker_` } )
+
         // Save workers to database
-        const write_result = await write_workers( { workers, mining_pool_uid, mining_pool_ip } )
+        const write_result = await write_workers( { workers, mining_pool_uid, mining_pool_ip, is_broadcast: true } )
         return { ...write_result, mining_pool_uid, mining_pool_ip }
 
     }
@@ -58,3 +64,50 @@ router.post( '/workers', async ( req, res ) => {
 
     }
 } )
+
+
+/**
+ * Handle the submission of mining pool metadata from miners themselves
+ * Expected body: { protocol: 'http'|'https', url: String, port: Number }
+ */
+router.post( '/mining_pool', async ( req, res ) => {
+
+    // This endpoint is only for miners
+    const { uid: mining_pool_uid, ip: mining_pool_ip } = await is_miner_request( req )
+    if( !mining_pool_uid ) return res.status( 403 ).json( { error: `Requester ${ mining_pool_ip } not a known miner` } )
+
+    const handle_route = async () => {
+
+        // Extract and sanitise inputs
+        let { protocol, url, port } = req.body || {}
+
+        // Normalise
+        protocol = sanetise_string( protocol )
+        url = sanetise_string( url )
+        port = Number( port )
+
+        // Validate inputs
+        if( !`${ protocol }`.match( /^https?/ ) ) throw new Error( `Invalid protocol: ${ protocol }` )
+
+        // Validate port
+        if( !Number.isInteger( port ) || port < 1 || port > 65535 ) throw new Error( `Invalid port: ${ port }` )
+
+        // Save mining pool metadata
+        await write_mining_pool_metadata( { mining_pool_uid, mining_pool_ip, protocol, url, port } )
+
+        return { success: true, mining_pool_uid, mining_pool_ip }
+
+    }
+
+    try {
+
+        const retryable_handler = await make_retryable( handle_route, { retry_times, cooldown_in_s } )
+        const response_data = await retryable_handler()
+        return res.json( response_data )
+
+    } catch ( e ) {
+        log.warn( `Error handling mining_pool broadcast. Error:`, e )
+        return res.status( 200 ).json( { error: e.message } )
+    }
+} )
+

@@ -19,7 +19,7 @@ export const validators_ip_fallback = [
 export const validators_ip_overrides = [ '88.204.136.221', '88.204.136.220', '161.35.91.172' ]
 
 
-const get_validators = async () => {
+export const get_validators = async () => {
 
     // Get validators from cache
     let validators = get_tpn_cache( 'last_known_validators' )

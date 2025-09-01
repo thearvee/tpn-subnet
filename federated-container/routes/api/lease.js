@@ -1,0 +1,94 @@
+import { Router } from "express"
+import { allow_props, is_ipv4, log, make_retryable, require_props, sanetise_ipv4, sanetise_string } from "mentie"
+import { cooldown_in_s, retry_times } from "../../modules/networking/routing.js"
+import { run_mode } from "../../modules/validations.js"
+import { get_tpn_cache } from "../../modules/caching.js"
+import { get_worker_config_as_miner } from "../../modules/api/mining_pool.js"
+import { get_worker_config_as_validator } from "../../modules/api/validator.js"
+import { get_worker_config_as_worker } from "../../modules/api/worker.js"
+import { is_validator_request } from "../../modules/networking/validators.js"
+import { is_miner_request } from "../../modules/networking/miners.js"
+const { CI_MODE, CI_MOCK_WORKER_RESPONSES } = process.env
+
+export const router = Router()
+
+router.get( '/lease/new', async ( req, res ) => {
+
+    const { format='json' } = req.query || {}
+
+    const handle_route = async () => {
+
+        // Caller validation based on run mode
+        const { mode, worker_mode, miner_mode, validator_mode } = run_mode()
+        if( miner_mode && !is_validator_request( req ) ) throw new Error( `Miners only accept lease requests from validators, which you are not` )
+        if( worker_mode && !is_miner_request( req ) ) throw new Error( `Workers only accept lease requests from miners, which you are not` )
+
+        // Worker access controls
+        if( worker_mode ) {
+            const { MINING_POOL } = process.env
+            log.info( `Checking if caller is mining pool ${ MINING_POOL }` )
+            const { uid, ip } = is_miner_request( req )
+            const ip_match = ( ip && sanetise_ipv4( { ip } ) ) == sanetise_ipv4( { ip: MINING_POOL } )
+            const uid_match = ( uid && sanetise_string( uid ) ) == sanetise_string( MINING_POOL )
+            if( !CI_MOCK_WORKER_RESPONSES && ( !ip_match || !uid_match ) ) throw new Error( `Worker does not accept lease requests from ${ uid }@${ ip }` )
+        }
+
+        // 📋 Future: Validator access controls
+        // if( validator_mode && !payment )
+
+
+        // Prepare validation props based on run mode
+        const worker_props = [ 'lease_seconds', 'format' ]
+        const val_props = [ ...worker_props, 'geo' ]
+        const pool_props = val_props
+        const optional_props = [ 'whitelist', 'blacklist' ]
+        let mandatory_props = null
+        if( worker_mode ) mandatory_props = worker_props
+        if( validator_mode ) mandatory_props = val_props
+        if( miner_mode ) mandatory_props = pool_props
+
+        // Get all relevant data
+        require_props( req.query, mandatory_props, true )
+        allow_props( req.query, [ ...mandatory_props, ...optional_props ], true )
+        let { lease_seconds, format, geo, whitelist, blacklist, priority=false } = req.query
+        const workers_by_country = get_tpn_cache( 'worker_country_code_to_ips', {} )
+
+        // Sanetise and parse inputs for each prop set
+        lease_seconds = lease_seconds && parseInt( lease_seconds, 10 )
+        format = format && sanetise_string( format )
+        geo = geo && sanetise_string( geo )
+        whitelist = whitelist && sanetise_string( whitelist ).split( ',' )
+        blacklist = blacklist && sanetise_string( blacklist ).split( ',' )
+        priority = priority == true ? true : false
+        const config_meta = { lease_seconds, format, geo, whitelist, blacklist, priority }
+
+        // Validate inputs as specified in props
+        if( mandatory_props.includes( 'lease_seconds' ) && isNaN( lease_seconds ) ) throw new Error( `Invalid lease_seconds: ${ lease_seconds }` )
+        if( mandatory_props.includes( 'format' ) && ![ 'json', 'text' ].includes( format ) ) throw new Error( `Invalid format: ${ format }` )
+        if( mandatory_props.includes( 'geo' ) && ( !workers_by_country[ geo ]?.length && geo != 'any' ) ) throw new Error( `No workers found for geo: ${ geo }` )
+        if( mandatory_props.includes( 'whitelist' ) && whitelist.some( ip => !is_ipv4( ip ) ) ) throw new Error( `Invalid ip addresses in whitelist` )
+        if( mandatory_props.includes( 'blacklist' ) && blacklist.some( ip => !is_ipv4( ip ) ) ) throw new Error( `Invalid ip addresses in blacklist` )
+
+        // Get relevant config based on run mode
+        log.info( `Getting config as ${ mode } with params:`, config_meta )
+        let config = null
+        if( validator_mode ) config = await get_worker_config_as_validator( config_meta )
+        if( miner_mode ) config = await get_worker_config_as_miner( config_meta )
+        if( worker_mode ) config = await get_worker_config_as_worker( config_meta )
+
+        // Validate config
+        if( !config ) throw new Error( `${ mode } failed to get config for ${ geo }` )
+
+        return config
+
+    }
+
+    try {
+        const retryable_handler = await make_retryable( handle_route, { retry_times, cooldown_in_s } )
+        const response_data = await retryable_handler()
+        return format == 'text' ? res.send( response_data ) : res.json( response_data )
+    } catch ( error ) {
+        if( CI_MODE ) log.info( `Error handling new lease route: `, error )
+        return res.status( 500 ).json( { error: `Error handling new lease route: ${ error.message }` } )
+    }
+} )

@@ -1,3 +1,24 @@
+import { log } from 'mentie'
+import { is_data_center } from './ip2location.js'
+
+// Helper that has all country names
+export const region_names = new Intl.DisplayNames( [ 'en' ], { type: 'region' } )
+
+/**
+ * @param {String} code - country code, case insensitive
+ * @returns {String} - country name, falls back to code if unknown
+ */
+export const country_name_from_code = code => {
+    if( !code ) return code
+    code = `${ code }`.toUpperCase().trim()
+    try {
+        return region_names.of( code )
+    } catch {
+        log.info( `Unknown country code: ${ code }` )
+        return code
+    }
+}
+
 export const geolocation_update_interval_ms = 60_000 * 60 * 24
 
 // Datacenter name patterns (including educated guesses)
@@ -54,3 +75,15 @@ export const datacenter_patterns = [
     /dedicated\s*server/i,
     /vps/i
 ]
+
+/**
+ * Get geolocation data for an IP address
+ * @param {string} ip - The IP address to lookup
+ * @returns {Promise<{ country: string, datacenter: boolean }>} - The geolocation data
+ */
+export async function ip_geodata( ip ) {
+    const { default: geoip } = await import( 'geoip-lite' )
+    const { country } = geoip.lookup( ip ) || {}
+    const datacenter = !!ip || await is_data_center( ip )
+    return { country_code: country, datacenter }
+}

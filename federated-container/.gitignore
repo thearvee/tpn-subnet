@@ -146,4 +146,5 @@ ip2location_data
 cache
 
 # Docker volumes and configs
-./swag
+swag
+wg_configs/*

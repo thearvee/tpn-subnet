@@ -1,5 +1,6 @@
 import { exec } from 'child_process'
 import { cache, log } from 'mentie'
+import { run_mode } from '../validations.js'
 
 
 /**
@@ -60,9 +61,9 @@ export async function check_system_warnings() {
         const precall_setup = is_mac ? `source ./scripts/mock-linux-on-mac.sh; ` : ``
 
         // Check system ram amount
-        const { RUN_MODE } = process.env
+        const { mode, worker_mode, validator_mode, miner_mode } = run_mode()
         const ram_reccs = { miner: 8, validator: 8, worker: 2 }
-        const min_ram_gib = ram_reccs[ RUN_MODE ] || 8
+        const min_ram_gib = ram_reccs[ mode ] || 8
         const ram_check = await run( `${ precall_setup }free -g | grep Mem | awk '{print $2}'` )
         const ram_gib = ram_check.stdout && parseInt( ram_check.stdout.trim() )
         if( ram_gib < min_ram_gib ) log.warn( `Your system has only ${ ram_gib } GiB of RAM, which is below the recommended ${ min_ram_gib } GiB. This may cause performance issues.` )    
@@ -74,7 +75,7 @@ export async function check_system_warnings() {
 
         // Check if the system has enough disk space
         const disk_reccs = { miner: 10, validator: 10, worker: 5 }
-        const min_disk_space_gib = disk_reccs[ RUN_MODE ] || 10
+        const min_disk_space_gib = disk_reccs[ mode ] || 10
         const disk_check = await run( `${ precall_setup }df -BG / | tail -1 | awk '{print $4}'` )
         const disk_space_gib = disk_check.stdout && parseInt( disk_check.stdout.trim().replace( 'G', '' ) )
         if( disk_space_gib < min_disk_space_gib ) log.warn( `Your system has only ${ disk_space_gib } GiB of free disk space, which is below the recommended ${ min_disk_space_gib } GiB. This may cause performance issues.` )
@@ -87,23 +88,24 @@ export async function check_system_warnings() {
         const recommended_env_vars = [ 
             `LOG_LEVEL`,
             `POSTGRES_PASSWORD`,
-            ...[ 'validator', 'miner' ].includes( RUN_MODE ) ? [
+            ... validator_mode || miner_mode  ? [
                 `SERVER_PUBLIC_URL`, 
                 `MAXMIND_LICENSE_KEY`, 
                 `IP2LOCATION_DOWNLOAD_TOKEN`,
                 `SWAG_DOMAIN_NAME`,
                 `SWAG_EMAIL`
             ] : [],
-            ...RUN_MODE == 'validator' ? [
+            ...validator_mode ? [
                 // No additional validator-specific vars currently
             ] : [],
-            ...RUN_MODE == 'miner' ? [ 
+            ...miner_mode ? [ 
                 `MINING_POOL_WEBSITE_URL`,
                 `MINING_POOL_REWARDS`
             ] : [],
-            ...RUN_MODE == 'worker' ? [ 
+            ...worker_mode ? [ 
                 `PAYMENT_ADDRESS_EVM`, 
-                `PAYMENT_ADDRESS_BITTENSOR` 
+                `PAYMENT_ADDRESS_BITTENSOR`,
+                `MINING_POOL`
             ] : [],
         ]
         const missing_keys = recommended_env_vars.filter( key => !process.env[ key ] )

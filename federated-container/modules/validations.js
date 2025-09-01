@@ -1,5 +1,5 @@
-import { is_ipv4, log, require_props } from "mentie"
-import { get_tpn_cache } from "./caching.js"
+import { is_ipv4, log, require_props, sanetise_string } from "mentie"
+import { country_name_from_code } from "./geolocation/helpers.js"
 
 const { CI_MODE } = process.env
 
@@ -26,8 +26,7 @@ export const is_valid_worker = ( worker ) => {
     }
 
     // Check if country code is valid
-    const miner_country_code_to_name = get_tpn_cache( 'miner_country_code_to_name', {} )
-    let valid_country = miner_country_code_to_name[ country_code ] !== undefined
+    let valid_country = country_name_from_code( country_code )
     if( CI_MODE && typeof country_code === 'string' && country_code.length > 0 ) valid_country = true
     if( !valid_country ) {
         log.info( `Worker country code is not valid: ${ country_code }` )
@@ -36,4 +35,20 @@ export const is_valid_worker = ( worker ) => {
 
     return true
 
+}
+
+/**
+ * Gets the current run mode and its associated flags.
+ * @returns {Object<{ run_mode: string, worker_mode: boolean, miner_mode: boolean, validator_mode: boolean }>} - An object containing the run mode and its flags.
+ */
+export const run_mode = () => {
+    const { RUN_MODE } = process.env
+    const mode = sanetise_string( RUN_MODE )
+    if( ![ 'validator', 'miner', 'worker' ].includes( RUN_MODE ) ) throw new Error( `Invalid run mode: ${ RUN_MODE }` )
+    return {
+        mode,
+        worker_mode: mode == 'worker',
+        miner_mode: mode == 'miner',
+        validator_mode: mode == 'validator',
+    }
 }

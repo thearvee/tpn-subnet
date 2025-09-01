@@ -89,9 +89,9 @@ function sample_size( { uptime_confidence_fraction=.99, expected_proportion_up=.
 
 - [x] `POST /validator/broadcast/workers/`
   - [x] Allows mining pools to submit their current workers. This may be done at any time by the mining pool (including faster than the cochrane query by the validator)
-- [ ] `GET /api/config/new?lease_seconds=100&format=text|json&geo=netherlands|NL&whitelist=1.1.1.1,2.2.2.2&blacklist=3.3.3.3`
+- [ ] `GET /api/lease/new?lease_seconds=100&format=text|json&geo=netherlands|NL&whitelist=1.1.1.1,2.2.2.2&blacklist=3.3.3.3`
   - [ ] Get a config, similar to what the mining pools expose, but with logic to select the best miner for the query
-- [ ] `GET /api/countries?format=code|name`
+- [ ] `GET /api/countries?format=json|text&type=code|name`
   - [ ] All countries based on merged list of mining pool
 
 ### Validator environment variables
@@ -121,11 +121,10 @@ The mining pool keeps track of all workers that are registered to it. Periodical
 
 ### Mining pool endpoints
 
-- [ ] `GET /pool/config/new?lease_seconds=100&format=text|json&geo=netherlands|NL&whitelist=1.1.1.1,2.2.2.2&blacklist=3.3.3.3`
+- [ ] `GET /api/lease/new?lease_seconds=100&format=text|json&geo=netherlands|NL&whitelist=1.1.1.1,2.2.2.2&blacklist=3.3.3.3`
   - [ ] Validators may call this only. Retreives a config file with those parameters.
-- [ ] `GET /pool/countries?format=code|name`
-  - [ ] List all available countries based on the workers of this pool
-
+- [ ] `GET /api/countries?format=json|text&type=code|name`
+  - [ ] All countries b
 ### Mining pool environment variables
 
 - [ ] `SERVER_PROTOCOL` - the protocol at which the pool should be called

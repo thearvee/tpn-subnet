@@ -3,11 +3,11 @@ import assert from 'node:assert'
 import { json } from './_helpers.js'
 import { BASE_URL, validWorkers, invalidWorkers, mixedWorkers } from './_fixtures.js'
 
-describe( '/validator/broadcast/workers endpoint', () => {
+describe( '/validator/broadcast/workers endpoint (miners broadcast workers to validators)', () => {
 
     describe( 'Success cases', () => {
 
-        test( 'should accept valid worker data from validator', async () => {
+        test( 'should accept valid worker data from a miner (mining pool)', async () => {
             // Use workers that don't depend on country validation for this test
             const testWorkers = [
                 { ip: '8.8.8.8', country_code: 'XX' },      // Use a test country code
@@ -32,7 +32,7 @@ describe( '/validator/broadcast/workers endpoint', () => {
             assert.ok( typeof data.broadcast_metadata.updated === 'number' )
         } )
 
-        test( 'should handle empty worker array', async () => {
+        test( 'should handle empty worker array from miner', async () => {
             const { response, data } = await json.post( `${ BASE_URL }/validator/broadcast/workers`, { 
                 workers: [] 
             } )
@@ -48,7 +48,7 @@ describe( '/validator/broadcast/workers endpoint', () => {
             }
         } )
 
-        test( 'should handle missing workers field', async () => {
+        test( 'should handle missing workers field from miner', async () => {
             const { response, data } = await json.post( `${ BASE_URL }/validator/broadcast/workers`, {} )
 
             assert.strictEqual( response.status, 200 )
@@ -62,7 +62,7 @@ describe( '/validator/broadcast/workers endpoint', () => {
             }
         } )
 
-        test( 'should filter out invalid workers and process valid ones', async () => {
+        test( 'should filter out invalid workers from miner and process valid ones', async () => {
             const { response, data } = await json.post( `${ BASE_URL }/validator/broadcast/workers`, { 
                 workers: mixedWorkers 
             } )
@@ -78,7 +78,7 @@ describe( '/validator/broadcast/workers endpoint', () => {
             assert.ok( typeof data.broadcast_metadata.updated === 'number' )
         } )
 
-        test( 'should sanitize IPv4 addresses', async () => {
+        test( 'should sanitize IPv4 addresses from miner submissions', async () => {
             const workersWithSpaces = [
                 { ip: ' 192.168.1.1 ', country_code: 'US' },
                 { ip: '10.0.0.1\n', country_code: 'CA' }
@@ -97,7 +97,7 @@ describe( '/validator/broadcast/workers endpoint', () => {
             assert.ok( typeof data.broadcast_metadata.updated === 'number' )
         } )
 
-        test( 'should handle large worker arrays', async () => {
+        test( 'should handle large worker arrays from miner', async () => {
             const largeWorkerArray = Array.from( { length: 100 }, ( _, i ) => ( {
                 ip: `192.168.1.${ i + 1 }`,
                 country_code: 'US'
@@ -121,9 +121,9 @@ describe( '/validator/broadcast/workers endpoint', () => {
 
     describe( 'Validation failures', () => {
 
-        test( 'should reject requests from non-validators', async () => {
-            // This test assumes the request will be rejected due to validator authentication
-            // The exact behavior depends on how is_validator_request works
+        test( 'should reject requests from non-miners', async () => {
+            // This test assumes the request will be rejected due to miner authentication
+            // The exact behavior depends on how is_miner_request works
             const { response, data } = await json.post( `${ BASE_URL }/validator/broadcast/workers`, { 
                 workers: validWorkers 
             }, {
@@ -135,9 +135,9 @@ describe( '/validator/broadcast/workers endpoint', () => {
 
             // Note: This might return 403 or 200 with error depending on implementation
             if( response.status === 403 ) {
-                assert.ok( data.error.includes( 'not a known validator' ) )
+                assert.ok( data.error.includes( 'not a known miner' ) )
             } else if( response.status === 200 && data.error ) {
-                assert.ok( data.error.includes( 'not a known validator' ) )
+                assert.ok( data.error.includes( 'not a known miner' ) )
             }
         } )
 
@@ -212,7 +212,7 @@ describe( '/validator/broadcast/workers endpoint', () => {
 
     describe( 'Error handling', () => {
 
-        test( 'should handle malformed JSON', async () => {
+        test( 'should handle malformed JSON from miner', async () => {
             const response = await fetch( `${ BASE_URL }/validator/broadcast/workers`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -222,7 +222,7 @@ describe( '/validator/broadcast/workers endpoint', () => {
             assert.strictEqual( response.status, 400 )
         } )
 
-        test( 'should handle non-object request body', async () => {
+        test( 'should handle non-object request body from miner', async () => {
             const { response } = await json.post( `${ BASE_URL }/validator/broadcast/workers`, 
                 'not an object'
             )
@@ -231,7 +231,7 @@ describe( '/validator/broadcast/workers endpoint', () => {
             assert.strictEqual( response.status, 400 )
         } )
 
-        test( 'should handle workers field as non-array', async () => {
+        test( 'should handle workers field as non-array from miner', async () => {
             const { response, data } = await json.post( `${ BASE_URL }/validator/broadcast/workers`, { 
                 workers: 'not an array' 
             } )
@@ -246,7 +246,7 @@ describe( '/validator/broadcast/workers endpoint', () => {
 
     describe( 'Data integrity', () => {
 
-        test( 'should maintain worker data integrity through processing', async () => {
+        test( 'should maintain worker data integrity through processing from miner', async () => {
             const specificWorkers = [
                 { ip: '203.0.113.1', country_code: 'US' }, // TEST-NET-3
                 { ip: '198.51.100.1', country_code: 'CA' }, // TEST-NET-2
@@ -268,7 +268,7 @@ describe( '/validator/broadcast/workers endpoint', () => {
             assert.ok( typeof data.broadcast_metadata.updated === 'number' )
         } )
 
-        test( 'should handle concurrent requests gracefully', async () => {
+        test( 'should handle concurrent miner requests gracefully', async () => {
             const requests = Array.from( { length: 5 }, () => 
                 json.post( `${ BASE_URL }/validator/broadcast/workers`, { 
                     workers: validWorkers.slice( 0, 2 ) 
@@ -293,7 +293,7 @@ describe( '/validator/broadcast/workers endpoint', () => {
 
     describe( 'Performance and limits', () => {
 
-        test( 'should handle reasonable batch sizes efficiently', async () => {
+        test( 'should handle reasonable batch sizes from miner efficiently', async () => {
             const batchWorkers = Array.from( { length: 50 }, ( _, i ) => ( {
                 ip: `10.0.${ Math.floor( i / 254 ) }.${ i % 254 + 1 }`,
                 country_code: 'US'
@@ -316,6 +316,34 @@ describe( '/validator/broadcast/workers endpoint', () => {
             assert.ok( typeof data.broadcast_metadata.updated === 'number' )
         } )
 
+    } )
+
+} )
+
+// Separate top-level describe for the mining pool endpoint tests
+describe( '/validator/broadcast/mining_pool endpoint (miners self-broadcast metadata)', () => {
+
+    describe( 'Success cases', () => {
+        test( 'should accept valid mining pool metadata from miner', async () => {
+            const payload = { protocol: 'https', url: 'example.com', port: 443 }
+            const { response, data } = await json.post( `${ BASE_URL }/validator/broadcast/mining_pool`, payload )
+
+            assert.strictEqual( response.status, 200 )
+            assert.strictEqual( data.success, true )
+            assert.ok( data.mining_pool_uid !== undefined )
+            assert.ok( data.mining_pool_ip !== undefined )
+        } )
+    } )
+
+    describe( 'Validation failures', () => {
+        test( 'should return an error for invalid protocol', async () => {
+            const payload = { protocol: 'ftp', url: 'example.com', port: 443 }
+            const { response, data } = await json.post( `${ BASE_URL }/validator/broadcast/mining_pool`, payload )
+
+            assert.strictEqual( response.status, 200 )
+            assert.ok( data.error )
+            assert.ok( data.error.includes( 'Invalid protocol' ) )
+        } )
     } )
 
 } )
