@@ -7,9 +7,11 @@ const { CI_MODE } = process.env
  * Map a list of IP addresses to their geolocation data
  * @param {Object} param - The input parameters
  * @param {Array} param.ips - The list of IP addresses to map
+ * @param {string} param.cache_prefix - The cache prefix to use
+ * @param {boolean} param.prefix_merge - Whether to merge the results with existing cache entries
  * @returns {Promise<{ ip_to_country: Object, country_count: Object, country_code_to_ips: Object, country_code_to_name: Object, country_name_to_code: Object, country_annotated_ips: Array }>} - The mapping of IP addresses to their geolocation data
  */
-export async function map_ips_to_geodata( { ips=[], cache_prefix } ) {
+export async function map_ips_to_geodata( { ips=[], cache_prefix, prefix_merge=false } ) {
 
     // Sanetise input
     log.info( `Sanitising ${ ips.length } IP addresses`, ips[0] )
@@ -93,16 +95,16 @@ export async function map_ips_to_geodata( { ips=[], cache_prefix } ) {
     // If cache prefix is set, add it to TPN cache or cache
     if( cache_prefix ) {
         let key = `${ cache_prefix }_ip_to_country`
-        if( tpn_cache_keys.includes( key ) ) set_tpn_cache( { key, value: ip_to_country } )
+        if( tpn_cache_keys.includes( key ) ) set_tpn_cache( { key, value: ip_to_country, merge: prefix_merge } )
         else cache( key, ip_to_country )
         key = `${ cache_prefix }_country_code_to_ips`
-        if( tpn_cache_keys.includes( key ) ) set_tpn_cache( { key, value: country_code_to_ips } )
+        if( tpn_cache_keys.includes( key ) ) set_tpn_cache( { key, value: country_code_to_ips, merge: prefix_merge } )
         else cache( key, country_code_to_ips )
         key = `${ cache_prefix }_country_code_to_name`
-        if( tpn_cache_keys.includes( key ) ) set_tpn_cache( { key, value: country_code_to_name } )
+        if( tpn_cache_keys.includes( key ) ) set_tpn_cache( { key, value: country_code_to_name, merge: prefix_merge } )
         else cache( key, country_code_to_name )
         key = `${ cache_prefix }_country_name_to_code`
-        if( tpn_cache_keys.includes( key ) ) set_tpn_cache( { key, value: country_name_to_code } )
+        if( tpn_cache_keys.includes( key ) ) set_tpn_cache( { key, value: country_name_to_code, merge: prefix_merge } )
         else cache( key, country_name_to_code )
     }
 

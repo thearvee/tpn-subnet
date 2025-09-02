@@ -1,14 +1,21 @@
 import { cache, log } from "mentie"
 import { close_pool } from "../database/postgres.js"
 
-export function handle_exit_gracefully( server ) {
+export function handle_exit_gracefully( server, intervals ) {
 
     const handle_close = async reason => {
-        log.info( 'Closing server, reason: ', reason || 'unknown' )
-        log.info( 'Shutting down gracefully...' )
+        log.info( '⏻ Closing server, reason: ', reason || 'unknown' )
+        log.info( '⏻ Shutting down gracefully...' )
         cache.clear( { i_am_sure: true } )
+        log.info( '⏻ Cleared cache' )
+        if( intervals?.length ) {
+            intervals.forEach( clearInterval )
+            log.info( `⏻ Cleared ${ intervals.length } intervals` )
+        }
         server.close()
+        log.info( '⏻ Closed server' )
         await close_pool()
+        log.info( '⏻ Closed database connections' )
         process.exit( 0 )
     }
 

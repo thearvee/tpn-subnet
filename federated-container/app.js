@@ -7,16 +7,17 @@ import { run_mode } from "./modules/validations.js"
 import { readFile } from 'fs/promises'
 const { version } = JSON.parse( await readFile( new URL( './package.json', import.meta.url ) ) )
 const { branch, hash } = await get_git_branch_and_hash()
-const { SERVER_PUBLIC_PORT } = process.env
+const { CI_MODE, SERVER_PUBLIC_PORT=3000 } = process.env
 const { mode, worker_mode, validator_mode, miner_mode } = run_mode()
 const last_start = cache( 'last_start', new Date().toISOString() )
+const intervals = []
 
 /* ///////////////////////////////
 // System setup
 // /////////////////////////////*/
 
 // Boot up message
-log.info( `${ last_start } - Starting TPN ${ mode } component version ${ version } (${ branch }/${ hash })` )
+log.info( `🚀  ${ last_start } - Starting TPN in ${ mode } mode. Version ${ version } (${ branch }/${ hash })` )
 
 // Check system resources
 await check_system_warnings()
@@ -36,8 +37,8 @@ if( validator_mode || miner_mode ) {
         update_maxmind(),
         update_ip2location_bin()
     ] )
-    setInterval( update_maxmind, geolocation_update_interval_ms )
-    setInterval( update_ip2location_bin, geolocation_update_interval_ms )
+    intervals.push( setInterval( update_maxmind, geolocation_update_interval_ms ) )
+    intervals.push( setInterval( update_ip2location_bin, geolocation_update_interval_ms ) )
     log.info( `Geolocation databases updated and will be refreshed every ${ geolocation_update_interval_ms / 1000/ 60 / 60 } hours` )
 
     // On start, clear network
@@ -47,6 +48,13 @@ if( validator_mode || miner_mode ) {
 
 }
 
+// Register with mining pool
+if( worker_mode && CI_MODE !== 'true' ) {
+    const worker_update_interval = 60_000 * 60
+    const { register_with_mining_pool } = await import( './modules/api/worker.js' )
+    await register_with_mining_pool()
+    intervals.push( setInterval( register_with_mining_pool, worker_update_interval ) )
+}
 
 // Import express
 import { app } from './modules/networking/server.js'
@@ -69,8 +77,14 @@ if( validator_mode || miner_mode ) {
     app.use( '/protocol', protocol_router )
     app.use( '/protocol', stats_router )
     app.use( '/protocol/challenge', challenge_solution_router )
-    log.info( `Protocol routes registered` )
+    log.info( `/protocol/ routes registered` )
 
+}
+
+// Miner routes
+if( miner_mode ) {
+    const { router: miner_broadcast_router } = await import( './routes/miner/broadcast.js' )
+    app.use( '/miner/broadcast', miner_broadcast_router )
 }
 
 // Validator routes
@@ -80,7 +94,20 @@ if( validator_mode ) {
     const { router: validator_force_scoring } = await import( './routes/validator/score.js' )
     app.use( '/validator/broadcast', validator_broadcast_router )
     app.use( '/validator/score', validator_force_scoring )
-    log.info( `Validator routes registered` )
+    log.info( `/validator/ routes registered` )
+
+}
+
+// Worker routes
+if( worker_mode ) {
+
+    const { router: worker_register_router } = await import( './routes/worker/register.js' )
+    app.use( '/worker/register', worker_register_router )
+    if( CI_MODE === 'true' ) {
+        log.info( `🤡 mocking [POST] /miner/broadcast/worker` )
+        app.use( '/miner/broadcast', worker_register_router )
+    }
+    log.info( `/worker/ routes registered` )
 
 }
 
@@ -89,15 +116,16 @@ import { router as api_status_router } from './routes/api/status.js'
 import { router as api_lease_router } from './routes/api/lease.js'
 app.use( '/api/', api_status_router )
 app.use( '/api/', api_lease_router )
-log.info( `API routes registered` )
+log.info( `/api/ routes registered` )
 
 /* ///////////////////////////////
 // Start server
 // /////////////////////////////*/
+log.info( `Starting server on :${ SERVER_PUBLIC_PORT }` )
 const server = app.listen( SERVER_PUBLIC_PORT, () => {
-    console.log( `Server running, serving from base url ${ base_url }` )
+    console.log( `Server running on :${ SERVER_PUBLIC_PORT }, serving from base url ${ base_url }` )
 } )
 
 // Handle graceful shutdown
 import { handle_exit_gracefully } from './modules/system/process.js'
-handle_exit_gracefully( server )
+handle_exit_gracefully( server, intervals )

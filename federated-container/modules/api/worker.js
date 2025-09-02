@@ -14,3 +14,26 @@ export async function get_worker_config_as_worker( { lease_seconds, priority, fo
     return json_config
 
 }
+
+export async function register_with_mining_pool() {
+
+    // Get required registration info
+    const { MINING_POOL_URL } = process.env
+    const wg_config = await get_valid_wireguard_config( { lease_seconds: 120_000, priority: true } )
+    const query = `${ MINING_POOL_URL }/miner/broadcast/worker`
+    const post_data = { wg_config }
+    log.info( `Registering with mining pool ${ MINING_POOL_URL } at ${ query }` )
+
+    // Post to the miner
+    const { registered, worker } = await fetch( query, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify( post_data )
+    } ).then( res => res.json() )
+    log.info( `Registered with mining pool ${ MINING_POOL_URL } as: `, worker )
+
+    return { registered, worker }
+
+}

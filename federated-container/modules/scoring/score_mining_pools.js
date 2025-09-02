@@ -1,4 +1,4 @@
-import { log } from "mentie"
+import { log, shuffle_array } from "mentie"
 import { get_tpn_cache } from "../caching.js"
 import { get_worker_countries_for_pool, get_workers, read_worker_broadcast_metadata } from "../database/workers.js"
 import { cochrane_sample_size } from "../math/samples.js"
@@ -16,10 +16,7 @@ export async function score_mining_pools() {
     log.info( `Found mining ${ mining_pool_uids.length } pools to score: `, mining_pool_uids )
 
     // Fisher-Yates shuffle the miner uid array
-    for( let i = mining_pool_uids.length - 1; i > 0; i-- ) {
-        const j = Math.floor( Math.random() * ( i + 1 ) );
-        [ mining_pool_uids[i], mining_pool_uids[j] ] = [ mining_pool_uids[j], mining_pool_uids[i] ]
-    }
+    shuffle_array( mining_pool_uids )
     log.info( `Shuffled ${ mining_pool_uids.length } mining pools: `, mining_pool_uids )
 
     // For each mining pool, run test

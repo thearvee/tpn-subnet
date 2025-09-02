@@ -29,7 +29,7 @@ services:
       - MINING_POOL_REWARDS=${MINING_POOL_REWARDS}
       
       # Worker only
-      - MINING_POOL=${MINING_POOL}
+      - MINING_POOL_URL=${MINING_POOL_URL:-https://pool.taofu.xyz}
       - PAYMENT_ADDRESS_EVM=${PAYMENT_ADDRESS_EVM}
       - PAYMENT_ADDRESS_BITTENSOR=${PAYMENT_ADDRESS_BITTENSOR}
       - BROADCAST_MESSAGE=${BROADCAST_MESSAGE}
@@ -64,7 +64,7 @@ services:
       - PUID=1000
       - PGID=1000
       - TZ=${TZ:-UTC}
-      - URL=${SWAG_DOMAIN_NAME}
+      - URL=${SERVER_PUBLIC_URL}
       - VALIDATION=${SWAG_VALIDATION:-http}
       - SUBDOMAINS=${SWAG_SUBDOMAINS:-www}
       - CERTPROVIDER=${SWAG_CERTPROVIDER:-}
@@ -81,6 +81,7 @@ services:
     ports:
       - "80:80"
       - "443:443"
+      - "${SERVER_PUBLIC_PORT:-3000}:${SERVER_PUBLIC_PORT:-3000}"
     networks:
       - tpn-external
       - tpn-internal

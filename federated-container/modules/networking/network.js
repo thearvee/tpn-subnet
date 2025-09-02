@@ -53,18 +53,20 @@ export function request_is_local( request ) {
  * @param {Object} params - Parameters for the domain resolution.
  * @param {string} params.domain - The domain to resolve.
  * @param {string} [params.fallback] - Fallback IP address to return if resolution fails.
- * @returns {Promise<{ ipv4: string, ipv6: string }>} - A promise that resolves to an object containing the resolved IP address.
+ * @returns {Promise<{ ip: string }>} - A promise that resolves to an object containing the resolved IP address.
  */
-export async function resolve_domain_to_ip( { domain, fallback } ) {
+export async function resolve_domain_to_ip( { domain, fallback, family=4 } ) {
 
 
     try {
         if( !domain ) throw new Error( `Domain is required` )
-        const { address, family } = await lookup( domain )
-        return { [ `ipv${ family }` ]: address || fallback }
+        const cached_value = cache( `resolved_domain_${ domain }` )
+        if( cached_value ) return cached_value
+        const { ip=fallback } = await lookup( domain, { family } )
+        return cache( `resolved_domain_${ domain }`, { ip }, 15 * 60 * 1000 ) // Cache for 15 minutes
     } catch ( e ) {
         log.warn( `Failed to resolve domain ${ domain }: ${ e.message }` )
-        return { ipv4: fallback, ipv6: fallback }
+        return { ip: fallback }
     }
 
 }

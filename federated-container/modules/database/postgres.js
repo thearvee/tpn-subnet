@@ -100,7 +100,7 @@ export async function get_pg_pool() {
 }
 
 // Helper function to close the pool
-export const close_pool = async () => _pool?.end?.().then( () => log.info( 'Postgres pool closed' ) ).catch( e => log.error( 'Error closing Postgres pool:', e ) )
+export const close_pool = async () => _pool?.end?.().catch( e => log.error( 'Error closing Postgres pool:', e ) )
 
 /**
  * Format a query using node-pg-format

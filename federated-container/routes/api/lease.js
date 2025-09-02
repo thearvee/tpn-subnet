@@ -7,7 +7,7 @@ import { get_worker_config_as_miner } from "../../modules/api/mining_pool.js"
 import { get_worker_config_as_validator } from "../../modules/api/validator.js"
 import { get_worker_config_as_worker } from "../../modules/api/worker.js"
 import { is_validator_request } from "../../modules/networking/validators.js"
-import { is_miner_request } from "../../modules/networking/miners.js"
+import { ip_from_req, resolve_domain_to_ip } from "../../modules/networking/network.js"
 const { CI_MODE, CI_MOCK_WORKER_RESPONSES } = process.env
 
 export const router = Router()
@@ -21,16 +21,18 @@ router.get( '/lease/new', async ( req, res ) => {
         // Caller validation based on run mode
         const { mode, worker_mode, miner_mode, validator_mode } = run_mode()
         if( miner_mode && !is_validator_request( req ) ) throw new Error( `Miners only accept lease requests from validators, which you are not` )
-        if( worker_mode && !is_miner_request( req ) ) throw new Error( `Workers only accept lease requests from miners, which you are not` )
 
         // Worker access controls
-        if( worker_mode ) {
-            const { MINING_POOL } = process.env
-            log.info( `Checking if caller is mining pool ${ MINING_POOL }` )
-            const { uid, ip } = is_miner_request( req )
-            const ip_match = ( ip && sanetise_ipv4( { ip } ) ) == sanetise_ipv4( { ip: MINING_POOL } )
-            const uid_match = ( uid && sanetise_string( uid ) ) == sanetise_string( MINING_POOL )
-            if( !CI_MOCK_WORKER_RESPONSES && ( !ip_match || !uid_match ) ) throw new Error( `Worker does not accept lease requests from ${ uid }@${ ip }` )
+        if( worker_mode && !CI_MOCK_WORKER_RESPONSES ) {
+            const { MINING_POOL_URL } = process.env
+            log.info( `Checking if caller is mining pool ${ MINING_POOL_URL }` )
+            let { unspoofable_ip } = ip_from_req( req )
+            const { ip: mining_pool_ip } = await resolve_domain_to_ip( MINING_POOL_URL )
+            const ip_match = sanetise_ipv4( { ip: unspoofable_ip } ) === sanetise_ipv4( { ip: mining_pool_ip } )
+            if( !ip_match ) {
+                log.warn( `Attempted access denied for ${ mining_pool_ip }` )
+                throw new Error( `Worker does not accept lease requests from ${ unspoofable_ip }` )
+            }
         }
 
         // 📋 Future: Validator access controls

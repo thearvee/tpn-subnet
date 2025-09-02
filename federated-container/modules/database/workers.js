@@ -7,11 +7,11 @@ import { is_valid_worker } from "../validations.js"
  * @param {Array<{ ip: string, country_code: string, status?: string }>} workers - Array of worker objects with properties: ip, country_code
  * @param {string} mining_pool_uid - Unique identifier of the mining pool submitting the workers
  * @param {string} mining_pool_ip - IP address of the mining pool submitting the workers
- * @param {boolean} is_broadcast - broadcasts update mining pool worker metadata based on the worker array, only set if worker array is full worker list from mining pool
+ * @param {boolean} is_miner_broadcast - broadcasts update mining pool worker metadata based on the worker array, only set if worker array is full worker list from mining pool
  * @returns {Promise<{ success: boolean, count: number, broadcast_metadata?: Object }> } - Result object with success status and number of entries written
  * @throws {Error} - If there is an error writing to the database
  */
-export async function write_workers( { workers, mining_pool_uid, mining_pool_ip, is_broadcast=false } ) {
+export async function write_workers( { workers, mining_pool_uid, mining_pool_ip, is_miner_broadcast=false } ) {
     // Get the postgres pool
     const pool = await get_pg_pool()
 
@@ -48,7 +48,7 @@ export async function write_workers( { workers, mining_pool_uid, mining_pool_ip,
     // Execute the query
     try {
         const worker_write_result = await pool.query( query )
-        const broadcast_metadata = is_broadcast ? await write_worker_broadcast_metadata( { mining_pool_uid, mining_pool_ip, workers: valid_workers } ) : null
+        const broadcast_metadata = is_miner_broadcast ? await write_worker_broadcast_metadata( { mining_pool_uid, mining_pool_ip, workers: valid_workers } ) : null
         log.info( `Wrote ${ worker_write_result.rowCount } workers to database for mining pool ${ mining_pool_uid }@${ mining_pool_ip } with metadata: `, broadcast_metadata )
         return { success: true, count: worker_write_result.rowCount, broadcast_metadata }
     } catch ( e ) {

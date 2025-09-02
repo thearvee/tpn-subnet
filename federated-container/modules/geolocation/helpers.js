@@ -1,4 +1,4 @@
-import { log } from 'mentie'
+import { cache, log } from 'mentie'
 import { is_data_center } from './ip2location.js'
 
 // Helper that has all country names
@@ -83,7 +83,10 @@ export const datacenter_patterns = [
  */
 export async function ip_geodata( ip ) {
     const { default: geoip } = await import( 'geoip-lite' )
+    const cached_value = cache( `geoip:${ ip }` )
+    if( cached_value ) return cached_value
     const { country } = geoip.lookup( ip ) || {}
     const datacenter = !!ip || await is_data_center( ip )
-    return { country_code: country, datacenter }
+    const data = { country_code: country, datacenter }
+    return cache( `geoip:${ ip }`, data, 60_000 )
 }
