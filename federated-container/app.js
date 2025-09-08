@@ -2,12 +2,12 @@
 import { cache, log } from "mentie"
 
 // Get relevant environment data
-import { get_git_branch_and_hash, check_system_warnings } from './modules/system/shell.js'
+import { get_git_branch_and_hash, check_system_warnings, run } from './modules/system/shell.js'
 import { run_mode } from "./modules/validations.js"
 import { readFile } from 'fs/promises'
 const { version } = JSON.parse( await readFile( new URL( './package.json', import.meta.url ) ) )
 const { branch, hash } = await get_git_branch_and_hash()
-const { CI_MODE, SERVER_PUBLIC_PORT=3000 } = process.env
+const { CI_MODE, SERVER_PUBLIC_PORT=3000, DAEMON_INTERVAL_SECONDS=300 } = process.env
 const { mode, worker_mode, validator_mode, miner_mode } = run_mode()
 const last_start = cache( 'last_start', new Date().toISOString() )
 const intervals = []
@@ -54,6 +54,28 @@ if( worker_mode && CI_MODE !== 'true' ) {
     const { register_with_mining_pool } = await import( './modules/api/worker.js' )
     await register_with_mining_pool()
     intervals.push( setInterval( register_with_mining_pool, worker_update_interval ) )
+}
+
+// Initialise periodic daemons
+if( miner_mode ) {
+    const { score_all_known_workers } = await import( './modules/scoring/score_workers.js' )
+    intervals.push( setInterval( score_all_known_workers, DAEMON_INTERVAL_SECONDS * 1_000 ) )
+    log.info( `🏴‍☠️  Scoring all known workers every ${ DAEMON_INTERVAL_SECONDS } seconds` )
+}
+if( validator_mode ) {
+    const { score_mining_pools } = await import( './modules/scoring/score_mining_pools.js' )
+    intervals.push( setInterval( score_mining_pools, DAEMON_INTERVAL_SECONDS * 1_000 ) )
+    log.info( `🏴‍☠️  Scoring all known mining pools every ${ DAEMON_INTERVAL_SECONDS } seconds` )
+}
+
+// CI mode auto update codebase
+if( CI_MODE === 'true' ) {
+    log.warn( `💥 IMPORTANT: CI mode is triggering auto-updates, unless you work at Taofu you should NEVER EVER SEE THIS` )
+    intervals.push( setInterval( async () => {
+        const { stderr, strout, error } = await run( `git checkout feature/tpn-federated && git pull`, { silent: true } )
+        if( !stderr ) log.info( `♻️ In sync with git remote` )
+        if( stderr || error ) log.warn( `💥 Error updating from git:`, { stderr, error } )
+    }, 10_000 ) )
 }
 
 // Import express

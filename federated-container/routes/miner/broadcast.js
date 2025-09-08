@@ -1,10 +1,10 @@
 import { Router } from 'express'
 import { log } from 'mentie'
-import { is_valid_worker } from '../../modules/validations.js'
+import { annotate_worker_with_defaults, is_valid_worker } from '../../modules/validations.js'
 import { map_ips_to_geodata } from '../../modules/geolocation/ip_mapping.js'
 import { ip_geodata } from '../../modules/geolocation/helpers.js'
-import { test_wireguard_connection } from '../../modules/networking/wireguard.js'
 import { write_workers } from '../../modules/database/workers.js'
+import { validate_and_annotate_workers } from '../../modules/scoring/score_workers.js'
 
 export const router = Router()
 
@@ -17,20 +17,25 @@ router.post( '/worker', async ( req, res ) => {
     try {
         
         // Get workerdata from request from the request
-        const { wg_config } = req.body || {}
+        const { wireguard_config } = req.body || {}
         const { unspoofable_ip } = req.query
         
         // Validate inputs
-        if( !wg_config ) throw new Error( `Missing WireGuard configuration in request` )
+        if( !wireguard_config ) throw new Error( `Missing WireGuard configuration in request` )
 
         // Get worker data
         const { country_code, datacenter } = await ip_geodata( unspoofable_ip )
-        const worker = { ip: unspoofable_ip, country_code, datacenter, status: 'up' }
+        let worker = { ip: unspoofable_ip, country_code, datacenter, status: 'up' }
+        worker = annotate_worker_with_defaults( worker )
+        worker.wireguard_config = wireguard_config
         if( !is_valid_worker( worker ) ) throw new Error( `Invalid worker data received` )
 
-        // Check if supplied config is valid
-        const { valid } = await test_wireguard_connection( { wg_config } )
-        if( !valid ) throw new Error( `Invalid WireGuard configuration` )
+        // Check that worker is valid
+        const { successes, failures } = await validate_and_annotate_workers( { workers_with_configs: [ worker ] } )
+        if( !successes.length ) {
+            log.info( `Worker failed validation`, failures )
+            throw new Error( `Worker failed validation` )
+        }
 
         // Cache geodata for this worker
         await map_ips_to_geodata( { ips: [ worker.ip ], cache_prefix: `worker_`, prefix_merge: true } )

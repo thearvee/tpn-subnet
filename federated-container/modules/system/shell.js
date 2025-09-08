@@ -83,11 +83,18 @@ export async function check_system_warnings() {
         // Check if the host user is root
         const is_root = process.getuid && process.getuid() === 0
         if( is_root ) log.warn( `You are running this validator as root, which is not recommended. Please run it as a non-root user to avoid potential security issues.` )
+
+        // If the constinuent variables are set, but not the SERVER_PUBLIC_URL this is probably a raw nodejs run, we'll declare the env var
+        const { SERVER_PUBLIC_URL, SERVER_PUBLIC_PROTOCOL, SERVER_PUBLIC_HOST, SERVER_PUBLIC_PORT } = process.env
+        if( !SERVER_PUBLIC_URL ) process.env.SERVER_PUBLIC_URL = `${ SERVER_PUBLIC_PROTOCOL }://${ SERVER_PUBLIC_HOST }:${ SERVER_PUBLIC_PORT }`
         
         // Check if recommended environment variables are set
         const recommended_env_vars = [ 
             `LOG_LEVEL`,
             `POSTGRES_PASSWORD`,
+            `SERVER_PUBLIC_PROTOCOL`,
+            `SERVER_PUBLIC_HOST`,
+            `SERVER_PUBLIC_PORT`,
             ... validator_mode || miner_mode  ? [
                 `SERVER_PUBLIC_URL`, 
                 `MAXMIND_LICENSE_KEY`, 

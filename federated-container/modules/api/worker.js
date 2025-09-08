@@ -1,7 +1,13 @@
 import { log } from "mentie"
 import { get_valid_wireguard_config } from "../networking/wg-container.js"
 import { parse_wireguard_config } from "../networking/wireguard.js"
+import { MINING_POOL_URL } from "../networking/worker.js"
 
+/**
+ * Get the worker configuration as a worker.
+ * @param {Object<{ lease_seconds: number, priority: boolean, format: string }>} params
+ * @returns {Promise<Object>}
+ */
 export async function get_worker_config_as_worker( { lease_seconds, priority, format } ) {
 
     const { wireguard_config, peer_id, peer_slots, expires_at } = await get_valid_wireguard_config( { lease_seconds, priority } )
@@ -15,13 +21,16 @@ export async function get_worker_config_as_worker( { lease_seconds, priority, fo
 
 }
 
+/**
+ * Registers the worker with the mining pool.
+ * @returns {Promise<{ registered: boolean, worker: object }>}
+ */
 export async function register_with_mining_pool() {
 
     // Get required registration info
-    const { MINING_POOL_URL } = process.env
-    const wg_config = await get_valid_wireguard_config( { lease_seconds: 120_000, priority: true } )
+    const wireguard_config = await get_valid_wireguard_config( { lease_seconds: 120_000, priority: true } )
     const query = `${ MINING_POOL_URL }/miner/broadcast/worker`
-    const post_data = { wg_config }
+    const post_data = { wireguard_config }
     log.info( `Registering with mining pool ${ MINING_POOL_URL } at ${ query }` )
 
     // Post to the miner

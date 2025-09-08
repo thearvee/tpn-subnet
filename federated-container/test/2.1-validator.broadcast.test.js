@@ -1,7 +1,7 @@
 import { test, describe } from 'node:test'
 import assert from 'node:assert'
 import { json } from './_helpers.js'
-import { BASE_URL, validWorkers, invalidWorkers, mixedWorkers } from './_fixtures.js'
+import { BASE_URL, invalidWorkers, mixedWorkers, validWorkers } from './_fixtures.js'
 
 describe( '/validator/broadcast/workers endpoint (miners broadcast workers to validators)', () => {
 
@@ -24,10 +24,8 @@ describe( '/validator/broadcast/workers endpoint (miners broadcast workers to va
             assert.ok( typeof data.count === 'number' )
             assert.ok( data.count >= 0 )
             assert.ok( data.mining_pool_uid )
-            assert.ok( data.mining_pool_ip )
             // broadcast metadata should be present and correct
             assert.ok( data.broadcast_metadata )
-            assert.strictEqual( data.broadcast_metadata.mining_pool_uid_ip_combolabel, `${ data.mining_pool_uid }@${ data.mining_pool_ip }` )
             assert.strictEqual( data.broadcast_metadata.last_known_worker_pool_size, testWorkers.length )
             assert.ok( typeof data.broadcast_metadata.updated === 'number' )
         } )
@@ -42,7 +40,6 @@ describe( '/validator/broadcast/workers endpoint (miners broadcast workers to va
             assert.strictEqual( data.count, 0 )
             // broadcast metadata may be omitted when no valid workers; if present, verify it's consistent
             if( data.broadcast_metadata ) {
-                assert.strictEqual( data.broadcast_metadata.mining_pool_uid_ip_combolabel, `${ data.mining_pool_uid }@${ data.mining_pool_ip }` )
                 assert.strictEqual( data.broadcast_metadata.last_known_worker_pool_size, 0 )
                 assert.ok( typeof data.broadcast_metadata.updated === 'number' )
             }
@@ -56,7 +53,6 @@ describe( '/validator/broadcast/workers endpoint (miners broadcast workers to va
             assert.strictEqual( data.count, 0 )
             // broadcast metadata may be omitted when no valid workers; if present, verify it's consistent
             if( data.broadcast_metadata ) {
-                assert.strictEqual( data.broadcast_metadata.mining_pool_uid_ip_combolabel, `${ data.mining_pool_uid }@${ data.mining_pool_ip }` )
                 assert.strictEqual( data.broadcast_metadata.last_known_worker_pool_size, 0 )
                 assert.ok( typeof data.broadcast_metadata.updated === 'number' )
             }
@@ -64,7 +60,7 @@ describe( '/validator/broadcast/workers endpoint (miners broadcast workers to va
 
         test( 'should filter out invalid workers from miner and process valid ones', async () => {
             const { response, data } = await json.post( `${ BASE_URL }/validator/broadcast/workers`, { 
-                workers: mixedWorkers 
+                workers: mixedWorkers
             } )
 
             assert.strictEqual( response.status, 200 )
@@ -73,7 +69,6 @@ describe( '/validator/broadcast/workers endpoint (miners broadcast workers to va
             assert.ok( data.count <= mixedWorkers.length )
             // Metadata must reflect sanitized valid count
             assert.ok( data.broadcast_metadata )
-            assert.strictEqual( data.broadcast_metadata.mining_pool_uid_ip_combolabel, `${ data.mining_pool_uid }@${ data.mining_pool_ip }` )
             assert.strictEqual( data.broadcast_metadata.last_known_worker_pool_size, data.count )
             assert.ok( typeof data.broadcast_metadata.updated === 'number' )
         } )
@@ -93,7 +88,6 @@ describe( '/validator/broadcast/workers endpoint (miners broadcast workers to va
             // Two entries become valid after trimming
             assert.ok( data.broadcast_metadata )
             assert.strictEqual( data.broadcast_metadata.last_known_worker_pool_size, 2 )
-            assert.strictEqual( data.broadcast_metadata.mining_pool_uid_ip_combolabel, `${ data.mining_pool_uid }@${ data.mining_pool_ip }` )
             assert.ok( typeof data.broadcast_metadata.updated === 'number' )
         } )
 
@@ -113,7 +107,6 @@ describe( '/validator/broadcast/workers endpoint (miners broadcast workers to va
             // Metadata should reflect full batch size
             assert.ok( data.broadcast_metadata )
             assert.strictEqual( data.broadcast_metadata.last_known_worker_pool_size, largeWorkerArray.length )
-            assert.strictEqual( data.broadcast_metadata.mining_pool_uid_ip_combolabel, `${ data.mining_pool_uid }@${ data.mining_pool_ip }` )
             assert.ok( typeof data.broadcast_metadata.updated === 'number' )
         } )
 
@@ -125,7 +118,7 @@ describe( '/validator/broadcast/workers endpoint (miners broadcast workers to va
             // This test assumes the request will be rejected due to miner authentication
             // The exact behavior depends on how is_miner_request works
             const { response, data } = await json.post( `${ BASE_URL }/validator/broadcast/workers`, { 
-                workers: validWorkers 
+                workers: validWorkers
             }, {
                 headers: {
                     'X-Forwarded-For': '1.2.3.4', // Non-validator IP
@@ -143,9 +136,8 @@ describe( '/validator/broadcast/workers endpoint (miners broadcast workers to va
 
         test( 'should handle completely invalid worker data', async () => {
             const { response, data } = await json.post( `${ BASE_URL }/validator/broadcast/workers`, { 
-                workers: invalidWorkers 
+                workers: invalidWorkers
             } )
-
             assert.strictEqual( response.status, 200 )
             assert.strictEqual( data.success, true )
             // Some workers might be valid in CI mode due to lenient validation
@@ -154,7 +146,6 @@ describe( '/validator/broadcast/workers endpoint (miners broadcast workers to va
             // If some entries are valid after validation, metadata must match count
             if( data.broadcast_metadata ) {
                 assert.strictEqual( data.broadcast_metadata.last_known_worker_pool_size, data.count )
-                assert.strictEqual( data.broadcast_metadata.mining_pool_uid_ip_combolabel, `${ data.mining_pool_uid }@${ data.mining_pool_ip }` )
                 assert.ok( typeof data.broadcast_metadata.updated === 'number' )
             }
         } )
@@ -177,7 +168,6 @@ describe( '/validator/broadcast/workers endpoint (miners broadcast workers to va
             // No valid workers; metadata may be omitted; if present, it must show 0
             if( data.broadcast_metadata ) {
                 assert.strictEqual( data.broadcast_metadata.last_known_worker_pool_size, 0 )
-                assert.strictEqual( data.broadcast_metadata.mining_pool_uid_ip_combolabel, `${ data.mining_pool_uid }@${ data.mining_pool_ip }` )
                 assert.ok( typeof data.broadcast_metadata.updated === 'number' )
             }
         } )
@@ -203,7 +193,6 @@ describe( '/validator/broadcast/workers endpoint (miners broadcast workers to va
             assert.ok( data.count <= invalidCountryWorkers.length )
             if( data.broadcast_metadata ) {
                 assert.strictEqual( data.broadcast_metadata.last_known_worker_pool_size, data.count )
-                assert.strictEqual( data.broadcast_metadata.mining_pool_uid_ip_combolabel, `${ data.mining_pool_uid }@${ data.mining_pool_ip }` )
                 assert.ok( typeof data.broadcast_metadata.updated === 'number' )
             }
         } )
@@ -264,7 +253,6 @@ describe( '/validator/broadcast/workers endpoint (miners broadcast workers to va
             // Metadata should reflect the number of valid entries (2)
             assert.ok( data.broadcast_metadata )
             assert.strictEqual( data.broadcast_metadata.last_known_worker_pool_size, specificWorkers.length )
-            assert.strictEqual( data.broadcast_metadata.mining_pool_uid_ip_combolabel, `${ data.mining_pool_uid }@${ data.mining_pool_ip }` )
             assert.ok( typeof data.broadcast_metadata.updated === 'number' )
         } )
 
@@ -284,7 +272,6 @@ describe( '/validator/broadcast/workers endpoint (miners broadcast workers to va
                 // Metadata should be present per response and reflect sanitized count (2)
                 assert.ok( data.broadcast_metadata )
                 assert.strictEqual( data.broadcast_metadata.last_known_worker_pool_size, 2 )
-                assert.strictEqual( data.broadcast_metadata.mining_pool_uid_ip_combolabel, `${ data.mining_pool_uid }@${ data.mining_pool_ip }` )
                 assert.ok( typeof data.broadcast_metadata.updated === 'number' )
             } )
         } )
@@ -312,7 +299,6 @@ describe( '/validator/broadcast/workers endpoint (miners broadcast workers to va
             // Metadata should reflect full batch size
             assert.ok( data.broadcast_metadata )
             assert.strictEqual( data.broadcast_metadata.last_known_worker_pool_size, batchWorkers.length )
-            assert.strictEqual( data.broadcast_metadata.mining_pool_uid_ip_combolabel, `${ data.mining_pool_uid }@${ data.mining_pool_ip }` )
             assert.ok( typeof data.broadcast_metadata.updated === 'number' )
         } )
 
@@ -327,7 +313,6 @@ describe( '/validator/broadcast/mining_pool endpoint (miners self-broadcast meta
         test( 'should accept valid mining pool metadata from miner', async () => {
             const payload = { protocol: 'https', url: 'example.com', port: 443 }
             const { response, data } = await json.post( `${ BASE_URL }/validator/broadcast/mining_pool`, payload )
-
             assert.strictEqual( response.status, 200 )
             assert.strictEqual( data.success, true )
             assert.ok( data.mining_pool_uid !== undefined )

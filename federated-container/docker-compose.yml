@@ -16,11 +16,12 @@ services:
       - POSTGRES_USER=${POSTGRES_USER:-tpn}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
       - NODE_OPTIONS=--max-old-space-size=${CONTAINER_MAX_PROCESS_RAM_MB:-8192}
+      - SERVER_PUBLIC_PROTOCOL=${SERVER_PUBLIC_PROTOCOL:-http}
+      - SERVER_PUBLIC_URL="${SERVER_PUBLIC_PROTOCOL:-http}://${SERVER_PUBLIC_HOST}:${SERVER_PUBLIC_PORT:-3000}"
+      - SERVER_PUBLIC_HOST=${SERVER_PUBLIC_HOST}
+      - SERVER_PUBLIC_PORT=${SERVER_PUBLIC_PORT:-3000}
       
       # Validator and Mining pool
-      - SERVER_PROTOCOL=${SERVER_PROTOCOL:-https}
-      - SERVER_PUBLIC_URL=${SERVER_PUBLIC_URL}
-      - SERVER_PUBLIC_PORT=${SERVER_PUBLIC_PORT:-443}
       - MAXMIND_LICENSE_KEY=${MAXMIND_LICENSE_KEY}
       - IP2LOCATION_DOWNLOAD_TOKEN=${IP2LOCATION_DOWNLOAD_TOKEN}
       
@@ -45,7 +46,7 @@ services:
     networks:
       - tpn-internal
     ports:
-      - "127.0.0.1:3000:3000" # Make this container available from localhost so the neuron can access it
+      - "127.0.0.1:3001:3000" # Make this container available from localhost so the neuron can access it
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000/"]
       interval: 30s

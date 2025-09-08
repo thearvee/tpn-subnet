@@ -10,30 +10,51 @@ const { CI_MODE } = process.env
  */
 export const is_valid_worker = ( worker ) => {
 
-    if( !worker || typeof worker !== 'object' ) return false
-    const { ip, country_code } = worker
+    try {
 
-    const has_required_props = require_props( worker, [ 'ip', 'country_code' ], false )
-    if( !has_required_props ) {
-        log.info( `Worker object is missing required properties:`, worker )
-        return false
-    }
+        if( !worker || typeof worker !== 'object' ) return false
+        const { ip, country_code } = worker
+
+        const has_required_props = require_props( worker, [ 'ip', 'country_code', 'public_port', 'mining_pool_url' ], false )
+        if( !has_required_props ) {
+            log.info( `Worker object is missing required properties:`, worker )
+            return false
+        }
     
-    const valid_ip = is_ipv4( ip )
-    if( !valid_ip ) {
-        log.info( `Worker IP is not a valid IPv4 address: ${ ip }` )
+        const valid_ip = is_ipv4( ip )
+        if( !valid_ip ) {
+            log.info( `Worker IP is not a valid IPv4 address: ${ ip }` )
+            return false
+        }
+
+        // Check if country code is valid
+        let valid_country = country_name_from_code( country_code )
+        if( CI_MODE && typeof country_code === 'string' && country_code.length > 0 ) valid_country = true
+        if( !valid_country ) {
+            log.info( `Worker country code is not valid: ${ country_code }` )
+            return false
+        }
+
+        return true
+
+    } catch {
         return false
     }
 
-    // Check if country code is valid
-    let valid_country = country_name_from_code( country_code )
-    if( CI_MODE && typeof country_code === 'string' && country_code.length > 0 ) valid_country = true
-    if( !valid_country ) {
-        log.info( `Worker country code is not valid: ${ country_code }` )
-        return false
-    }
+}
 
-    return true
+export const annotate_worker_with_defaults = worker => {
+
+    if( !worker || typeof worker !== 'object' ) return worker
+
+    let { public_port=3000, ip, mining_pool_url='https://pool.taofu.xyz' } = worker
+
+    return {
+        ...worker,
+        ip,
+        public_port,
+        mining_pool_url
+    }
 
 }
 

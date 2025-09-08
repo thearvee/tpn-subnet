@@ -24,13 +24,14 @@ export async function init_database() {
     if( miner_mode || validator_mode ) {
         await pool.query( `
             CREATE TABLE IF NOT EXISTS workers (
-                PRIMARY KEY (mining_pool_uid, mining_pool_ip, ip),
+                PRIMARY KEY (mining_pool_uid, mining_pool_url, ip),
                 ip TEXT,
+                public_port TEXT NOT NULL,
                 country_code TEXT NOT NULL,
-                updated_at BIGINT NOT NULL,
+                mining_pool_url TEXT NOT NULL,
                 mining_pool_uid TEXT NOT NULL,
-                mining_pool_ip TEXT NOT NULL,
-                status TEXT NOT NULL
+                status TEXT NOT NULL,
+                updated_at BIGINT NOT NULL
             )
         ` )
         log.info( `✅ Workers table initialized` )
@@ -40,11 +41,9 @@ export async function init_database() {
     if( miner_mode || validator_mode ) {
         await pool.query( `
             CREATE TABLE IF NOT EXISTS worker_broadcast_metadata (
-                mining_pool_uid TEXT NOT NULL,
-                mining_pool_ip TEXT NOT NULL,
+                mining_pool_uid TEXT NOT NULL PRIMARY KEY,
                 last_known_worker_pool_size BIGINT NOT NULL,
-                updated BIGINT NOT NULL,
-                PRIMARY KEY (mining_pool_uid, mining_pool_ip)
+                updated BIGINT NOT NULL
             )
         ` )
         log.info( `✅ Worker broadcast metadata table initialized` )

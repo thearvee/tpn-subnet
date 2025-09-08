@@ -1,14 +1,21 @@
-import { log, shuffle_array } from "mentie"
+import { cache, log, shuffle_array } from "mentie"
 import { get_tpn_cache } from "../caching.js"
-import { get_worker_countries_for_pool, get_workers, read_worker_broadcast_metadata } from "../database/workers.js"
+import { get_worker_countries_for_pool, get_workers, read_worker_broadcast_metadata, write_workers } from "../database/workers.js"
 import { cochrane_sample_size } from "../math/samples.js"
-import { get_worker_config_through_mining_pool } from "./score_workers.js"
-import { test_wireguard_connection } from "../networking/wireguard.js"
-import { ip_geodata } from "../geolocation/helpers.js"
+import { get_worker_config_through_mining_pool, validate_and_annotate_workers } from "./score_workers.js"
 import { write_pool_score } from "../database/mining_pools.js"
 const { CI_MODE, CI_MOCK_MINING_POOL_RESPONSES, CI_MOCK_WORKER_RESPONSES } = process.env
 
-export async function score_mining_pools() {
+/**
+ * Validator function to score mining pools based on worker performance
+ * @returns {Object} results - Object containing the scores of each mining pool
+ */
+export async function score_mining_pools( max_duration_minutes=30 ) {
+
+    // Set up a lock to prevent race conditions
+    const lock = cache( `score_mining_pools_running` )
+    if( lock ) return log.warn( `score_mining_pools is already running` )
+    cache( `score_mining_pools_running`, true, max_duration_minutes * 60_000 )
 
     // Get mining pool uids and ips
     const mining_pool_uids = get_tpn_cache( 'miner_uids', [] )
@@ -51,6 +58,10 @@ export async function score_mining_pools() {
 
     }
 
+    // Unlock
+    cache( `score_mining_pools_running`, false )
+
+    // Return results
     return results
 
 
@@ -82,62 +93,24 @@ async function score_single_mining_pool( { mining_pool_uid, mining_pool_ip, pool
     }
     log.info( `Selected ${ selected_workers.length } workers for scoring from mining pool ${ pool_label }` )
 
+    // Annotate the selected workers with a wireguard config for testing in paralell
+    await Promise.allSettled( selected_workers.map( async ( worker, index ) => {
+        const { error, json_config, text_config } = await get_worker_config_through_mining_pool( { worker_ip: worker.ip, mining_pool_uid, mining_pool_ip } )
+        if( text_config ) selected_workers[ index ].wireguard_config = text_config
+        if( error ) log.info( `Error fetching worker config for ${ worker.ip }: ${ error }` )
+    } ) )
+
     // Score the selected workers
-    const scoring_queue = selected_workers.map( worker => async () => {
+    const { successes, failures, workers_with_status } = await validate_and_annotate_workers( { workers_with_configs: selected_workers } )
 
-        try {
-
-            const start = Date.now()
-
-            // Get config of worker through miner
-            const { error, json_config, text_config } = await get_worker_config_through_mining_pool( { worker_ip: worker.ip, mining_pool_uid, mining_pool_ip } )
-            if( error ) throw new Error( `Error fetching worker config through mining pool: ${ error }` )
-
-            // Check that the worker broadcasts mining pool membership
-            const { pool_uid, pool_ip } = CI_MOCK_WORKER_RESPONSES === 'true' ? { pool_uid: mining_pool_uid, pool_ip: mining_pool_ip } : await fetch( `${ json_config.endpoint_ipv4 }` ).then( res => res.json() )
-            if( !pool_uid && !pool_ip ) throw new Error( `Worker does not broadcast mining pool membership` )
-            if( pool_uid !== mining_pool_uid || pool_ip !== mining_pool_ip ) throw new Error( `Worker is not part of mining pool ${ pool_label }` )
-
-            // Validate that wireguard config works
-            const { valid, message } = await test_wireguard_connection( { wireguard_config: text_config } )
-            if( !valid ) throw new Error( `Wireguard config invalid: ${ message }` )
-
-            // Check country of ip address
-            const [ worker_data ] = await get_workers( { ip: worker.ip, mining_pool_ip, mining_pool_uid } )
-            const { country_code, datacenter } = await ip_geodata( worker.ip )
-            if( country_code != worker_data.country_code ) throw new Error( `Worker claimed country code ${ worker_data.country_code } does not match geolocated country ${ country_code }` )
-
-            // Calculate test duration
-            const test_duration_s = ( Date.now() - start ) / 1_000
-
-            // Return status
-            return { success: true, datacenter, test_duration_s }
-        
-        } catch ( e ) {
-            log.info( `Error scoring worker ${ worker.id } in mining pool ${ pool_label }: ${ e.message }` )
-            return { success: false, error: e.message }
-        }
-
-    } )
-
-    // Wait for all workers to be scored
-    const results = await Promise.allSettled( scoring_queue.map( fn => fn() ) )
-    const [ successes, failures ] = results.reduce( ( acc, result ) => {
-
-        // If the status was fulfilled and the result is success == true, it counts as a win, otherwise it is a fail;
-        const { status, value={}, reason } = result
-        const { success, error } = value
-        if( success ) acc[0].push( value )
-        else acc[1].push( error || reason || 'Unknown error' )
-
-        return acc
-    }, [ [], [] ] )
+    // Save updated worker data to database
+    await write_workers( { workers: workers_with_status, mining_pool_uid, mining_pool_ip } )
 
     // Get the context needed to calculate scores
     const countries_in_pool = await get_worker_countries_for_pool( { mining_pool_uid, mining_pool_ip } )
 
     // Calculate stability score (up fraction)
-    const stability_fraction = successes.length / results.length
+    const stability_fraction = successes.length / selected_workers.length
     const stability_score = stability_fraction * 100
 
     // Calculate size score, defined as the ranking of the size against the last_known_worker_pool_size 
