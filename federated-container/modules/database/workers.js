@@ -205,7 +205,7 @@ export async function get_workers( { ip, mining_pool_uid, limit=1 } ) {
     // Execute the query
     try {
         const result = await pool.query( query, [ ...values ] )
-        log.info( `Retrieved workers from database for mining pool ${ mining_pool_uid }: `, result.rows )
+        log.info( `Retrieved workers from database for mining pool ${ mining_pool_uid }:`, result.rows )
         return { success: !!result.rowCount, workers: result.rows }
     } catch ( e ) {
         throw new Error( `Error retrieving workers from database: ${ e.message }` )

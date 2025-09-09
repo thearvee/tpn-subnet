@@ -21,6 +21,7 @@ export async function score_all_known_workers( max_duration_minutes=15 ) {
 
         // Get all known workers
         const { workers } = await get_workers( { mining_pool_uid: 'internal' } )
+        if( !workers?.length ) throw new Error( `No known workers to score` )
 
         // Get a config directly from each worker
         await Promise.allSettled( workers.map( async ( worker, index ) => {
