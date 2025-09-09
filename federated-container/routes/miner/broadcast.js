@@ -51,7 +51,7 @@ router.post( '/worker', async ( req, res ) => {
 
     } catch ( e ) {
         
-        log.warn( `Error handling neuron broadcast. Error:`, e )
+        log.warn( `Error handling worker broadcast. Error:`, e )
         return res.status( 200 ).json( { error: e.message } )
 
     }

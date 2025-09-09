@@ -5,7 +5,7 @@ import { is_valid_worker } from "../validations.js"
 import { ip_geodata } from "../geolocation/helpers.js"
 import { get_workers, write_workers } from "../database/workers.js"
 import { get_wireguard_config_directly_from_worker } from "../networking/worker.js"
-const { CI_MOCK_WORKER_RESPONSES } = process.env
+const { CI_MODE, CI_MOCK_WORKER_RESPONSES } = process.env
 
 /**
  * Miner function to test all knwn workers
@@ -113,6 +113,8 @@ export async function validate_and_annotate_workers( { workers_with_configs=[] }
     if( workers_with_configs.length > 250 ) {
         log.warn( `Worker config list exceeds 250, this may cause issues with IP subnet limits` )
     }
+
+    if( CI_MODE === 'true' ) log.info( `Validating ${ workers_with_configs?.length } workers, first:`, workers_with_configs?.[0] )
 
     // Check that all workers are valid and have configs attached
     const [ valid_workers, invalid_workers ] = workers_with_configs.reduce( ( acc, worker ) => {
