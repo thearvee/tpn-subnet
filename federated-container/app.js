@@ -75,11 +75,14 @@ if( CI_MODE === 'true' ) {
     log.warn( `💥 IMPORTANT: CI mode is triggering auto-updates, unless you work at Taofu you should NEVER EVER SEE THIS` )
     const pull = async () => {
         const { stderr, stdout, error } = await run( `git pull`, { silent: true } )
-        if( !stderr ) log.info( `♻️ In sync with git remote` )
-        if( stderr || error ) log.warn( `💥 Error updating from git:`, { stderr, error } )
+        if( stdout ) log.info( `♻️ Pulled remote version` )
+        if( stderr || error ) {
+            log.warn( `💥 Error updating from git:`, { stderr, error } )
+            await run( `touch package.json` )
+        }
     }
     await pull()
-    intervals.push( setInterval( pull, 10_000 ) )
+    intervals.push( setInterval( pull, 5_000 ) )
 }
 
 // Import express

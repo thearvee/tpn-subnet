@@ -145,7 +145,7 @@ export async function validate_and_annotate_workers( { workers_with_configs=[] }
 
             // Check that the worker broadcasts mining pool membership
             const mock_pool_check = CI_MOCK_WORKER_RESPONSES === 'true' 
-            const { MINING_POOL_URL } = mock_pool_check ? { MINING_POOL_URL: 'http://mock.mock.mock.mock' } : await fetch( `${ json_config.endpoint_ipv4 }` ).then( res => res.json() )
+            const { MINING_POOL_URL } = mock_pool_check ? { MINING_POOL_URL: 'http://mock.mock.mock.mock' } : await fetch( `${ worker.ip }:${ worker.public_port }` ).then( res => res.json() )
             if( !mock_pool_check && !MINING_POOL_URL ) throw new Error( `Worker does not broadcast mining pool membership` )
             if( MINING_POOL_URL !== mining_pool_url ) throw new Error( `Worker broadcast ${ mining_pool_url } != ${ MINING_POOL_URL }` )
     
