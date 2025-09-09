@@ -195,7 +195,7 @@ export function parse_wireguard_config( { wireguard_config='', expected_endpoint
     const misconfigured_keys = allowed_config_props.filter( ( { type, key, validate } ) => {
         const value = json_config[ type ][ key ]
         if( !value ) return false
-        log.info( `Checking ${ type } ${ key }: `, value )
+        // log.info( `Checking ${ type } ${ key }: `, value )
         const is_valid = !validate || validate( value )
         return !is_valid
     } )
@@ -205,6 +205,7 @@ export function parse_wireguard_config( { wireguard_config='', expected_endpoint
 
     // Explicit checks for value requirements
     const endpoint_ipv4 = sanetise_ipv4( { ip: json_config.peer.Endpoint?.split( ':' )[ 0 ], validate: true, error_on_invalid: false } )
+    log.info( `Checking peer Endpoint: `, endpoint_ipv4 )
     const endpoint_correct = expected_endpoint_ip ? endpoint_ipv4 === expected_endpoint_ip : true
     const config_valid = !misconfigured_keys.length && endpoint_correct
 
