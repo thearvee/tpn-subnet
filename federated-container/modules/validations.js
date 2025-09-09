@@ -47,13 +47,12 @@ export const annotate_worker_with_defaults = worker => {
 
     if( !worker || typeof worker !== 'object' ) return worker
 
-    let { public_port=3000, ip, mining_pool_url='https://pool.taofu.xyz' } = worker
+    let { public_port=3000, ip } = worker
 
     return {
         ...worker,
         ip,
-        public_port,
-        mining_pool_url
+        public_port
     }
 
 }
