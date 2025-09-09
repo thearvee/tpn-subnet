@@ -30,7 +30,7 @@ export async function register_with_mining_pool() {
     try { 
 
         // Get required registration info
-        const wireguard_config = await get_valid_wireguard_config( { lease_seconds: 120_000, priority: true } )
+        const { wireguard_config } = await get_valid_wireguard_config( { lease_seconds: 120_000, priority: true } )
         const query = `${ MINING_POOL_URL }/miner/broadcast/worker`
         const post_data = { wireguard_config }
         log.info( `Registering with mining pool ${ MINING_POOL_URL } at ${ query }` )

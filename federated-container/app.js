@@ -74,7 +74,7 @@ if( validator_mode ) {
 if( CI_MODE === 'true' ) {
     log.warn( `💥 IMPORTANT: CI mode is triggering auto-updates, unless you work at Taofu you should NEVER EVER SEE THIS` )
     const pull = async () => {
-        const { stderr, strout, error } = await run( `git pull`, { silent: true } )
+        const { stderr, stdout, error } = await run( `git pull`, { silent: true } )
         if( !stderr ) log.info( `♻️ In sync with git remote` )
         if( stderr || error ) log.warn( `💥 Error updating from git:`, { stderr, error } )
     }
