@@ -7,7 +7,7 @@ import { run_mode } from "./modules/validations.js"
 import { readFile } from 'fs/promises'
 const { version } = JSON.parse( await readFile( new URL( './package.json', import.meta.url ) ) )
 const { branch, hash } = await get_git_branch_and_hash()
-const { CI_MODE, SERVER_PUBLIC_PORT=3000, DAEMON_INTERVAL_SECONDS=300 } = process.env
+const { CI_MODE, SERVER_PUBLIC_PORT=3000, DAEMON_INTERVAL_SECONDS=300, CI_MOCK_MINING_POOL_RESPONSES } = process.env
 const { mode, worker_mode, validator_mode, miner_mode } = run_mode()
 const last_start = cache( 'last_start', new Date().toISOString() )
 const intervals = []
@@ -125,7 +125,7 @@ if( worker_mode ) {
 
     const { router: worker_register_router } = await import( './routes/worker/register.js' )
     app.use( '/worker/register', worker_register_router )
-    if( CI_MODE === 'true' ) {
+    if( CI_MODE === 'true' && CI_MOCK_MINING_POOL_RESPONSES === 'true' ) {
         log.info( `🤡 mocking [POST] /miner/broadcast/worker` )
         app.use( '/miner/broadcast', worker_register_router )
     }
