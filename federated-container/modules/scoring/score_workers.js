@@ -1,7 +1,7 @@
 import { abort_controller, cache, log, make_retryable } from "mentie"
 import { read_mining_pool_metadata } from "../database/mining_pools.js"
 import { parse_wireguard_config, test_wireguard_connection } from "../networking/wireguard.js"
-import { is_valid_worker } from "../validations.js"
+import { default_mining_pool, is_valid_worker } from "../validations.js"
 import { ip_geodata } from "../geolocation/helpers.js"
 import { get_workers, write_workers } from "../database/workers.js"
 import { get_wireguard_config_directly_from_worker } from "../networking/worker.js"
@@ -147,7 +147,7 @@ export async function validate_and_annotate_workers( { workers_with_configs=[] }
             const mock_pool_check = CI_MOCK_WORKER_RESPONSES === 'true' 
             const { MINING_POOL_URL } = mock_pool_check ? { MINING_POOL_URL: 'http://mock.mock.mock.mock' } : await fetch( `http://${ worker.ip }:${ worker.public_port }` ).then( res => res.json() )
             if( !mock_pool_check && !MINING_POOL_URL ) throw new Error( `Worker does not broadcast mining pool membership` )
-            if( mining_pool_url && MINING_POOL_URL !== mining_pool_url ) throw new Error( `Worker broadcast ${ MINING_POOL_URL } which does not correspond to our expectation of ${ mining_pool_url }` )
+            if( MINING_POOL_URL !== mining_pool_url && MINING_POOL_URL !== default_mining_pool ) throw new Error( `Worker broadcast ${ MINING_POOL_URL } which does not correspond to our expectation of ${ mining_pool_url }` )
     
             // Validate that wireguard config works
             const { valid, message } = await test_wireguard_connection( { wireguard_config: text_config } )

@@ -2,6 +2,7 @@ import { is_ipv4, log, require_props, sanetise_string } from "mentie"
 import { country_name_from_code } from "./geolocation/helpers.js"
 
 const { CI_MODE } = process.env
+export const default_mining_pool='https://pool.taofu.xyz'
 
 /**
  * Validates if a worker object has the required properties and a valid IPv4 address.
@@ -47,12 +48,13 @@ export const annotate_worker_with_defaults = worker => {
 
     if( !worker || typeof worker !== 'object' ) return worker
 
-    let { public_port=3000, ip } = worker
+    let { public_port=3000, ip, mining_pool_url=default_mining_pool } = worker
 
     return {
         ...worker,
         ip,
-        public_port
+        public_port,
+        mining_pool_url
     }
 
 }
