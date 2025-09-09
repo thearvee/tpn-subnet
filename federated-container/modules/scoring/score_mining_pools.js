@@ -12,58 +12,65 @@ const { CI_MODE, CI_MOCK_MINING_POOL_RESPONSES, CI_MOCK_WORKER_RESPONSES } = pro
  */
 export async function score_mining_pools( max_duration_minutes=30 ) {
 
-    // Set up a lock to prevent race conditions
-    const lock = cache( `score_mining_pools_running` )
-    if( lock ) return log.warn( `score_mining_pools is already running` )
-    cache( `score_mining_pools_running`, true, max_duration_minutes * 60_000 )
+    try {
 
-    // Get mining pool uids and ips
-    const mining_pool_uids = get_tpn_cache( 'miner_uids', [] )
-    const miner_uid_to_ip = get_tpn_cache( 'miner_uid_to_ip', {} )
-    log.info( `Found mining ${ mining_pool_uids.length } pools to score: `, mining_pool_uids )
 
-    // Fisher-Yates shuffle the miner uid array
-    shuffle_array( mining_pool_uids )
-    log.info( `Shuffled ${ mining_pool_uids.length } mining pools: `, mining_pool_uids )
+        // Set up a lock to prevent race conditions
+        const lock = cache( `score_mining_pools_running` )
+        if( lock ) return log.warn( `score_mining_pools is already running` )
+        cache( `score_mining_pools_running`, true, max_duration_minutes * 60_000 )
 
-    // For each mining pool, run test
-    const results = {}
-    for( const mining_pool_uid of mining_pool_uids ) {
+        // Get mining pool uids and ips
+        const mining_pool_uids = get_tpn_cache( 'miner_uids', [] )
+        const miner_uid_to_ip = get_tpn_cache( 'miner_uid_to_ip', {} )
+        log.info( `Found mining ${ mining_pool_uids.length } pools to score: `, mining_pool_uids )
 
-        log.info( `Starting scoring for mining pool ${ mining_pool_uid }` )
+        // Fisher-Yates shuffle the miner uid array
+        shuffle_array( mining_pool_uids )
+        log.info( `Shuffled ${ mining_pool_uids.length } mining pools: `, mining_pool_uids )
 
-        try {
+        // For each mining pool, run test
+        const results = {}
+        for( const mining_pool_uid of mining_pool_uids ) {
 
-            // Formulate pool label
-            const mining_pool_ip = miner_uid_to_ip[ mining_pool_uid ]
-            if( !mining_pool_ip ) {
-                log.error( `No IP found for mining pool ${ mining_pool_uid }, this should never happen` )
-                continue
+            log.info( `Starting scoring for mining pool ${ mining_pool_uid }` )
+
+            try {
+
+                // Formulate pool label
+                const mining_pool_ip = miner_uid_to_ip[ mining_pool_uid ]
+                if( !mining_pool_ip ) {
+                    log.error( `No IP found for mining pool ${ mining_pool_uid }, this should never happen` )
+                    continue
+                }
+                const pool_label = `${ mining_pool_uid }@${ mining_pool_ip }`
+
+                // Get mining pool scores
+                const { score, stability_score, geo_score, size_score, performance_score } = await score_single_mining_pool( { mining_pool_uid, mining_pool_ip, pool_label } )
+
+                // Save mining pool score to database
+                await write_pool_score( { mining_pool_ip, mining_pool_uid, stability_score, geo_score, size_score, performance_score, score } )
+
+                // Write results
+                results[ mining_pool_uid ] = { mining_pool_ip, score, stability_score, geo_score, size_score, performance_score }
+
+
+            } catch ( e ) {
+                log.error( `Error scoring mining pool ${ mining_pool_uid }: ${ e.message }` )
             }
-            const pool_label = `${ mining_pool_uid }@${ mining_pool_ip }`
 
-            // Get mining pool scores
-            const { score, stability_score, geo_score, size_score, performance_score } = await score_single_mining_pool( { mining_pool_uid, mining_pool_ip, pool_label } )
-
-            // Save mining pool score to database
-            await write_pool_score( { mining_pool_ip, mining_pool_uid, stability_score, geo_score, size_score, performance_score, score } )
-
-            // Write results
-            results[ mining_pool_uid ] = { mining_pool_ip, score, stability_score, geo_score, size_score, performance_score }
-
-
-        } catch ( e ) {
-            log.error( `Error scoring mining pool ${ mining_pool_uid }: ${ e.message }` )
         }
 
+        // Unlock
+        cache( `score_mining_pools_running`, false )
+
+        // Return results
+        return results
+
+
+    } catch ( e ) {
+        log.error( `Error scoring mining pools: ${ e.message }` )
     }
-
-    // Unlock
-    cache( `score_mining_pools_running`, false )
-
-    // Return results
-    return results
-
 
 }
 

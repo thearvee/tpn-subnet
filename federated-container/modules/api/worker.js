@@ -26,23 +26,29 @@ export async function get_worker_config_as_worker( { lease_seconds, priority, fo
  * @returns {Promise<{ registered: boolean, worker: object }>}
  */
 export async function register_with_mining_pool() {
+ 
+    try { 
 
-    // Get required registration info
-    const wireguard_config = await get_valid_wireguard_config( { lease_seconds: 120_000, priority: true } )
-    const query = `${ MINING_POOL_URL }/miner/broadcast/worker`
-    const post_data = { wireguard_config }
-    log.info( `Registering with mining pool ${ MINING_POOL_URL } at ${ query }` )
+        // Get required registration info
+        const wireguard_config = await get_valid_wireguard_config( { lease_seconds: 120_000, priority: true } )
+        const query = `${ MINING_POOL_URL }/miner/broadcast/worker`
+        const post_data = { wireguard_config }
+        log.info( `Registering with mining pool ${ MINING_POOL_URL } at ${ query }` )
 
-    // Post to the miner
-    const { registered, worker } = await fetch( query, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify( post_data )
-    } ).then( res => res.json() )
-    log.info( `Registered with mining pool ${ MINING_POOL_URL } as: `, worker )
+        // Post to the miner
+        const { registered, worker } = await fetch( query, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify( post_data )
+        } ).then( res => res.json() )
+        log.info( `Registered with mining pool ${ MINING_POOL_URL } as: `, worker )
 
-    return { registered, worker }
+        return { registered, worker }
+        
+    } catch ( e ) {
+        log.error( `Error registering with mining pool ${ MINING_POOL_URL }: ${ e.message }` )
+    }
 
 }

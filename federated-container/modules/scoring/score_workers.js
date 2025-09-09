@@ -12,35 +12,40 @@ const { CI_MOCK_WORKER_RESPONSES } = process.env
  */
 export async function score_all_known_workers( max_duration_minutes=15 ) {
 
-    // Set a lock on this activity to prevent races
-    const locked = cache( `score_all_known_workers_running` )
-    if( locked ) return log.warn( `score_all_known_workers is already running` )
-    cache( `score_all_known_workers_running`, true, max_duration_minutes * 60_000 )
+    try { 
 
-    // Get all known workers
-    const workers = await get_workers( { mining_pool_uid: 'internal' } )
+        // Set a lock on this activity to prevent races
+        const locked = cache( `score_all_known_workers_running` )
+        if( locked ) return log.warn( `score_all_known_workers is already running` )
+        cache( `score_all_known_workers_running`, true, max_duration_minutes * 60_000 )
 
-    // Get a config directly from each worker
-    await Promise.allSettled( workers.map( async ( worker, index ) => {
-        const wireguard_config = await get_wireguard_config_directly_from_worker( { worker } )
-        const { text_config, json_config } = parse_wireguard_config( { wireguard_config } )
-        if( text_config ) workers[ index ].wireguard_config = text_config
-    } ) )
+        // Get all known workers
+        const { workers } = await get_workers( { mining_pool_uid: 'internal' } )
 
-    // Test all known workers
-    const { successes, failures } = await validate_and_annotate_workers( { workers_with_configs: workers } )
+        // Get a config directly from each worker
+        await Promise.allSettled( workers.map( async ( worker, index ) => {
+            const wireguard_config = await get_wireguard_config_directly_from_worker( { worker } )
+            const { text_config, json_config } = parse_wireguard_config( { wireguard_config } )
+            if( text_config ) workers[ index ].wireguard_config = text_config
+        } ) )
 
-    // Save all worker data
-    const annotated_workers = [
-        ...successes.map( worker => ( { ...worker, status: 'up' } ) ),
-        ...failures.map( worker => ( { ...worker, status: 'down' } ) )
-    ]
+        // Test all known workers
+        const { successes, failures } = await validate_and_annotate_workers( { workers_with_configs: workers } )
 
-    // Save annotated workers to database
-    await write_workers( { annotated_workers, mining_pool_uid: 'internal' } )
+        // Save all worker data
+        const annotated_workers = [
+            ...successes.map( worker => ( { ...worker, status: 'up' } ) ),
+            ...failures.map( worker => ( { ...worker, status: 'down' } ) )
+        ]
 
-    // Unlock
-    cache( `score_all_known_workers_running`, false )
+        // Save annotated workers to database
+        await write_workers( { annotated_workers, mining_pool_uid: 'internal' } )
+
+        // Unlock
+        cache( `score_all_known_workers_running`, false )
+    } catch ( e ) {
+        log.error( `Error scoring all known workers: ${ e.message }` )
+    }
 
 }
 
