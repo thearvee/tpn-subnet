@@ -22,6 +22,7 @@ git checkout "$BRANCH"
 Set up the right `.env` file and make sure to:
 
 - Set `CI_VALIDATOR_IP_OVERRIDES` and `CI_MINER_IP_OVERRIDES` to a comma separated list or single ip of the other boxes
+- Set `POSTGRES_HOST=localhost`
 - Do not set any `MOCK_` response values, requests should be real
 
 ```
