@@ -49,7 +49,7 @@ if( validator_mode || miner_mode ) {
 }
 
 // Register with mining pool
-if( worker_mode && CI_MODE !== 'true' ) {
+if( worker_mode && CI_MOCK_MINING_POOL_RESPONSES !== 'true' ) {
     const worker_update_interval = 60_000 * 60
     const { register_with_mining_pool } = await import( './modules/api/worker.js' )
     await register_with_mining_pool()
@@ -61,11 +61,13 @@ if( miner_mode ) {
     const { score_all_known_workers } = await import( './modules/scoring/score_workers.js' )
     intervals.push( setInterval( score_all_known_workers, DAEMON_INTERVAL_SECONDS * 1_000 ) )
     log.info( `🏴‍☠️  Scoring all known workers every ${ DAEMON_INTERVAL_SECONDS } seconds` )
+    if( CI_MODE === 'true' ) score_all_known_workers()
 }
 if( validator_mode ) {
     const { score_mining_pools } = await import( './modules/scoring/score_mining_pools.js' )
     intervals.push( setInterval( score_mining_pools, DAEMON_INTERVAL_SECONDS * 1_000 ) )
     log.info( `🏴‍☠️  Scoring all known mining pools every ${ DAEMON_INTERVAL_SECONDS } seconds` )
+    if( CI_MODE === 'true' ) score_mining_pools()
 }
 
 // CI mode auto update codebase
