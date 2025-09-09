@@ -37,52 +37,12 @@ if( validator_mode || miner_mode ) {
         update_maxmind(),
         update_ip2location_bin()
     ] )
-    intervals.push( setInterval( update_maxmind, geolocation_update_interval_ms ) )
-    intervals.push( setInterval( update_ip2location_bin, geolocation_update_interval_ms ) )
-    log.info( `Geolocation databases updated and will be refreshed every ${ geolocation_update_interval_ms / 1000/ 60 / 60 } hours` )
 
     // On start, clear network
     const { clean_up_tpn_interfaces, clean_up_tpn_namespaces } = await import( "./modules/networking/wireguard.js" )
     await clean_up_tpn_interfaces()
     await clean_up_tpn_namespaces()
 
-}
-
-// Register with mining pool
-if( worker_mode && CI_MOCK_MINING_POOL_RESPONSES !== 'true' ) {
-    const worker_update_interval = 60_000 * 60
-    const { register_with_mining_pool } = await import( './modules/api/worker.js' )
-    await register_with_mining_pool()
-    intervals.push( setInterval( register_with_mining_pool, worker_update_interval ) )
-}
-
-// Initialise periodic daemons
-if( miner_mode ) {
-    const { score_all_known_workers } = await import( './modules/scoring/score_workers.js' )
-    intervals.push( setInterval( score_all_known_workers, DAEMON_INTERVAL_SECONDS * 1_000 ) )
-    log.info( `🏴‍☠️  Scoring all known workers every ${ DAEMON_INTERVAL_SECONDS } seconds` )
-    if( CI_MODE === 'true' ) score_all_known_workers()
-}
-if( validator_mode ) {
-    const { score_mining_pools } = await import( './modules/scoring/score_mining_pools.js' )
-    intervals.push( setInterval( score_mining_pools, DAEMON_INTERVAL_SECONDS * 1_000 ) )
-    log.info( `🏴‍☠️  Scoring all known mining pools every ${ DAEMON_INTERVAL_SECONDS } seconds` )
-    if( CI_MODE === 'true' ) score_mining_pools()
-}
-
-// CI mode auto update codebase
-if( CI_MODE === 'true' ) {
-    log.warn( `💥 IMPORTANT: CI mode is triggering auto-updates, unless you work at Taofu you should NEVER EVER SEE THIS` )
-    const pull = async () => {
-        const { stderr, stdout, error } = await run( `git pull`, { silent: true } )
-        if( !stdout?.includes( `Already up to date` ) ) log.info( `♻️ Pulled remote version` )
-        if( stderr || error ) {
-            log.warn( `💥 Error updating from git:`, { stderr, error } )
-            await run( `touch package.json` )
-        }
-    }
-    await pull()
-    intervals.push( setInterval( pull, 5_000 ) )
 }
 
 // Import express
@@ -158,3 +118,57 @@ const server = app.listen( SERVER_PUBLIC_PORT, () => {
 // Handle graceful shutdown
 import { handle_exit_gracefully } from './modules/system/process.js'
 handle_exit_gracefully( server, intervals )
+
+/* ///////////////////////////////
+// Initialise Daemons
+// /////////////////////////////*/
+
+// Update geolocation databases
+if( validator_mode || miner_mode ) {
+
+    const { geolocation_update_interval_ms } = await import( './modules/geolocation/helpers.js' )
+    const { update_maxmind } = await import( './modules/geolocation/maxmind.js' )
+    const { update_ip2location_bin } = await import( './modules/geolocation/ip2location.js' )
+    intervals.push( setInterval( update_maxmind, geolocation_update_interval_ms ) )
+    intervals.push( setInterval( update_ip2location_bin, geolocation_update_interval_ms ) )
+    log.info( `Geolocation databases updated and will be refreshed every ${ geolocation_update_interval_ms / 1000/ 60 / 60 } hours` )
+
+}
+
+
+// Register with mining pool
+if( worker_mode && CI_MOCK_MINING_POOL_RESPONSES !== 'true' ) {
+    const worker_update_interval = 60_000 * 60
+    const { register_with_mining_pool } = await import( './modules/api/worker.js' )
+    await register_with_mining_pool()
+    intervals.push( setInterval( register_with_mining_pool, worker_update_interval ) )
+}
+
+// Initialise periodic daemons
+if( miner_mode ) {
+    const { score_all_known_workers } = await import( './modules/scoring/score_workers.js' )
+    intervals.push( setInterval( score_all_known_workers, DAEMON_INTERVAL_SECONDS * 1_000 ) )
+    log.info( `🏴‍☠️  Scoring all known workers every ${ DAEMON_INTERVAL_SECONDS } seconds` )
+    if( CI_MODE === 'true' ) score_all_known_workers()
+}
+if( validator_mode ) {
+    const { score_mining_pools } = await import( './modules/scoring/score_mining_pools.js' )
+    intervals.push( setInterval( score_mining_pools, DAEMON_INTERVAL_SECONDS * 1_000 ) )
+    log.info( `🏴‍☠️  Scoring all known mining pools every ${ DAEMON_INTERVAL_SECONDS } seconds` )
+    if( CI_MODE === 'true' ) score_mining_pools()
+}
+
+// CI mode auto update codebase
+if( CI_MODE === 'true' ) {
+    log.warn( `💥 IMPORTANT: CI mode is triggering auto-updates, unless you work at Taofu you should NEVER EVER SEE THIS` )
+    const pull = async () => {
+        const { stderr, stdout, error } = await run( `git pull`, { silent: true } )
+        if( !stdout?.includes( `Already up to date` ) ) log.info( `♻️ Pulled remote version` )
+        if( stderr || error ) {
+            log.warn( `💥 Error updating from git:`, { stderr, error } )
+            await run( `touch package.json` )
+        }
+    }
+    await pull()
+    intervals.push( setInterval( pull, 5_000 ) )
+}
