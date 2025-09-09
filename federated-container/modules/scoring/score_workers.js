@@ -121,11 +121,11 @@ export async function validate_and_annotate_workers( { workers_with_configs=[] }
 
         const valid_worker = is_valid_worker( worker )
         const { wireguard_config } = worker
-        const { config_valid, json_config, text_config } = parse_wireguard_config( { wireguard_config } )
+        const { config_valid, ...parsed_wg_config } = parse_wireguard_config( { wireguard_config } )
         const is_valid = valid_worker && config_valid
 
-        if( !is_valid ) acc[1].push( { ...worker, json_config, text_config, reason: `${ valid_worker ? 'valid' : 'invalid' } worker, ${ config_valid ? 'valid' : 'invalid' } wg config` } )
-        else acc[0].push( { ...worker, json_config, text_config } )
+        if( !is_valid ) acc[1].push( { ...worker, ...parsed_wg_config, reason: `${ valid_worker ? 'valid' : 'invalid' } worker, ${ config_valid ? 'valid' : 'invalid' } wg config` } )
+        else acc[0].push( { ...worker, ...parsed_wg_config } )
 
         return acc
 
