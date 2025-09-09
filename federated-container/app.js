@@ -73,11 +73,13 @@ if( validator_mode ) {
 // CI mode auto update codebase
 if( CI_MODE === 'true' ) {
     log.warn( `💥 IMPORTANT: CI mode is triggering auto-updates, unless you work at Taofu you should NEVER EVER SEE THIS` )
-    intervals.push( setInterval( async () => {
+    const pull = async () => {
         const { stderr, strout, error } = await run( `git pull`, { silent: true } )
         if( !stderr ) log.info( `♻️ In sync with git remote` )
         if( stderr || error ) log.warn( `💥 Error updating from git:`, { stderr, error } )
-    }, 10_000 ) )
+    }
+    await pull()
+    intervals.push( setInterval( pull, 10_000 ) )
 }
 
 // Import express
