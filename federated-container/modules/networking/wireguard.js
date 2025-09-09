@@ -205,7 +205,7 @@ export function parse_wireguard_config( { wireguard_config='', expected_endpoint
 
     // Explicit checks for value requirements
     const endpoint_ipv4 = sanetise_ipv4( { ip: json_config.peer.Endpoint?.split( ':' )[ 0 ], validate: true, error_on_invalid: false } )
-    log.info( `Checking peer Endpoint: `, endpoint_ipv4 )
+    log.info( `Extracted ipv4 from Endpoint: `, endpoint_ipv4 )
     const endpoint_correct = expected_endpoint_ip ? endpoint_ipv4 === expected_endpoint_ip : true
     const config_valid = !misconfigured_keys.length && endpoint_correct
 

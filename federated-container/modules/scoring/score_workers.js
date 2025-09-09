@@ -125,7 +125,7 @@ export async function validate_and_annotate_workers( { workers_with_configs=[] }
         const is_valid = valid_worker && config_valid
 
         if( !is_valid ) acc[1].push( { ...worker, json_config, text_config, reason: `${ valid_worker ? 'valid' : 'invalid' } worker, ${ config_valid ? 'valid' : 'invalid' } wg config` } )
-        else acc[0].push( worker )
+        else acc[0].push( { ...worker, json_config, text_config } )
 
         return acc
 
