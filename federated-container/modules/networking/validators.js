@@ -1,7 +1,7 @@
 import { is_ipv4, log, wait } from "mentie"
 import { ip_from_req } from "./network.js"
 import { get_tpn_cache } from "../caching.js"
-const { CI_MODE } = process.env
+const { CI_MODE, CI_VALIDATOR_IP_OVERRIDES } = process.env
 
 // This hardcoded validator list is a failover for when the neuron did not submit the latest validator ips
 export const validators_ip_fallback = [
@@ -15,8 +15,8 @@ export const validators_ip_fallback = [
 
 ]
 
-// Manual overrise for ips that should be considered validators for the purpose of miner API requests
-export const validators_ip_overrides = [ '88.204.136.221', '88.204.136.220', '161.35.91.172' ]
+// Manual override for ips that should be considered validators for the purpose of miner API requests
+export const validators_ip_overrides = [ ...CI_VALIDATOR_IP_OVERRIDES ? CI_VALIDATOR_IP_OVERRIDES.split( ',' ) : [], '88.204.136.221', '88.204.136.220', '161.35.91.172' ]
 
 
 export const get_validators = async () => {
