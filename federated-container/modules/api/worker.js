@@ -36,14 +36,15 @@ export async function register_with_mining_pool() {
         log.info( `Registering with mining pool ${ MINING_POOL_URL } at ${ query }` )
 
         // Post to the miner
-        const { registered, worker } = await fetch( query, {
+        const { registered, worker, error } = await fetch( query, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify( post_data )
         } ).then( res => res.json() )
-        log.info( `Registered with mining pool ${ MINING_POOL_URL } as: `, worker )
+        if( !error ) log.info( `Registered with mining pool ${ MINING_POOL_URL } as: `, worker )
+        if( error ) log.warn( `Error registering with mining pool ${ MINING_POOL_URL }: ${ error }` )
 
         return { registered, worker }
         

@@ -5,6 +5,7 @@ import { map_ips_to_geodata } from '../../modules/geolocation/ip_mapping.js'
 import { ip_geodata } from '../../modules/geolocation/helpers.js'
 import { write_workers } from '../../modules/database/workers.js'
 import { validate_and_annotate_workers } from '../../modules/scoring/score_workers.js'
+import { ip_from_req } from '../../modules/networking/network.js'
 
 export const router = Router()
 
@@ -18,7 +19,7 @@ router.post( '/worker', async ( req, res ) => {
         
         // Get workerdata from request from the request
         const { wireguard_config } = req.body || {}
-        const { unspoofable_ip } = req.query
+        const { unspoofable_ip } = ip_from_req( req )
         
         // Validate inputs
         if( !wireguard_config ) throw new Error( `Missing WireGuard configuration in request` )
