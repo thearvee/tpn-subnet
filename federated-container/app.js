@@ -75,7 +75,7 @@ if( CI_MODE === 'true' ) {
     log.warn( `💥 IMPORTANT: CI mode is triggering auto-updates, unless you work at Taofu you should NEVER EVER SEE THIS` )
     const pull = async () => {
         const { stderr, stdout, error } = await run( `git pull`, { silent: true } )
-        if( stdout ) log.info( `♻️ Pulled remote version` )
+        if( !stdout?.includes( `Already up to date` ) ) log.info( `♻️ Pulled remote version` )
         if( stderr || error ) {
             log.warn( `💥 Error updating from git:`, { stderr, error } )
             await run( `touch package.json` )
