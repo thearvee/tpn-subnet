@@ -44,8 +44,8 @@ nvm install && nvm use && npm i
 
 On each box run the following:
 
-- worker: `docker compose up -d postgres wireguard`
-- miner/validator: `docker compose up -d postgres` 
+- worker: `docker compose -f docker-compose.yml -f docker-compose.ci.yml up -d postgres wireguard`
+- miner/validator: `docker compose -f docker-compose.yml -f docker-compose.ci.yml up -d postgres` 
 
 Then run the relevant npm start command, note that this will auto-pull changes you push to the branch, and will reload them into the node stack when changes are detected.
 

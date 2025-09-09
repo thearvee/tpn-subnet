@@ -21,6 +21,6 @@
 		"firebase.json": "fire*,.fire*",
 		"package.json": "package-lock.json, yarn.lock, pnpm-lock.yaml,.eslint*,config.*,.npm*,.nvm*,.ncu*,.gitignore,.babelrc,.env.*",
 		"README.md": "*.md,LICENSE",
-		"docker-compose.yml": "*.Dockerfile,.env.*"
+		"docker-compose.yml": "*.Dockerfile,.env.*,docker-compose*"
 	}
 }

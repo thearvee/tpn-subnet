@@ -1,0 +1,9 @@
+networks:
+  # Internal network - has internal connectivity only, cannot reach internet or be reached from it
+  tpn-internal:
+    driver: bridge
+    internal: false
+    ipam:
+      config:
+        - subnet: ${TPN_INTERNAL_SUBNET:-172.20.0.0/16}
+          gateway: ${TPN_INTERNAL_GATEWAY:-172.20.0.1}
