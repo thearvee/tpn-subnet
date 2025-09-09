@@ -172,7 +172,7 @@ export function parse_wireguard_config( { wireguard_config='', expected_endpoint
         { type: 'interface', key: 'DNS', validate: is_ipv4 },
         { type: 'peer', key: 'PublicKey', validate: value => /^[A-Za-z0-9+/=]+$/.test( value ) },
         { type: 'peer', key: 'PresharedKey', validate: value => /^[A-Za-z0-9+/=]+$/.test( value ) },
-        { type: 'peer', key: 'AllowedIPs', validate: value => value == '0.0.0.0/0, ::/0' },
+        { type: 'peer', key: 'AllowedIPs', validate: value => [ '0.0.0.0/0', '0.0.0.0/0, ::0' ].includes( value ) },
         { type: 'peer', key: 'Endpoint', validate: value => is_ipv4( `${ value }`.split( ':' )[ 0 ] ) }
     ]
 
