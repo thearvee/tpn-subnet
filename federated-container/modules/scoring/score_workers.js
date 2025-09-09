@@ -162,7 +162,7 @@ export async function validate_and_annotate_workers( { workers_with_configs=[] }
             test_result.success = true
 
         } catch ( e ) {
-            log.info( `Error scoring worker ${ worker.ip }: ${ e.message }` )
+            log.info( `Error scoring worker ${ worker.ip }: ${ e.message }:`, e )
             test_result.success = false
             test_result.error = e.message
         } finally {
