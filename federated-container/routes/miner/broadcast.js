@@ -25,7 +25,8 @@ router.post( '/worker', async ( req, res ) => {
 
         // Get worker data
         const { country_code, datacenter } = await ip_geodata( unspoofable_ip )
-        let worker = { ip: unspoofable_ip, country_code, datacenter, status: 'up' }
+        let worker = { ip: unspoofable_ip, country_code, datacenter, status: 'tbd' }
+        log.info( `Received worker registration from ${ unspoofable_ip }:`, worker )
         worker = annotate_worker_with_defaults( worker )
         worker.wireguard_config = wireguard_config
         if( !is_valid_worker( worker ) ) throw new Error( `Invalid worker data received` )
