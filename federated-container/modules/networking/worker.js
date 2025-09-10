@@ -1,4 +1,4 @@
-import { abort_controller, sanetise_string } from "mentie"
+import { abort_controller, log, sanetise_string } from "mentie"
 
 export const get_worker_mining_pool_url = () => {
 
@@ -41,11 +41,12 @@ export async function get_wireguard_config_directly_from_worker( { worker, max_r
         attempts++
         const query = `http://${ ip }:${ public_port }/api/lease/new?lease_seconds=${ lease_seconds }&format=${ format }`
         const { fetch_options } = abort_controller( { timeout_ms } )
+        log.info( `Attempt ${ attempts }/${ max_retries } to get ${ query }` )
         config = await fetch( query, fetch_options ).then( res => format === 'json' ? res.json() : res.text() )
     
     }
-    
-    // On mock succees
+
+    // On mock success
     if( CI_MOCK_WORKER_RESPONSES ) config = config || {}
     
     return config

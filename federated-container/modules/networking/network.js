@@ -1,5 +1,5 @@
 import { lookup } from "dns/promises"
-import { cache, log, random_number_between, random_string_of_length, wait } from "mentie"
+import { cache, is_ipv4, log, random_number_between, random_string_of_length, wait } from "mentie"
 import { v4 as uuidv4 } from "uuid"
 import { run } from "../system/shell.js"
 
@@ -58,6 +58,7 @@ export function request_is_local( request ) {
  */
 export async function resolve_domain_to_ip( { domain, fallback, family=4 } ) {
 
+    if( is_ipv4( domain ) ) return { ip: domain }
 
     try {
         if( !domain ) throw new Error( `Domain is required` )

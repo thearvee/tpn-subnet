@@ -8,6 +8,7 @@ import { get_worker_config_as_validator } from "../../modules/api/validator.js"
 import { get_worker_config_as_worker } from "../../modules/api/worker.js"
 import { is_validator_request } from "../../modules/networking/validators.js"
 import { ip_from_req, resolve_domain_to_ip } from "../../modules/networking/network.js"
+import { MINING_POOL_URL } from "../../modules/networking/worker.js"
 const { CI_MODE, CI_MOCK_WORKER_RESPONSES } = process.env
 
 export const router = Router()
@@ -24,10 +25,10 @@ router.get( '/lease/new', async ( req, res ) => {
 
         // Worker access controls
         if( worker_mode && !CI_MOCK_WORKER_RESPONSES ) {
-            const { MINING_POOL_URL } = process.env
             log.info( `Checking if caller is mining pool ${ MINING_POOL_URL }` )
+            const { hostname } = new URL( MINING_POOL_URL )
             let { unspoofable_ip } = ip_from_req( req )
-            const { ip: mining_pool_ip } = await resolve_domain_to_ip( MINING_POOL_URL )
+            const { ip: mining_pool_ip } = await resolve_domain_to_ip( hostname )
             const ip_match = sanetise_ipv4( { ip: unspoofable_ip } ) === sanetise_ipv4( { ip: mining_pool_ip } )
             if( !ip_match ) {
                 log.warn( `Attempted access denied for ${ mining_pool_ip }` )
