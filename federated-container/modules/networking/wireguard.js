@@ -182,7 +182,7 @@ export function parse_wireguard_config( { wireguard_config='', expected_endpoint
         // Get key value from the config
         const key_match = new RegExp( `^${ key } ?= ?(.*)`, 'm' )
         const { 0: match, 1: value } = wireguard_config.match( key_match ) || []
-        log( { type, key, match, value } )
+        // log( { type, key, match, value } )
 
         // add key value to the config object
         if( value ) acc[ type ][ key ] = value
@@ -204,7 +204,9 @@ export function parse_wireguard_config( { wireguard_config='', expected_endpoint
     if( !json_config.interface.Address?.includes( '/' ) ) json_config.interface.Address = `${ json_config.interface.Address }/32`
 
     // Explicit checks for value requirements
-    const endpoint_ipv4 = sanetise_ipv4( { ip: json_config.peer.Endpoint?.split( ':' )[ 0 ], validate: true, error_on_invalid: false } )
+    const ip = json_config.peer.Endpoint?.split( ':' )[ 0 ]
+    if( !ip ) log.warn( `No valid IP found in Endpoint:`, json_config )
+    const endpoint_ipv4 = sanetise_ipv4( { ip, validate: true, error_on_invalid: false } )
     log.info( `Extracted ipv4 from Endpoint: `, endpoint_ipv4 )
     const endpoint_correct = expected_endpoint_ip ? endpoint_ipv4 === expected_endpoint_ip : true
     const config_valid = !misconfigured_keys.length && endpoint_correct
