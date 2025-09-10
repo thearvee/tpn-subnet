@@ -28,7 +28,7 @@ router.get( '/lease/new', async ( req, res ) => {
             log.info( `Checking if caller is mining pool ${ MINING_POOL_URL }` )
             const { hostname } = new URL( MINING_POOL_URL )
             let { unspoofable_ip } = ip_from_req( req )
-            const { ip: mining_pool_ip } = await resolve_domain_to_ip( hostname )
+            const { ip: mining_pool_ip } = await resolve_domain_to_ip( { domain: hostname } )
             const ip_match = sanetise_ipv4( { ip: unspoofable_ip } ) === sanetise_ipv4( { ip: mining_pool_ip } )
             if( !ip_match ) {
                 log.warn( `Attempted access denied for ${ mining_pool_ip }` )
