@@ -142,6 +142,8 @@ export async function validate_and_annotate_workers( { workers_with_configs=[] }
     
             // Start test
             const { json_config, text_config, mining_pool_url } = worker
+            if( CI_MODE === 'true' ) log.info( `Validating worker ${ worker.ip } with config:`, worker )
+
 
             // Check that the worker broadcasts mining pool membership
             const mock_pool_check = CI_MOCK_WORKER_RESPONSES === 'true' 
