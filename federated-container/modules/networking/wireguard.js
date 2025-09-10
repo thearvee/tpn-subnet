@@ -1,4 +1,4 @@
-import { cache, is_ipv4, log, random_number_between, sanetise_ipv4, wait } from "mentie"
+import { cache, is_ipv4, log, multiline_trim, random_number_between, sanetise_ipv4, wait } from "mentie"
 import { run } from "../system/shell.js"
 import { generate_challenge } from "../scoring/challenge_response.js"
 import { get_free_interfaces } from "./network.js"
@@ -171,7 +171,7 @@ export function parse_wireguard_config( { wireguard_config, expected_endpoint_ip
     }
 
     // Trim whitespaces that would mess with our matching
-    wireguard_config = wireguard_config.trim()
+    wireguard_config = multiline_trim( wireguard_config )
 
     // Set allowed config props
     const allowed_config_props = [
@@ -228,7 +228,7 @@ export function parse_wireguard_config( { wireguard_config, expected_endpoint_ip
     const config_valid = !misconfigured_keys.length && endpoint_correct
 
     // Recreate wireguard text config
-    let text_config = `
+    let text_config = multiline_trim( `
         [Interface]
         Address = ${ json_config.interface.Address }
         PrivateKey = ${ json_config.interface.PrivateKey }
@@ -240,7 +240,7 @@ export function parse_wireguard_config( { wireguard_config, expected_endpoint_ip
         PresharedKey = ${ json_config.peer.PresharedKey }
         AllowedIPs = ${ json_config.peer.AllowedIPs }
         Endpoint = ${ json_config.peer.Endpoint }
-    `.trim()
+    ` )
 
     // If the config is not valid, do not return the config text and json as a safety measure
     if( !config_valid ) {
