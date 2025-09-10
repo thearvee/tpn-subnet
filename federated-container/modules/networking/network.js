@@ -1,6 +1,7 @@
 import { lookup } from "dns/promises"
 import { cache, log, random_number_between, random_string_of_length, wait } from "mentie"
 import { v4 as uuidv4 } from "uuid"
+import { run } from "../system/shell.js"
 
 export function ip_from_req( request ) {
 
