@@ -61,15 +61,17 @@ export async function score_mining_pools( max_duration_minutes=30 ) {
 
         }
 
-        // Unlock
-        cache( `score_mining_pools_running`, false )
-
         // Return results
         return results
 
 
     } catch ( e ) {
         log.error( `Error scoring mining pools: ${ e.message }` )
+    } finally {
+
+        // Unlock
+        cache( `score_mining_pools_running`, false )
+
     }
 
 }

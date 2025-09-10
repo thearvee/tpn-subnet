@@ -42,10 +42,13 @@ export async function score_all_known_workers( max_duration_minutes=15 ) {
         // Save annotated workers to database
         await write_workers( { annotated_workers, mining_pool_uid: 'internal' } )
 
-        // Unlock
-        cache( `score_all_known_workers_running`, false )
     } catch ( e ) {
         log.error( `Error scoring all known workers: ${ e.message }` )
+    } finally {
+
+        // Unlock
+        cache( `score_all_known_workers_running`, false )
+        
     }
 
 }

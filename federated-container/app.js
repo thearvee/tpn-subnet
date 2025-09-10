@@ -162,14 +162,12 @@ if( validator_mode ) {
 if( CI_MODE === 'true' ) {
     log.warn( `💥 IMPORTANT: CI mode is triggering auto-updates, unless you work at Taofu you should NEVER EVER SEE THIS` )
     const pull = async () => {
-        const { stderr, stdout, error } = await run( `git pull`, { silent: true } )
-        if( !stdout?.includes( `Already up to date` ) ) log.info( `♻️ Pulled remote version` )
-        if( stderr || error ) {
-            await wait( 2_000 )
-            await run( `git pull`, { silent: true } ).then( () => {
-                log.info( `♻️ Pulled remote version on 2nd attempt` )
-            } )
-            await run( `touch app.js` )
+        let { stderr, stdout, error } = await run( `git pull`, { silent: true } )
+        while( !stdout?.includes( `Already up to date` ) ) {
+            log.info( `♻️ Pulled remote version` )
+            await run( `npm i` )
+            await wait( 2_000 );
+            ( { stderr, stdout, error } = await run( `git pull`, { silent: true } ) )
         }
     }
     await pull()
