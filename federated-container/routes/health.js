@@ -19,7 +19,7 @@ router.get( '/', ( req, res ) => {
         last_start,
         branch,
         hash,
-        ...MINING_POOL_URL && { MINING_POOL_URL }
+        ...MINING_POOL_URL && MINING_POOL_URL != 'undefined' && { MINING_POOL_URL }
     } )
 
 } )
