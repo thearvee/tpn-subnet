@@ -11,12 +11,13 @@ Requirements:
 
 Clone the repo and set it to the right branch:
 
-```
+```bash
 BRANCH='feature/tpn-federated'
 cd
 git clone https://github.com/taofu-labs/tpn-subnet.git
 cd tpn-subnet/federated-container
 git checkout "$BRANCH"
+sudo apt update && sudo apt install -y wireguard wireguard-tools iproute2 dnsutils iputils-ping iptables procps resolvconf
 ```
 
 Set up the right `.env` file and make sure to:
@@ -25,7 +26,7 @@ Set up the right `.env` file and make sure to:
 - Set `POSTGRES_HOST=localhost`
 - Do not set any `MOCK_` response values, requests should be real
 
-```
+```bash
 # note that miner is called pool (to prevent confusion to operators in prod)
 type=worker|pool|validator
 cp ".env.$type.example" ".env"
@@ -50,7 +51,7 @@ On each box run the following:
 
 Then run the relevant npm start command, note that this will auto-pull changes you push to the branch, and will reload them into the node stack when changes are detected.
 
-```
+```bash
 npm run start:worker|miner|validator
 ```
 

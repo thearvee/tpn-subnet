@@ -267,7 +267,7 @@ export function parse_wireguard_config( { wireguard_config, expected_endpoint_ip
  * @param {boolean} params.verbose - Whether to log verbosely.
  * @returns {Promise<{ valid: boolean, message: string }>} - The result of the wireguard connection test.
  */
-export async function test_wireguard_connection( { wireguard_config, verbose=false } ) {
+export async function test_wireguard_connection( { wireguard_config, verbose=CI_MODE === 'true' } ) {
 
     // Check if we should mock
     const { CI_MOCK_WORKER_RESPONSES } = process.env
