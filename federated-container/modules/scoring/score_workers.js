@@ -48,7 +48,7 @@ export async function score_all_known_workers( max_duration_minutes=15 ) {
 
         // Unlock
         cache( `score_all_known_workers_running`, false )
-        
+
     }
 
 }
@@ -135,7 +135,7 @@ export async function validate_and_annotate_workers( { workers_with_configs=[] }
     }, [ [], [] ] )
 
     // Score the selected workers
-    const scoring_queue = valid_workers.map( worker => async () => {
+    const scoring_queue = valid_workers.map( async worker => {
 
         // Prepare test
         const start = Date.now()
@@ -179,7 +179,7 @@ export async function validate_and_annotate_workers( { workers_with_configs=[] }
     } )
     
     // Wait for all workers to be scored
-    const results = await Promise.allSettled( scoring_queue.map( fn => fn() ) )
+    const results = await Promise.allSettled( scoring_queue )
     const [ successes, failures ] = results.reduce( ( acc, worker ) => {
     
         // If the status was fulfilled and the result is success == true, it counts as a win, otherwise it is a fail;
@@ -191,7 +191,10 @@ export async function validate_and_annotate_workers( { workers_with_configs=[] }
     
         return acc
     }, [ [], [ ...invalid_workers ] ] )
-    log.info( `Completed with ${ successes.length } successes and ${ failures.length } failures` )
+    log.info( `Completed with ${ successes.length } successes and ${ failures.length } failures:`, {
+        successes,
+        failures
+    } )
 
     // Collate results
     const workers_with_status = [
