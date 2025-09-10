@@ -162,7 +162,13 @@ export async function clean_up_tpn_interfaces( { interfaces, ip_addresses, dryru
  * @param {string} params.expected_endpoint_ip - The expected IP address of the endpoint.
  * @returns {Object<{ json_config: Object, text_config: string, valid: boolean, misconfigured_keys: Array, endpoint_ipv4: string }>} - The sanitised wireguard config.
  */
-export function parse_wireguard_config( { wireguard_config='', expected_endpoint_ip } ) {
+export function parse_wireguard_config( { wireguard_config, expected_endpoint_ip } ) {
+
+    // Input validations
+    if( typeof wireguard_config !== 'string' ) {
+        log.error( `Invalid wireguard_config:`, wireguard_config )
+        throw new Error( `Invalid wireguard_config` )
+    }
 
     // Set allowed config props
     const allowed_config_props = [
