@@ -278,7 +278,7 @@ export async function test_wireguard_connection( { wireguard_config, verbose=CI_
 
     // Get text config from wireguard config
     const { text_config, json_config, endpoint_ipv4 } = parse_wireguard_config( { wireguard_config } )
-    const server_id = `${ random_number_between( 10, 20 ) }${ endpoint_ipv4.replace( '.', '' ) }`
+    const server_id = `${ random_number_between( 10, 20 ) }${ endpoint_ipv4.replaceAll( '.', '' ) }`
     const log_tag = server_id
 
     // Generate a challenge for the wireguard server to solve
@@ -405,7 +405,7 @@ export async function test_wireguard_connection( { wireguard_config, verbose=CI_
         if( verbose ) log.info( `${ log_tag } Marking ip address ${ Address } as in processing` )
 
         // Write the wireguard config to a file
-        const config_cmd = await run( write_config_command, { silent: true, log_tag } )
+        const config_cmd = await run( write_config_command, { silent: !verbose, log_tag, verbose } )
         if( config_cmd.error || config_cmd.stderr ) throw new Error( `Error writing wireguard config: ${ config_cmd.error } ${ config_cmd.stderr }` )
 
         // loop over network commands
