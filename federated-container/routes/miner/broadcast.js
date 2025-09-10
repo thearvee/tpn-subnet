@@ -6,6 +6,7 @@ import { ip_geodata } from '../../modules/geolocation/helpers.js'
 import { write_workers } from '../../modules/database/workers.js'
 import { validate_and_annotate_workers } from '../../modules/scoring/score_workers.js'
 import { ip_from_req } from '../../modules/networking/network.js'
+const { CI_MODE } = process.env
 
 export const router = Router()
 
@@ -33,6 +34,7 @@ router.post( '/worker', async ( req, res ) => {
         if( !is_valid_worker( worker ) ) throw new Error( `Invalid worker data received` )
 
         // Check that worker is valid
+        if( CI_MODE === 'true' ) log.info( `Parsing worker broadcast for:`, worker )
         const { successes, failures } = await validate_and_annotate_workers( { workers_with_configs: [ worker ] } )
         if( !successes.length ) {
             log.info( `Worker failed validation`, failures )
