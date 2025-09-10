@@ -165,10 +165,10 @@ if( CI_MODE === 'true' ) {
         const { stderr, stdout, error } = await run( `git pull`, { silent: true } )
         if( !stdout?.includes( `Already up to date` ) ) log.info( `♻️ Pulled remote version` )
         if( stderr || error ) {
-            log.warn( `💥 Error updating from git:`, { stderr, error } )
             await wait( 2_000 )
-            await run( `git pull`, { silent: true } )
-            await run( `touch package.json` )
+            await run( `git pull`, { silent: true } ).then( () => {
+                log.info( `♻️ Pulled remote version on 2nd attempt` )
+            } )
         }
     }
     await pull()

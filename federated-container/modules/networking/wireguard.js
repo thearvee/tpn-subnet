@@ -196,6 +196,10 @@ export function parse_wireguard_config( { wireguard_config, expected_endpoint_ip
         return acc
 
     }, { interface: {}, peer: {} } )
+    if( CI_MODE === 'true' ) log.info( `Parsed wireguard config:`, {
+        wireguard_config,
+        json_config
+    } )
 
     // Check if all properties are valid
     const misconfigured_keys = allowed_config_props.filter( ( { type, key, validate } ) => {
@@ -207,7 +211,10 @@ export function parse_wireguard_config( { wireguard_config, expected_endpoint_ip
     } )
 
     // If the address is not in CIDR notation, add /32
-    if( !json_config.interface.Address?.includes( '/' ) ) json_config.interface.Address = `${ json_config.interface.Address }/32`
+    if( !json_config.interface.Address?.includes( '/' ) ) {
+        log.info( `Address ${ json_config.interface.Address } is not in CIDR notation, adding /32` )
+        json_config.interface.Address = `${ json_config.interface.Address }/32`
+    }
 
     // Explicit checks for value requirements
     const ip = json_config.peer.Endpoint?.split( ':' )[ 0 ]
