@@ -41,6 +41,11 @@ router.post( '/worker', async ( req, res ) => {
             throw new Error( `Worker failed validation` )
         }
 
+        // Set worker to the successful worker
+        const [ successful_worker ] = successes
+        if( successful_worker.ip !== worker.ip ) throw new Error( `Worker IP mismatch after validation, this should never happen` )
+        worker = successful_worker
+
         // Cache geodata for this worker
         await map_ips_to_geodata( { ips: [ worker.ip ], cache_prefix: `worker_`, prefix_merge: true } )
 
