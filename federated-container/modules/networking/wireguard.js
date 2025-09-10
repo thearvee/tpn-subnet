@@ -170,6 +170,9 @@ export function parse_wireguard_config( { wireguard_config, expected_endpoint_ip
         throw new Error( `Invalid wireguard_config` )
     }
 
+    // Trim whitespaces that would mess with our matching
+    wireguard_config = wireguard_config.trim()
+
     // Set allowed config props
     const allowed_config_props = [
         { type: 'interface', key: 'Address', validate: is_ipv4 },
@@ -188,7 +191,7 @@ export function parse_wireguard_config( { wireguard_config, expected_endpoint_ip
         // Get key value from the config
         const key_match = new RegExp( `^${ key } ?= ?(.*)`, 'm' )
         const { 0: match, 1: value } = wireguard_config.match( key_match ) || []
-        // log( { type, key, match, value } )
+        if( !match && CI_MODE === 'true' ) log.info( `Missing key ${ key } in wireguard config` )
 
         // add key value to the config object
         if( value ) acc[ type ][ key ] = value
