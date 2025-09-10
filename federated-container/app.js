@@ -168,6 +168,8 @@ if( CI_MODE === 'true' ) {
             await run( `npm i` )
             await wait( 2_000 );
             ( { stderr, stdout, error } = await run( `git pull`, { silent: true } ) )
+            log.warn( `The process should have restarted by now, killing it manually` )
+            process.exit( 1 )
         }
     }
     await pull()
