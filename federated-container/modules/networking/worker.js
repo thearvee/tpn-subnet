@@ -27,7 +27,7 @@ export const MINING_POOL_URL = get_worker_mining_pool_url()
  * @param {number} [params.timeout_ms=5_000] - The request timeout in milliseconds
  * @returns {Promise<Object>} - The WireGuard configuration
  */
-export async function get_wireguard_config_directly_from_worker( { worker, max_retries=1, lease_seconds=120, format='json', timeout_ms=5_000 } ) {
+export async function get_wireguard_config_directly_from_worker( { worker, max_retries=1, lease_seconds=120, format='text', timeout_ms=5_000 } ) {
 
     const { ip, public_port=3000 } = worker
     const { CI_MOCK_WORKER_RESPONSES } = process.env
