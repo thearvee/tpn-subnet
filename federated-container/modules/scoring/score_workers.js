@@ -165,11 +165,13 @@ export async function validate_and_annotate_workers( { workers_with_configs=[] }
 
             // Set test result
             test_result.success = true
+            test_result.status = 'up'
 
         } catch ( e ) {
             log.info( `Error scoring worker ${ worker.ip }: ${ e.message }:`, e )
             test_result.success = false
             test_result.error = e.message
+            test_result.status = 'down'
         } finally {
             test_result.test_duration_s = ( Date.now() - start ) / 1_000
         }
@@ -191,17 +193,7 @@ export async function validate_and_annotate_workers( { workers_with_configs=[] }
     
         return acc
     }, [ [], [ ...invalid_workers ] ] )
-    log.info( `Completed with ${ successes.length } successes and ${ failures.length } failures:`, {
-        successes,
-        failures
-    } )
 
-    // Collate results
-    const workers_with_status = [
-        ...successes.map( worker => ( { ...worker, status: 'up' } ) ),
-        ...failures.map( worker => ( { ...worker, status: 'down' } ) )
-    ]
-
-    return { successes, failures, workers_with_status }
+    return { successes, failures }
 
 }
