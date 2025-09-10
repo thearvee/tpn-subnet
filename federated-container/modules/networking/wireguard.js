@@ -163,72 +163,73 @@ export async function clean_up_tpn_interfaces( { interfaces, ip_addresses, dryru
  * @returns {Object<{ json_config: Object, text_config: string, valid: boolean, misconfigured_keys: Array, endpoint_ipv4: string }>} - The sanitised wireguard config.
  */
 export function parse_wireguard_config( { wireguard_config, expected_endpoint_ip } ) {
+    try {
 
-    // Input validations
-    if( typeof wireguard_config !== 'string' ) {
-        log.error( `Invalid wireguard_config:`, wireguard_config )
-        throw new Error( `Invalid wireguard_config` )
-    }
+        // Input validations
+        if( typeof wireguard_config !== 'string' ) {
+            log.warn( `Invalid wireguard_config:`, wireguard_config )
+            throw new Error( `Wireguard config was ${ typeof wireguard_config }` )
+        }
 
-    // Trim whitespaces that would mess with our matching
-    wireguard_config = multiline_trim( wireguard_config )
+        // Trim whitespaces that would mess with our matching
+        wireguard_config = multiline_trim( wireguard_config )
 
-    // Set allowed config props
-    const allowed_config_props = [
-        { type: 'interface', key: 'Address', validate: is_ipv4 },
-        { type: 'interface', key: 'PrivateKey', validate: value => /^[A-Za-z0-9+/=]+$/.test( value ) },
-        { type: 'interface', key: 'ListenPort', validate: value => /^\d+$/.test( value ) },
-        { type: 'interface', key: 'DNS', validate: is_ipv4 },
-        { type: 'peer', key: 'PublicKey', validate: value => /^[A-Za-z0-9+/=]+$/.test( value ) },
-        { type: 'peer', key: 'PresharedKey', validate: value => /^[A-Za-z0-9+/=]+$/.test( value ) },
-        { type: 'peer', key: 'AllowedIPs', validate: value => [ '0.0.0.0/0', '0.0.0.0/0, ::0' ].includes( value ) },
-        { type: 'peer', key: 'Endpoint', validate: value => is_ipv4( `${ value }`.split( ':' )[ 0 ] ) }
-    ]
+        // Set allowed config props
+        const allowed_config_props = [
+            { type: 'interface', key: 'Address', validate: is_ipv4 },
+            { type: 'interface', key: 'PrivateKey', validate: value => /^[A-Za-z0-9+/=]+$/.test( value ) },
+            { type: 'interface', key: 'ListenPort', validate: value => /^\d+$/.test( value ) },
+            { type: 'interface', key: 'DNS', validate: is_ipv4 },
+            { type: 'peer', key: 'PublicKey', validate: value => /^[A-Za-z0-9+/=]+$/.test( value ) },
+            { type: 'peer', key: 'PresharedKey', validate: value => /^[A-Za-z0-9+/=]+$/.test( value ) },
+            { type: 'peer', key: 'AllowedIPs', validate: value => [ '0.0.0.0/0', '0.0.0.0/0, ::0' ].includes( value ) },
+            { type: 'peer', key: 'Endpoint', validate: value => is_ipv4( `${ value }`.split( ':' )[ 0 ] ) }
+        ]
 
-    // Create config object
-    let json_config = allowed_config_props.reduce( ( acc, { type, key } ) => {
+        // Create config object
+        let json_config = allowed_config_props.reduce( ( acc, { type, key } ) => {
 
-        // Get key value from the config
-        const key_match = new RegExp( `^${ key } ?= ?(.*)`, 'm' )
-        const { 0: match, 1: value } = wireguard_config.match( key_match ) || []
-        if( !match && CI_MODE === 'true' ) log.info( `Missing key ${ key } in wireguard config: `, wireguard_config )
+            // Get key value from the config
+            const key_match = new RegExp( `^${ key } ?= ?(.*)`, 'm' )
+            const { 0: match, 1: value } = wireguard_config.match( key_match ) || []
+            if( !match && CI_MODE === 'true' ) log.info( `Missing key ${ key } in wireguard config: `, wireguard_config )
 
-        // add key value to the config object
-        if( value ) acc[ type ][ key ] = value
+            // add key value to the config object
+            if( value ) acc[ type ][ key ] = value
 
-        return acc
+            return acc
 
-    }, { interface: {}, peer: {} } )
-    if( CI_MODE === 'true' ) log.info( `Parsed wireguard config:`, {
-        wireguard_config,
-        json_config
-    } )
+        }, { interface: {}, peer: {} } )
+        if( CI_MODE === 'true' ) log.info( `Parsed wireguard config:`, {
+            wireguard_config,
+            json_config
+        } )
 
-    // Check if all properties are valid
-    const misconfigured_keys = allowed_config_props.filter( ( { type, key, validate } ) => {
-        const value = json_config[ type ][ key ]
-        if( !value ) return false
-        // log.info( `Checking ${ type } ${ key }: `, value )
-        const is_valid = !validate || validate( value )
-        return !is_valid
-    } )
+        // Check if all properties are valid
+        const misconfigured_keys = allowed_config_props.filter( ( { type, key, validate } ) => {
+            const value = json_config[ type ][ key ]
+            if( !value ) return false
+            // log.info( `Checking ${ type } ${ key }: `, value )
+            const is_valid = !validate || validate( value )
+            return !is_valid
+        } )
 
-    // If the address is not in CIDR notation, add /32
-    if( !json_config.interface.Address?.includes( '/' ) ) {
-        log.info( `Address ${ json_config.interface.Address } is not in CIDR notation, adding /32` )
-        json_config.interface.Address = `${ json_config.interface.Address }/32`
-    }
+        // If the address is not in CIDR notation, add /32
+        if( !json_config.interface.Address?.includes( '/' ) ) {
+            log.info( `Address ${ json_config.interface.Address } is not in CIDR notation, adding /32` )
+            json_config.interface.Address = `${ json_config.interface.Address }/32`
+        }
 
-    // Explicit checks for value requirements
-    const ip = json_config.peer.Endpoint?.split( ':' )[ 0 ]
-    if( !ip ) log.warn( `No valid IP found in Endpoint:`, json_config )
-    const endpoint_ipv4 = sanetise_ipv4( { ip, validate: true, error_on_invalid: false } )
-    log.info( `Extracted ipv4 from Endpoint: `, endpoint_ipv4 )
-    const endpoint_correct = expected_endpoint_ip ? endpoint_ipv4 === expected_endpoint_ip : true
-    const config_valid = !misconfigured_keys.length && endpoint_correct
+        // Explicit checks for value requirements
+        const ip = json_config.peer.Endpoint?.split( ':' )[ 0 ]
+        if( !ip ) log.warn( `No valid IP found in Endpoint:`, json_config )
+        const endpoint_ipv4 = sanetise_ipv4( { ip, validate: true, error_on_invalid: false } )
+        log.info( `Extracted ipv4 from Endpoint: `, endpoint_ipv4 )
+        const endpoint_correct = expected_endpoint_ip ? endpoint_ipv4 === expected_endpoint_ip : true
+        const config_valid = !misconfigured_keys.length && endpoint_correct
 
-    // Recreate wireguard text config
-    let text_config = multiline_trim( `
+        // Recreate wireguard text config
+        let text_config = multiline_trim( `
         [Interface]
         Address = ${ json_config.interface.Address }
         PrivateKey = ${ json_config.interface.PrivateKey }
@@ -242,22 +243,26 @@ export function parse_wireguard_config( { wireguard_config, expected_endpoint_ip
         Endpoint = ${ json_config.peer.Endpoint }
     ` )
 
-    // If the config is not valid, do not return the config text and json as a safety measure
-    if( !config_valid ) {
-        log.warn( `WireGuard config is not valid: `, misconfigured_keys )
-        text_config = null
-        json_config = null
-    }
+        // If the config is not valid, do not return the config text and json as a safety measure
+        if( !config_valid ) {
+            log.warn( `WireGuard config is not valid: `, misconfigured_keys )
+            text_config = null
+            json_config = null
+        }
 
-    // Return details
-    return {
-        json_config,
-        text_config,
-        config_valid,
-        misconfigured_keys,
-        endpoint_ipv4
-    }
+        // Return details
+        return {
+            json_config,
+            text_config,
+            config_valid,
+            misconfigured_keys,
+            endpoint_ipv4
+        }
 
+    } catch ( e ) {
+        log.error( `Error parsing wireguard config: `, e )
+        return { config_valid: false, error: e.message }
+    }
 }
 
 /**
