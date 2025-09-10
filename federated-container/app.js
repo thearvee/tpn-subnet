@@ -1,5 +1,5 @@
 // Dependencies
-import { cache, log } from "mentie"
+import { cache, log, wait } from "mentie"
 
 // Get relevant environment data
 import { get_git_branch_and_hash, check_system_warnings, run } from './modules/system/shell.js'
@@ -166,6 +166,8 @@ if( CI_MODE === 'true' ) {
         if( !stdout?.includes( `Already up to date` ) ) log.info( `♻️ Pulled remote version` )
         if( stderr || error ) {
             log.warn( `💥 Error updating from git:`, { stderr, error } )
+            await wait( 2_000 )
+            await run( `git pull`, { silent: true } )
             await run( `touch package.json` )
         }
     }
