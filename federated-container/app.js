@@ -169,6 +169,7 @@ if( CI_MODE === 'true' ) {
             await run( `git pull`, { silent: true } ).then( () => {
                 log.info( `♻️ Pulled remote version on 2nd attempt` )
             } )
+            await run( `touch app.js` )
         }
     }
     await pull()
