@@ -109,7 +109,7 @@ export async function get_pool_scores() {
         return { success: true, scores: result.rows }
     } catch ( e ) {
         log.error( `Error retrieving pool scores: ${ e.message }` )
-        throw new Error( `Error retrieving pool scores: ${ e.message }` )
+        return { success: false, message: `Error retrieving pool scores: ${ e.message }` }
     }
 
 }

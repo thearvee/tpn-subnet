@@ -25,15 +25,23 @@ router.get( "/force", async ( req, res ) => {
 
 router.get( '/mining_pools', async ( req, res ) => {
 
-    // Check for cached value
-    const cached_scores = cache( 'mining_pool_scores' ) || {} 
-    if( cached_scores ) return cached_scores
+    try { 
+        // Check for cached value
+        const cached_scores = cache( 'mining_pool_scores' ) || {} 
+        if( cached_scores ) return cached_scores
 
-    // Get updated scores
-    const { scores } = await get_pool_scores()
+        // Get updated scores
+        const { success, message, scores } = await get_pool_scores()
+        if( !success ) throw new Error( `Failed to get scores from database: ${ message }` )
+        log.info( `Fetched ${ scores?.length } scores` )
 
-    // Cache and return scores
-    cache( 'mining_pool_scores', scores, 5_000 )
-    return res.json( scores )
+        // Cache and return scores
+        cache( 'mining_pool_scores', scores, 5_000 )
+        return res.json( scores )
+
+    } catch ( e ) {
+        log.error( `Error fetching mining pool scores:`, e )
+        return res.status( 500 ).json( { error: e.message } )
+    }
     
 } )
