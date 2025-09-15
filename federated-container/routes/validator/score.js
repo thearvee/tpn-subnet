@@ -33,6 +33,7 @@ router.get( '/mining_pools', async ( req, res ) => {
     const { scores } = await get_pool_scores()
 
     // Cache and return scores
-    return cache( 'mining_pool_scores', scores, 5_000 )
+    cache( 'mining_pool_scores', scores, 5_000 )
+    return res.json( scores )
     
 } )
