@@ -150,13 +150,20 @@ if( miner_mode ) {
     const { score_all_known_workers } = await import( './modules/scoring/score_workers.js' )
     intervals.push( setInterval( score_all_known_workers, DAEMON_INTERVAL_SECONDS * 1_000 ) )
     log.info( `🏴‍☠️  Scoring all known workers every ${ DAEMON_INTERVAL_SECONDS } seconds` )
-    if( CI_MODE === 'true' ) score_all_known_workers()
+    if( CI_MODE === 'true' ) {
+        // One-time scoring for CI testing
+        await wait( 30_000 )
+        await score_all_known_workers()
+    }
 }
 if( validator_mode ) {
     const { score_mining_pools } = await import( './modules/scoring/score_mining_pools.js' )
     intervals.push( setInterval( score_mining_pools, DAEMON_INTERVAL_SECONDS * 1_000 ) )
     log.info( `🏴‍☠️  Scoring all known mining pools every ${ DAEMON_INTERVAL_SECONDS } seconds` )
-    if( CI_MODE === 'true' ) score_mining_pools()
+    if( CI_MODE === 'true' ) {
+        await wait( 60_000 )
+        await score_mining_pools()
+    }
 }
 
 // CI mode auto update codebase

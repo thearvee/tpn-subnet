@@ -15,6 +15,7 @@ export async function score_all_known_workers( max_duration_minutes=15 ) {
     try { 
 
         // Set a lock on this activity to prevent races
+        log.info( `Starting score_all_known_workers, max duration ${ max_duration_minutes } minutes` )
         const locked = cache( `score_all_known_workers_running` )
         if( locked ) return log.warn( `score_all_known_workers is already running` )
         cache( `score_all_known_workers_running`, true, max_duration_minutes * 60_000 )
@@ -22,8 +23,10 @@ export async function score_all_known_workers( max_duration_minutes=15 ) {
         // Get all known workers
         const { workers } = await get_workers( { mining_pool_uid: 'internal' } )
         if( !workers?.length ) throw new Error( `No known workers to score` )
+        if( CI_MODE === 'true' ) log.info( `Got ${ workers.length } workers to score, first: `, workers?.[0] )
 
         // Get a config directly from each worker
+        log.info( `Fetching wireguard config from ${ workers.length } workers...` )
         await Promise.allSettled( workers.map( async ( worker, index ) => {
             const wireguard_config = await get_wireguard_config_directly_from_worker( { worker } )
             const { text_config, json_config } = parse_wireguard_config( { wireguard_config } )
