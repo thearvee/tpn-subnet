@@ -70,7 +70,13 @@ export async function register_mining_pool_with_validators() {
         const host = validator_broadcast.SERVER_PUBLIC_HOST || ip
         const port = validator_broadcast.SERVER_PUBLIC_PORT || 3000
         const url = `${ protocol }://${ host }:${ port }/validator/broadcast/mining_pool`
-        return fetch( url, { method: 'POST', body, signal } ).then( res => res.json() )
+        return fetch( url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body, signal
+        } ).then( res => res.json() )
 
     } ) )
 
