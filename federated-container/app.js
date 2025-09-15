@@ -81,9 +81,9 @@ if( miner_mode ) {
 if( validator_mode ) {
 
     const { router: validator_broadcast_router } = await import( './routes/validator/broadcast.js' )
-    const { router: validator_force_scoring } = await import( './routes/validator/score.js' )
+    const { router: validator_scoring } = await import( './routes/validator/score.js' )
     app.use( '/validator/broadcast', validator_broadcast_router )
-    app.use( '/validator/score', validator_force_scoring )
+    app.use( '/validator/score', validator_scoring )
     log.info( `/validator/ routes registered` )
 
 }

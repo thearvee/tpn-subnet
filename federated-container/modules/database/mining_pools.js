@@ -91,3 +91,25 @@ export async function write_pool_score( { mining_pool_ip, mining_pool_uid, stabi
         throw new Error( `Error writing pool score: ${ e.message }` )
     }
 }
+
+export async function get_pool_scores() {
+
+    // Get postgres pool
+    const pool = await get_pg_pool()
+
+    // Create query
+    const query = `
+        SELECT * FROM scores
+        ORDER BY score DESC
+    `
+
+    try {
+        const result = await pool.query( query )
+        log.info( `Retrieved ${ result.rows.length } pool scores` )
+        return { success: true, scores: result.rows }
+    } catch ( e ) {
+        log.error( `Error retrieving pool scores: ${ e.message }` )
+        throw new Error( `Error retrieving pool scores: ${ e.message }` )
+    }
+
+}
