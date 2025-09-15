@@ -11,32 +11,37 @@ export const miners_ip_overrides = CI_MINER_IP_OVERRIDES ? CI_MINER_IP_OVERRIDES
  * Returns a list of miners as { uid, ip } from the in-memory cache.
  * Waits briefly (with retries) if the cache hasn't been populated yet by the neuron broadcast.
  */
-const get_miners = async () => {
+const get_miners = async ( { ip_only=false, overrides_only=false, skip_overrides=false } ) => {
+
     // Build miner list from cache mapping of uid -> ip
-    let uid_to_ip = get_tpn_cache( 'miner_uid_to_ip' )
+    let uid_to_ip = overrides_only ? [] : get_tpn_cache( 'miner_uid_to_ip' )
+    let miners = Object.entries( uid_to_ip || {} ).map( ( [ uid, ip ] ) => ( { uid: Number( uid ), ip } ) )
     let attempts = 0
 
     // Give the protocol broadcast a moment to populate cache on cold starts
-    while( ( !uid_to_ip || Object.keys( uid_to_ip ).length === 0 ) && attempts < 5 ) {
+    while( CI_MODE !== 'true' && ( !uid_to_ip || Object.keys( uid_to_ip ).length === 0 ) && attempts < 5 ) {
         log.info( `[ WHILE ] No miners found in cache, waiting 5 seconds and retrying...` )
         await wait( 5_000 )
         uid_to_ip = get_tpn_cache( 'miner_uid_to_ip' )
+        // Convert mapping to normalized array
+        if( uid_to_ip?.length ) miners = Object.entries( uid_to_ip ).map( ( [ uid, ip ] ) => ( { uid: Number( uid ), ip } ) )
         attempts++
     }
+
+    // Add ip overrised to validators
+    if( !skip_overrides ) miners = [ ...miners, ...miners_ip_overrides.map( ip => ( { uid: ip.replaceAll( '.', '' ), ip, override: true } ) ) ]
+
 
     if( !uid_to_ip || Object.keys( uid_to_ip ).length === 0 ) {
         log.error( `No miners found in cache` )
         return []
     }
 
-    // Convert mapping to normalized array and filter out zero IPs
-    const miners = Object.entries( uid_to_ip )
-        .map( ( [ uid, ip ] ) => ( { uid: Number( uid ), ip } ) )
-        .map( miner => {
-            // If neuron delivered 0.0.0.0, keep as-is; there is no reliable fallback list for miners
-            return miner
-        } )
-        .filter( ( { ip } ) => ip && ip !== '0.0.0.0' )
+    // Filter out miners with an ip of 0.0.0.0
+    miners = miners.filter( m => m.ip !== '0.0.0.0' )
+
+    // If ip only, map
+    if( ip_only ) miners = miners.map( m => m.ip )
 
     return miners
 }
@@ -63,12 +68,6 @@ export async function is_miner_request( request ) {
     const miners = await get_miners()
     const miner = miners.find( m => m.ip === unspoofable_ip )
     if( miner ) return miner
-
-    // Check overrides
-    if( miners_ip_overrides.includes( unspoofable_ip ) ) {
-        log.info( `Request ip ${ unspoofable_ip } is a miner override ip` )
-        return { uid: 99999, ip: unspoofable_ip }
-    }
 
     // No match
     return {}

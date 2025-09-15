@@ -148,12 +148,23 @@ if( worker_mode && CI_MOCK_MINING_POOL_RESPONSES !== 'true' ) {
 // Initialise periodic daemons
 if( miner_mode ) {
     const { score_all_known_workers } = await import( './modules/scoring/score_workers.js' )
+    const { register_mining_pool_with_validators, register_mining_pool_workers_with_validators } = await import( './modules/api/mining_pool.js' )
+    
+    intervals.push( setInterval( register_mining_pool_with_validators, DAEMON_INTERVAL_SECONDS * 1_000 ) )
     intervals.push( setInterval( score_all_known_workers, DAEMON_INTERVAL_SECONDS * 1_000 ) )
     log.info( `🏴‍☠️  Scoring all known workers every ${ DAEMON_INTERVAL_SECONDS } seconds` )
     if( CI_MODE === 'true' ) {
+
+        // Register with validator
+        await register_mining_pool_with_validators()
+
         // One-time scoring for CI testing
         await wait( 30_000 )
         await score_all_known_workers()
+
+        // Broadcast worker data to validators
+        await register_mining_pool_workers_with_validators()
+
     }
 }
 if( validator_mode ) {

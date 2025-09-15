@@ -7,7 +7,7 @@ import { MINING_POOL_URL } from '../modules/networking/worker.js'
 const { version } = JSON.parse( await readFile( new URL( '../package.json', import.meta.url ) ) )
 const { branch, hash } = await get_git_branch_and_hash()
 const last_start = cache( 'last_start' )
-const { RUN_MODE } = process.env
+const { RUN_MODE, SERVER_PUBLIC_HOST, SERVER_PUBLIC_PORT, SERVER_PUBLIC_PROTOCOL } = process.env
 
 
 router.get( '/', ( req, res ) => {
@@ -19,7 +19,10 @@ router.get( '/', ( req, res ) => {
         last_start,
         branch,
         hash,
-        ...MINING_POOL_URL && MINING_POOL_URL != 'undefined' && { MINING_POOL_URL }
+        ...MINING_POOL_URL && MINING_POOL_URL != 'undefined' && { MINING_POOL_URL },
+        ...SERVER_PUBLIC_HOST && { SERVER_PUBLIC_HOST },
+        ...SERVER_PUBLIC_PORT && { SERVER_PUBLIC_PORT },
+        ...SERVER_PUBLIC_PROTOCOL && { SERVER_PUBLIC_PROTOCOL }
     } )
 
 } )

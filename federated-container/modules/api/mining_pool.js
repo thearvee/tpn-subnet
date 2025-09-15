@@ -1,6 +1,8 @@
-import { is_ipv4, log, shuffle_array } from "mentie"
+import { abort_controller, is_ipv4, log, shuffle_array } from "mentie"
 import { get_tpn_cache } from "../caching.js"
 import { get_wireguard_config_directly_from_worker } from "../networking/worker.js"
+import { get_validators } from "../networking/validators.js"
+import { get_worker_countries_for_pool } from "../database/workers.js"
 const { CI_MOCK_WORKER_RESPONSES } = process.env
 
 export async function get_worker_config_as_miner( { geo, format, whitelist, blacklist, lease_seconds } ) {
@@ -38,5 +40,85 @@ export async function get_worker_config_as_miner( { geo, format, whitelist, blac
 
     // Return the config
     return config
+
+}
+
+export async function register_mining_pool_with_validators() {
+
+    // Get validator ip list
+    const validator_ips = await get_validators( { ip_only: true } )
+
+    // Formulate identity
+    let { SERVER_PUBLIC_URL: url, SERVER_PUBLIC_PORT: port=3000, SERVER_PUBLIC_PROTOCOL: protocol='http', SERVER_PUBLIC_HOST, CI_MODE } = process.env
+    const identity = { protocol, url, port }
+
+    // Register with validators with allSettled
+    const results = await Promise.allSettled( validator_ips.map( async ip => {
+        
+        // Abort controller
+        let { signal } = abort_controller( { timeout_ms: 60_000 } )
+
+        // Get protocol data from validator
+        const validator_broadcast = await fetch( `http://${ ip }:3000/`, { signal } ).then( res => res.json() )
+
+        // Formulate registration request
+        ;( { signal } = abort_controller( { timeout_ms: 30_000 } ) )
+        const body = JSON.stringify( identity )
+        const protocol = validator_broadcast.SERVER_PUBLIC_PROTOCOL || 'http'
+        const host = validator_broadcast.SERVER_PUBLIC_HOST || ip
+        const port = validator_broadcast.SERVER_PUBLIC_PORT || 3000
+        const url = `${ protocol }://${ host }:${ port }/validator/broadcast/mining_pool`
+        return fetch( url, { method: 'POST', body, signal } ).then( res => res.json() )
+
+    } ) )
+
+    const [ successes, failures ] = results.reduce( ( acc, result ) => {
+        if( result.status === 'fulfilled' ) acc[ 0 ].push( result.value )
+        else acc[ 1 ].push( result.reason )
+        return acc
+    }, [ [], [] ] )
+    log.info( `Registered with validators: ${ successes.length }, failed: ${ failures.length }` )
+
+    return { successes, failures }
+
+}
+
+export async function register_mining_pool_workers_with_validators() {
+
+    // Get validator ip list
+    const validator_ips = await get_validators( { ip_only: true } )
+
+    // Get all worker data and structure it
+    const workers = await get_worker_countries_for_pool( { mining_pool_uid: 'internal' } )
+    log.info( `Broadcasting ${ workers.length } workers to ${ validator_ips.length } validators` )
+
+    // Register with validators with allSettled
+    const results = await Promise.allSettled( validator_ips.map( async ip => {
+
+        // Abort controller
+        let { signal } = abort_controller( { timeout_ms: 60_000 } )
+
+        // Get protocol data from validator
+        const validator_broadcast = await fetch( `http://${ ip }:3000/`, { signal } ).then( res => res.json() )
+
+        // Formulate registration request
+        ;( { signal } = abort_controller( { timeout_ms: 30_000 } ) )
+        const body = JSON.stringify( { workers } )
+        const protocol = validator_broadcast.SERVER_PUBLIC_PROTOCOL || 'http'
+        const host = validator_broadcast.SERVER_PUBLIC_HOST || ip
+        const port = validator_broadcast.SERVER_PUBLIC_PORT || 3000
+        const url = `${ protocol }://${ host }:${ port }/validator/broadcast/workers`
+        return fetch( url, { method: 'POST', body, signal } ).then( res => res.json() )
+
+    } ) )
+
+    const [ successes, failures ] = results.reduce( ( acc, result ) => {
+        if( result.status === 'fulfilled' ) acc[ 0 ].push( result.value )
+        else acc[ 1 ].push( result.reason )
+        return acc
+    }, [ [], [] ] )
+    log.info( `Registered with validators: ${ successes.length }, failed: ${ failures.length }` )
+
+    return { successes, failures }
 
 }

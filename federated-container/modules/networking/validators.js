@@ -18,19 +18,33 @@ export const validators_ip_fallback = [
 // Manual override for ips that should be considered validators for the purpose of miner API requests
 export const validators_ip_overrides = [ ...CI_VALIDATOR_IP_OVERRIDES ? CI_VALIDATOR_IP_OVERRIDES.split( ',' ) : [], '88.204.136.221', '88.204.136.220', '161.35.91.172' ]
 
-
-export const get_validators = async () => {
+/**
+ * Get the list of validator IPs
+ * @param {Object} options - Options object
+ * @param {boolean} options.ip_only - If true, return only the IP addresses.
+ * @param {boolean} options.overrides_only - If true, return only the override IPs.
+ * @param {boolean} options.skip_overrides - If true, skip adding override IPs to the list.
+ * @returns {Promise<Object[]>} A promise that resolves to an array of validator objects with uid and ip.
+ */
+export const get_validators = async ( { ip_only=false, overrides_only=false, skip_overrides=false } ) => {
 
     // Get validators from cache
-    let validators = get_tpn_cache( 'last_known_validators' )
+    let validators = overrides_only ? [] : get_tpn_cache( 'last_known_validators' )
     let attempts = 0
 
-    while( !validators?.length && attempts < 5 ) {
+    // Give the protocol broadcast a moment to populate cache on cold starts
+    while( CI_MODE !== 'true' && !validators?.length && attempts < 5 ) {
         log.info( `[ WHILE ] No validators found in cache, waiting 5 seconds and retrying...` )
         await wait( 5_000 )
         validators = get_tpn_cache( 'last_known_validators' )
         attempts++
     }
+
+
+    // Add ip overrides to validators
+    if( !skip_overrides ) validators = [ ...validators, ...validators_ip_overrides.map( ip => ( { ip, uid: ip.replaceAll( '.', '' ), override: true } ) ) ]
+    log.info( `Found ${ validators.length } validators, ${ validators_ip_overrides.length } overrides` )
+
 
     // Return fallback validators if no validators found in cache
     if( !validators?.length ) {
@@ -45,6 +59,9 @@ export const get_validators = async () => {
             validator.ip = validators_ip_fallback.find( val => val.uid == validator.uid )?.ip || '0.0.0.0'
         }
     }
+
+    // If ip_only, map
+    if( ip_only ) validators = validators.map( val => val.ip )
 
     return validators
 
@@ -76,12 +93,6 @@ export async function is_validator_request( request ) {
     const validators = await get_validators()
     const validator = validators.find( val => val.ip == unspoofable_ip )
     if( validator ) return validator
-
-    // Check if ip is override ip
-    if( validators_ip_overrides.includes( unspoofable_ip ) ) {
-        log.info( `Request ip ${ unspoofable_ip } is an override ip` )
-        return { uid: Infinity, ip: unspoofable_ip }
-    }
 
     // If no validator found, return false
     return {}
