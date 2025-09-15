@@ -4,7 +4,7 @@ import { get_worker_countries_for_pool, get_workers, read_worker_broadcast_metad
 import { cochrane_sample_size } from "../math/samples.js"
 import { get_worker_config_through_mining_pool, validate_and_annotate_workers } from "./score_workers.js"
 import { write_pool_score } from "../database/mining_pools.js"
-const { CI_MODE, CI_MOCK_MINING_POOL_RESPONSES, CI_MOCK_WORKER_RESPONSES } = process.env
+const { CI_MODE, CI_MOCK_MINING_POOL_RESPONSES, CI_MOCK_WORKER_RESPONSES, CI_MINER_IP_OVERRIDES } = process.env
 
 /**
  * Validator function to score mining pools based on worker performance
@@ -24,6 +24,20 @@ export async function score_mining_pools( max_duration_minutes=30 ) {
         const mining_pool_uids = get_tpn_cache( 'miner_uids', [] )
         const miner_uid_to_ip = get_tpn_cache( 'miner_uid_to_ip', {} )
         log.info( `Found mining ${ mining_pool_uids.length } pools to score: `, mining_pool_uids )
+
+        // If we are running in CI mode, add a the live testing mining pool if defined
+        if( CI_MODE === 'true' && CI_MINER_IP_OVERRIDES ) {
+
+            const override_ips = CI_MINER_IP_OVERRIDES.split( ',' )
+            override_ips.forEach( ( ip, index ) => {
+                const out_of_bounds_uid = 9000
+                mining_pool_uids.push( out_of_bounds_uid + index )
+                miner_uid_to_ip[ out_of_bounds_uid + index ] = ip
+                log.info( `Added CI override mining pool ${ out_of_bounds_uid + index }@${ ip }` )
+            } )
+            
+
+        }
 
         // Fisher-Yates shuffle the miner uid array
         shuffle_array( mining_pool_uids )
