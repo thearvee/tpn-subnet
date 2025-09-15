@@ -98,7 +98,7 @@ export async function register_mining_pool_workers_with_validators() {
     const validator_ips = await get_validators( { ip_only: true } )
 
     // Get all worker data and structure it
-    const workers = await get_workers( { mining_pool_uid: 'internal' } )
+    const { workers } = await get_workers( { mining_pool_uid: 'internal' } )
     log.info( `Broadcasting ${ workers.length } workers to ${ validator_ips.length } validators` )
 
     // Register with validators with allSettled
