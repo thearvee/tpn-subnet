@@ -46,7 +46,7 @@ export async function score_all_known_workers( max_duration_minutes=15 ) {
         await write_workers( { workers: annotated_workers, mining_pool_uid: 'internal' } )
 
     } catch ( e ) {
-        log.error( `Error scoring all known workers: ${ e.message }, `, e )
+        log.error( `Error scoring all known workers:`, e )
     } finally {
 
         // Unlock

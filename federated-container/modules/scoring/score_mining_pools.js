@@ -70,7 +70,7 @@ export async function score_mining_pools( max_duration_minutes=30 ) {
 
 
             } catch ( e ) {
-                log.error( `Error scoring mining pool ${ mining_pool_uid }: ${ e.message }` )
+                log.error( `Error scoring mining pool ${ mining_pool_uid }:`, e )
             }
 
         }
@@ -80,7 +80,7 @@ export async function score_mining_pools( max_duration_minutes=30 ) {
 
 
     } catch ( e ) {
-        log.error( `Error scoring mining pools: ${ e.message }` )
+        log.error( `Error scoring mining pools:`, e )
     } finally {
 
         // Unlock
@@ -96,7 +96,7 @@ async function score_single_mining_pool( { mining_pool_uid, mining_pool_ip, pool
     log.info( `Scoring mining pool ${ pool_label }` )
 
     // Get the latest broadcast metadata of the worker data
-    const [ { success: meta_success, last_known_worker_pool_size, updated } ]= await read_worker_broadcast_metadata( { mining_pool_uid, mining_pool_ip, limit: 1 } )
+    const [ { success: meta_success, last_known_worker_pool_size, updated }={} ]= await read_worker_broadcast_metadata( { mining_pool_uid, mining_pool_ip, limit: 1 } )
     if( !meta_success ) throw new Error( `No worker broadcast metadata found for mining pool ${ mining_pool_uid }@${ mining_pool_ip }` )
 
     // Grab the latest workers
