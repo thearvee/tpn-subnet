@@ -182,17 +182,21 @@ if( validator_mode ) {
 // CI mode auto update codebase
 if( CI_MODE === 'true' ) {
     log.warn( `💥 IMPORTANT: CI mode is triggering auto-updates, unless you work at Taofu you should NEVER EVER SEE THIS` )
+    let interval = 1_000
+    if( miner_mode ) interval += 5_000
+    if( worker_mode ) interval += 10_000
+
     const pull = async () => {
         let { stderr, stdout, error } = await run( `git pull`, { silent: true } )
         while( !stdout?.includes( `Already up to date` ) ) {
             log.info( `♻️ Pulled remote version` )
-            await run( `npm i` )
-            await wait( 2_000 );
+            await run( `npm i` ).catch( e => log.error( `Error installing dependencies: ${ e.message }` ) )
+            await wait( interval );
             ( { stderr, stdout, error } = await run( `git pull`, { silent: true } ) )
             log.warn( `The process should have restarted by now, killing it manually` )
             process.exit( 1 )
         }
     }
     await pull()
-    intervals.push( setInterval( pull, 5_000 ) )
+    intervals.push( setInterval( pull, interval ) )
 }
