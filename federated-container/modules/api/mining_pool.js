@@ -85,7 +85,7 @@ export async function register_mining_pool_with_validators() {
         else acc[ 1 ].push( result.reason )
         return acc
     }, [ [], [] ] )
-    log.info( `Registered with validators: ${ successes.length }, failed: ${ failures.length }` )
+    log.info( `Registered mining pool with validators: ${ successes.length }, failed: ${ failures.length }` )
 
     return { successes, failures }
 
@@ -125,7 +125,7 @@ export async function register_mining_pool_workers_with_validators() {
         else acc[ 1 ].push( result.reason )
         return acc
     }, [ [], [] ] )
-    log.info( `Registered with validators: ${ successes.length }, failed: ${ failures.length }`, {
+    log.info( `Registered workers with validators: ${ successes.length }, failed: ${ failures.length }`, {
         successes,
         failures
     } )

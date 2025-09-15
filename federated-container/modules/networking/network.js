@@ -59,7 +59,12 @@ export function request_is_local( request ) {
 export async function resolve_domain_to_ip( { domain, fallback, family=4 } ) {
 
     // Normalise url input to domain format
-    domain = new URL( domain ).hostname.replace( /^www\./, '' )
+    try {
+        domain = new URL( domain ).hostname.replace( /^www\./, '' )
+        log.info( `Normalized domain ${ domain }` )
+    } catch {
+        log.info( `Did not normalize domain ${ domain }` )
+    }
 
     // If the domain is already an ipv4 address, return it directly
     if( is_ipv4( domain ) ) return { ip: domain }
