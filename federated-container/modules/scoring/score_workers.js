@@ -43,7 +43,7 @@ export async function score_all_known_workers( max_duration_minutes=15 ) {
         ]
 
         // Save annotated workers to database
-        await write_workers( { annotated_workers, mining_pool_uid: 'internal' } )
+        await write_workers( { workers: annotated_workers, mining_pool_uid: 'internal' } )
 
     } catch ( e ) {
         log.error( `Error scoring all known workers: ${ e.message }, `, e )
