@@ -4,7 +4,7 @@ import { get_worker_countries_for_pool, get_workers, read_worker_broadcast_metad
 import { cochrane_sample_size } from "../math/samples.js"
 import { get_worker_config_through_mining_pool, validate_and_annotate_workers } from "./score_workers.js"
 import { write_pool_score } from "../database/mining_pools.js"
-import { get_validators } from "../networking/validators.js"
+import { get_miners } from "../networking/miners.js"
 const { CI_MODE, CI_MOCK_MINING_POOL_RESPONSES, CI_MOCK_WORKER_RESPONSES, CI_MINER_IP_OVERRIDES } = process.env
 
 /**
@@ -27,15 +27,14 @@ export async function score_mining_pools( max_duration_minutes=30 ) {
         log.info( `Found mining ${ mining_pool_uids.length } pools to score: `, mining_pool_uids )
 
         // If we are running in CI mode, add a the live testing mining pool if defined
-        if( CI_MODE === 'true' && CI_MINER_IP_OVERRIDES ) {
+        if( CI_MODE === 'true' ) {
 
-            const override_ips = await get_validators( { overrides_only: true } )
+            const override_ips = await get_miners( { overrides_only: true } )
             override_ips.forEach( ( { ip, uid } ) => {
                 mining_pool_uids.push( uid )
                 miner_uid_to_ip[ uid ] = ip
                 log.info( `Added CI override mining pool ${ uid }@${ ip }` )
             } )
-            
 
         }
 
