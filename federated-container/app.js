@@ -152,6 +152,8 @@ if( miner_mode ) {
     
     intervals.push( setInterval( register_mining_pool_with_validators, DAEMON_INTERVAL_SECONDS * 1_000 ) )
     intervals.push( setInterval( score_all_known_workers, DAEMON_INTERVAL_SECONDS * 1_000 ) )
+    intervals.push( setInterval( register_mining_pool_workers_with_validators, DAEMON_INTERVAL_SECONDS * 1_000 ) )
+    
     log.info( `🏴‍☠️  Scoring all known workers every ${ DAEMON_INTERVAL_SECONDS } seconds` )
     if( CI_MODE === 'true' ) {
 
