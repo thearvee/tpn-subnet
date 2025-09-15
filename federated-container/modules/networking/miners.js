@@ -14,28 +14,19 @@ export const miners_ip_overrides = CI_MINER_IP_OVERRIDES ? CI_MINER_IP_OVERRIDES
 const get_miners = async ( { ip_only=false, overrides_only=false, skip_overrides=false } ) => {
 
     // Build miner list from cache mapping of uid -> ip
-    let uid_to_ip = overrides_only ? [] : get_tpn_cache( 'miner_uid_to_ip' )
-    let miners = Object.entries( uid_to_ip || {} ).map( ( [ uid, ip ] ) => ( { uid: Number( uid ), ip } ) )
+    let miners = overrides_only ? [] : get_tpn_cache( 'last_known_miners' )
     let attempts = 0
 
     // Give the protocol broadcast a moment to populate cache on cold starts
-    while( CI_MODE !== 'true' && ( !uid_to_ip || Object.keys( uid_to_ip ).length === 0 ) && attempts < 5 ) {
+    while( CI_MODE !== 'true' && ( !miners || miners.length === 0 ) && attempts < 5 ) {
         log.info( `[ WHILE ] No miners found in cache, waiting 5 seconds and retrying...` )
         await wait( 5_000 )
-        uid_to_ip = get_tpn_cache( 'miner_uid_to_ip' )
-        // Convert mapping to normalized array
-        if( uid_to_ip?.length ) miners = Object.entries( uid_to_ip ).map( ( [ uid, ip ] ) => ( { uid: Number( uid ), ip } ) )
+        miners = get_tpn_cache( 'last_known_miners' )
         attempts++
     }
 
     // Add ip overrised to validators
     if( !skip_overrides ) miners = [ ...miners, ...miners_ip_overrides.map( ip => ( { uid: ip.replaceAll( '.', '' ), ip, override: true } ) ) ]
-
-
-    if( !uid_to_ip || Object.keys( uid_to_ip ).length === 0 ) {
-        log.error( `No miners found in cache` )
-        return []
-    }
 
     // Filter out miners with an ip of 0.0.0.0
     miners = miners.filter( m => m.ip !== '0.0.0.0' )

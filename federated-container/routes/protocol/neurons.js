@@ -1,5 +1,5 @@
 import { Router } from "express"
-import { cache, is_ipv4, log, make_retryable, require_props, sanetise_ipv4 } from "mentie"
+import { is_ipv4, log, make_retryable, require_props, sanetise_ipv4 } from "mentie"
 import { request_is_local } from "../../modules/networking/network.js"
 import { save_tpn_cache_to_disk, set_tpn_cache } from "../../modules/caching.js"
 import { validators_ip_fallback } from "../../modules/networking/validators.js"
@@ -81,11 +81,13 @@ router.post( "/broadcast/neurons", async ( req, res ) => {
         // 🤖 Cache validators to memory
         // ///////////////////////////
         log.info( `Caching validator ip data: `, validators )
-        cache( 'last_known_validators', validators )
+        set_tpn_cache( 'last_known_validators', validators )
 
         // ///////////////////////////
         // ⚒️ Cache miners to memory
         // ///////////////////////////
+        log.info( `Caching ${ miners.length } miner ip data` )
+        set_tpn_cache( `last_known_miners`, miners )
         const ips = miners.map( miner => miner.ip )
         const { ip_to_country, country_count, country_annotated_ips } = await map_ips_to_geodata( { ips, cache_prefix: 'miner_' } )
 

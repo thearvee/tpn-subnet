@@ -11,6 +11,9 @@ const cache_persistence_path = `${ cache_dir }/.tpn_cache.json`
 // Valid TPN cache keys
 export const tpn_cache_keys = [
 
+    'last_known_validators',
+    'last_known_miners',
+
     'country_count',
     'ip_to_country',
     'country_code_to_ips',
