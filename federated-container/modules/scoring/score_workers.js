@@ -22,7 +22,7 @@ export async function score_all_known_workers( max_duration_minutes=15 ) {
 
         // Get all known workers
         const { workers } = await get_workers( { mining_pool_uid: 'internal' } )
-        if( !workers?.length ) throw new Error( `No known workers to score` )
+        if( !workers?.length ) return log.info( `No known workers to score` )
         if( CI_MODE === 'true' ) log.info( `Got ${ workers.length } workers to score, first: `, workers?.[0] )
 
         // Get a config directly from each worker

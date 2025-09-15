@@ -3,6 +3,7 @@ import { get_tpn_cache } from "../caching.js"
 import { get_wireguard_config_directly_from_worker } from "../networking/worker.js"
 import { get_validators } from "../networking/validators.js"
 import { get_worker_countries_for_pool } from "../database/workers.js"
+import { base_url } from "../networking/url.js"
 const { CI_MOCK_WORKER_RESPONSES } = process.env
 
 export async function get_worker_config_as_miner( { geo, format, whitelist, blacklist, lease_seconds } ) {
@@ -49,8 +50,9 @@ export async function register_mining_pool_with_validators() {
     const validator_ips = await get_validators( { ip_only: true } )
 
     // Formulate identity
-    let { SERVER_PUBLIC_URL: url, SERVER_PUBLIC_PORT: port=3000, SERVER_PUBLIC_PROTOCOL: protocol='http', SERVER_PUBLIC_HOST, CI_MODE } = process.env
-    const identity = { protocol, url, port }
+    let { SERVER_PUBLIC_PORT: port=3000, SERVER_PUBLIC_PROTOCOL: protocol='http', SERVER_PUBLIC_HOST } = process.env
+    const identity = { protocol, url: base_url, port }
+    log.info( `Registering mining pool with validators:`, identity )
 
     // Register with validators with allSettled
     const results = await Promise.allSettled( validator_ips.map( async ip => {

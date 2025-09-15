@@ -29,7 +29,7 @@ export async function score_mining_pools( max_duration_minutes=30 ) {
         // If we are running in CI mode, add a the live testing mining pool if defined
         if( CI_MODE === 'true' && CI_MINER_IP_OVERRIDES ) {
 
-            const override_ips = await get_validators( { ip_only: true, overrides_only: true } )
+            const override_ips = await get_validators( { overrides_only: true } )
             override_ips.forEach( ( { ip, uid } ) => {
                 mining_pool_uids.push( uid )
                 miner_uid_to_ip[ uid ] = ip
