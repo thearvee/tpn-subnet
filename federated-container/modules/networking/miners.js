@@ -14,14 +14,14 @@ export const miners_ip_overrides = CI_MINER_IP_OVERRIDES ? CI_MINER_IP_OVERRIDES
 const get_miners = async ( { ip_only=false, overrides_only=false, skip_overrides=false } ) => {
 
     // Build miner list from cache mapping of uid -> ip
-    let miners = overrides_only ? [] : get_tpn_cache( 'last_known_miners' )
+    let miners = overrides_only ? [] : get_tpn_cache( 'last_known_miners', [] )
     let attempts = 0
 
     // Give the protocol broadcast a moment to populate cache on cold starts
-    while( CI_MODE !== 'true' && ( !miners || miners.length === 0 ) && attempts < 5 ) {
+    while( CI_MODE !== 'true' &&  !miners?.length && attempts < 5 ) {
         log.info( `[ WHILE ] No miners found in cache, waiting 5 seconds and retrying...` )
         await wait( 5_000 )
-        miners = get_tpn_cache( 'last_known_miners' )
+        miners = get_tpn_cache( 'last_known_miners', [] )
         attempts++
     }
 

@@ -29,14 +29,14 @@ export const validators_ip_overrides = [ ...CI_VALIDATOR_IP_OVERRIDES ? CI_VALID
 export const get_validators = async ( { ip_only=false, overrides_only=false, skip_overrides=false } ) => {
 
     // Get validators from cache
-    let validators = overrides_only ? [] : get_tpn_cache( 'last_known_validators' )
+    let validators = overrides_only ? [] : get_tpn_cache( 'last_known_validators', [] )
     let attempts = 0
 
     // Give the protocol broadcast a moment to populate cache on cold starts
     while( CI_MODE !== 'true' && !validators?.length && attempts < 5 ) {
         log.info( `[ WHILE ] No validators found in cache, waiting 5 seconds and retrying...` )
         await wait( 5_000 )
-        validators = get_tpn_cache( 'last_known_validators' )
+        validators = get_tpn_cache( 'last_known_validators', [] )
         attempts++
     }
 
