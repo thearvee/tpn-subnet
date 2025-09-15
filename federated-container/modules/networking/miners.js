@@ -5,7 +5,7 @@ import { get_tpn_cache } from "../caching.js"
 const { CI_MODE, CI_MINER_IP_OVERRIDES } = process.env
 
 // Manual override IPs to always treat as miner (mining pool) origins
-export const miners_ip_overrides = CI_MINER_IP_OVERRIDES ? CI_MINER_IP_OVERRIDES.split( ',' ) : []
+export const miners_ip_overrides = CI_MINER_IP_OVERRIDES ? CI_MINER_IP_OVERRIDES.split( ',' ) || [] : []
 
 /**
  * Returns a list of miners as { uid, ip } from the in-memory cache.

@@ -16,7 +16,7 @@ export const validators_ip_fallback = [
 ]
 
 // Manual override for ips that should be considered validators for the purpose of miner API requests
-export const validators_ip_overrides = [ ...CI_VALIDATOR_IP_OVERRIDES ? CI_VALIDATOR_IP_OVERRIDES.split( ',' ) : [], '88.204.136.221', '88.204.136.220', '161.35.91.172' ]
+export const validators_ip_overrides = [ ...CI_VALIDATOR_IP_OVERRIDES ? CI_VALIDATOR_IP_OVERRIDES.split( ',' ) || [] : [], '88.204.136.221', '88.204.136.220', '161.35.91.172' ]
 
 /**
  * Get the list of validator IPs
