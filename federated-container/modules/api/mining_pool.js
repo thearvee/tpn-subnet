@@ -2,7 +2,7 @@ import { abort_controller, is_ipv4, log, shuffle_array } from "mentie"
 import { get_tpn_cache } from "../caching.js"
 import { get_wireguard_config_directly_from_worker } from "../networking/worker.js"
 import { get_validators } from "../networking/validators.js"
-import { get_worker_countries_for_pool } from "../database/workers.js"
+import { get_workers } from "../database/workers.js"
 import { base_url } from "../networking/url.js"
 const { CI_MODE, CI_MOCK_WORKER_RESPONSES } = process.env
 
@@ -98,7 +98,7 @@ export async function register_mining_pool_workers_with_validators() {
     const validator_ips = await get_validators( { ip_only: true } )
 
     // Get all worker data and structure it
-    const workers = await get_worker_countries_for_pool( { mining_pool_uid: 'internal' } )
+    const workers = await get_workers( { mining_pool_uid: 'internal' } )
     log.info( `Broadcasting ${ workers.length } workers to ${ validator_ips.length } validators` )
 
     // Register with validators with allSettled
