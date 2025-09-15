@@ -4,7 +4,7 @@ import { get_wireguard_config_directly_from_worker } from "../networking/worker.
 import { get_validators } from "../networking/validators.js"
 import { get_worker_countries_for_pool } from "../database/workers.js"
 import { base_url } from "../networking/url.js"
-const { CI_MOCK_WORKER_RESPONSES } = process.env
+const { CI_MODE, CI_MOCK_WORKER_RESPONSES } = process.env
 
 export async function get_worker_config_as_miner( { geo, format, whitelist, blacklist, lease_seconds } ) {
 
@@ -117,6 +117,7 @@ export async function register_mining_pool_workers_with_validators() {
         const host = validator_broadcast.SERVER_PUBLIC_HOST || ip
         const port = validator_broadcast.SERVER_PUBLIC_PORT || 3000
         const url = `${ protocol }://${ host }:${ port }/validator/broadcast/workers`
+        log.info( `Registering at ${ url } with ${ workers.length } workers.`, CI_MODE === 'true' ? body : '' )
         return fetch( url, {
             method: 'POST',
             headers: {
