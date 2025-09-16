@@ -11,6 +11,7 @@ export async function get_worker_config_as_miner( { geo, format='text', whitelis
     // Get relevant workers
     const workers_by_country = get_tpn_cache( 'worker_country_code_to_ips', {} )
     let relevant_workers = workers_by_country[ geo ] || []
+    if( geo == 'any' ) relevant_workers = get_tpn_cache( 'worker_ip_addresses', [] )
     if( blacklist?.length ) relevant_workers = relevant_workers.filter( ( { ip } ) => !blacklist.includes( ip ) )
     if( whitelist?.length ) relevant_workers = relevant_workers.filter( ( { ip } ) => whitelist.includes( ip ) )
 

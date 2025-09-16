@@ -14,6 +14,7 @@ export const tpn_cache_keys = [
     'last_known_validators',
     'last_known_miners',
 
+    'ip_addresses',
     'country_count',
     'ip_to_country',
     'country_code_to_ips',
@@ -29,6 +30,7 @@ export const tpn_cache_keys = [
     'miner_ip_to_uid',
     'miner_country_to_uids',
 
+    'worker_ip_addresses',
     'worker_country_code_to_ips',
     'worker_country_count',
 

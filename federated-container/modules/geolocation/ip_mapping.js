@@ -91,6 +91,7 @@ export async function map_ips_to_geodata( { ips=[], cache_prefix, prefix_merge=f
     set_tpn_cache( { key: `country_code_to_name`, value: country_code_to_name, merge: true } )
     set_tpn_cache( { key: `country_name_to_code`, value: country_name_to_code, merge: true } )
     set_tpn_cache( { key: 'country_count', value: country_count, merge: true } )
+    set_tpn_cache( { key: 'ip_addresses', value: ips, merge: true } )
 
     // If cache prefix is set, add it to TPN cache or cache
     if( cache_prefix ) {
@@ -106,6 +107,8 @@ export async function map_ips_to_geodata( { ips=[], cache_prefix, prefix_merge=f
         key = `${ cache_prefix }_country_name_to_code`
         if( tpn_cache_keys.includes( key ) ) set_tpn_cache( { key, value: country_name_to_code, merge: prefix_merge } )
         else cache( key, country_name_to_code )
+        if( tpn_cache_keys.includes( `${ cache_prefix }_ip_addresses` ) ) set_tpn_cache( { key: `${ cache_prefix }_ip_addresses`, value: ips, merge: prefix_merge } )
+        else cache( `${ cache_prefix }_ip_addresses`, ips )
     }
 
     return {
