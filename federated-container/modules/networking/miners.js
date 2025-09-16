@@ -11,7 +11,7 @@ export const miners_ip_overrides = CI_MINER_IP_OVERRIDES ? CI_MINER_IP_OVERRIDES
  * Returns a list of miners as { uid, ip } from the in-memory cache.
  * Waits briefly (with retries) if the cache hasn't been populated yet by the neuron broadcast.
  */
-export const get_miners = async ( { ip_only=false, overrides_only=false, skip_overrides=false } ) => {
+export const get_miners = async ( { ip_only=false, overrides_only=false, skip_overrides=false }={} ) => {
 
     // Build miner list from cache mapping of uid -> ip
     let miners = overrides_only ? [] : get_tpn_cache( 'last_known_miners', [] )

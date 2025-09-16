@@ -26,7 +26,7 @@ export const validators_ip_overrides = [ ...CI_VALIDATOR_IP_OVERRIDES ? CI_VALID
  * @param {boolean} options.skip_overrides - If true, skip adding override IPs to the list.
  * @returns {Promise<Object[]>} A promise that resolves to an array of validator objects with uid and ip.
  */
-export const get_validators = async ( { ip_only=false, overrides_only=false, skip_overrides=false } ) => {
+export const get_validators = async ( { ip_only=false, overrides_only=false, skip_overrides=false }={} ) => {
 
     // Get validators from cache
     let validators = overrides_only ? [] : get_tpn_cache( 'last_known_validators', [] )
