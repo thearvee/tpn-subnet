@@ -148,7 +148,7 @@ async function score_single_mining_pool( { mining_pool_uid, mining_pool_ip, pool
 
     // Calculate the geographic score
     const total_countries = 249
-    const geo_completeness_fraction = countries_in_pool.length / total_countries
+    const geo_completeness_fraction = Math.max( countries_in_pool.length / total_countries, 1 )
     const geo_score = Math.max( geo_completeness_fraction * 100, 1 )
     log.info( `Geo completeness for mining pool ${ pool_label }: ${ countries_in_pool.length } unique countries out of ${ total_countries }, geo_score: ${ geo_score }` )
 
