@@ -74,29 +74,29 @@ export function set_tpn_cache( { key, value, merge=false, expires_in_ms } ) {
     // Check if the key is a valid TPN cache key
     if( !tpn_cache_keys.includes( key ) ) throw new Error( `Invalid TPN cache key: ${ key }` )
 
+    // Check input type
+    let input_type = typeof value
+    if( Array.isArray( value ) ) input_type = 'array'
+
     // If the cache value is tracked by reference, make a new version
     let immutable_cache_value = value
-    if( typeof value == 'object' ) immutable_cache_value = { ...value }
-    if( Array.isArray( value ) ) immutable_cache_value = [ ...value ]
+    if( input_type == 'array' ) immutable_cache_value = [ ...value ]
+    else if( input_type == 'object' ) immutable_cache_value = { ...value }
 
     // If merge requested, merge the new value with the existing cache value
     if( merge ) {
-        const existing_cache_value = get_tpn_cache( key, {} )
-        if( Array.isArray( existing_cache_value ) && Array.isArray( immutable_cache_value ) ) {
+        let default_val = undefined
+        if( input_type == 'array' ) default_val = []
+        if( input_type == 'object' ) default_val = {}
+        const existing_cache_value = get_tpn_cache( key, default_val )
+        if( input_type == 'array' ) {
             immutable_cache_value = [ ...new Set( [ ...existing_cache_value, ...immutable_cache_value ] ) ]
-        } else if( typeof existing_cache_value == 'object' && typeof immutable_cache_value == 'object' ) {
+        } else if( input_type == 'object' ) {
             immutable_cache_value = { ...existing_cache_value, ...immutable_cache_value }
         } else {
             log.warn( `Cannot merge non-object/array TPN cache values for key: ${ key }` )
         }
     }
-
-    if(  key == 'miner_uids'  ) log.info( `Setting miner_uids cache with ${ immutable_cache_value?.length } entries:`, {
-        key,
-        value,
-        merge,
-        immutable_cache_value
-    } )
 
     // Set cache value
     if( CI_MODE ) {

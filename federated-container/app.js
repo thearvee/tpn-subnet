@@ -141,7 +141,12 @@ if( validator_mode || miner_mode ) {
 if( worker_mode && CI_MOCK_MINING_POOL_RESPONSES !== 'true' ) {
     const worker_update_interval = 60_000 * 60
     const { register_with_mining_pool } = await import( './modules/api/worker.js' )
-    await register_with_mining_pool()
+    let success = false
+    while( !success ) {
+        const { registered } = await register_with_mining_pool()
+        success = registered
+        if( !success ) await wait( 5_000 )
+    }
     intervals.push( setInterval( register_with_mining_pool, worker_update_interval ) )
 }
 
@@ -158,8 +163,12 @@ if( miner_mode ) {
     if( CI_MODE === 'true' ) {
 
         // Register with validator
-        await register_mining_pool_with_validators()
-
+        let success = false
+        while( ! success ) {
+            const { successes } = await register_mining_pool_with_validators()
+            success = !!successes.length
+        }
+        
         // One-time scoring for CI testing
         await wait( 30_000 )
         await score_all_known_workers()
