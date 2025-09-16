@@ -70,7 +70,8 @@ export async function get_worker_config_through_mining_pool( { worker_ip, mining
 
         // Get mining pool data
         const { protocol, url, port } = await read_mining_pool_metadata( { mining_pool_ip, mining_pool_uid } )
-        const endpoint = `${ protocol }://${ url }:${ port }/pool/config/new`
+        if( !url?.includes( port ) || !url?.includes( protocol ) ) log.warn( `Mining pool URL ${ url } does not include port ${ port } or protocol ${ protocol }, this suggests misconfiguration of the miner` )
+        const endpoint = `${ url }/pool/config/new`
         const query = `?lease_seconds=120&format=text&whitelist=${ worker_ip }`
 
         // Mock response if needed
