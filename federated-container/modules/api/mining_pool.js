@@ -1,5 +1,4 @@
 import { abort_controller, is_ipv4, log, shuffle_array } from "mentie"
-import { get_tpn_cache } from "../caching.js"
 import { get_wireguard_config_directly_from_worker } from "../networking/worker.js"
 import { get_validators } from "../networking/validators.js"
 import { get_workers } from "../database/workers.js"
@@ -9,9 +8,7 @@ const { CI_MODE, CI_MOCK_WORKER_RESPONSES } = process.env
 export async function get_worker_config_as_miner( { geo, format='text', whitelist, blacklist, lease_seconds } ) {
 
     // Get relevant workers
-    const workers_by_country = get_tpn_cache( 'worker_country_code_to_ips', {} )
-    let relevant_workers = workers_by_country[ geo ] || []
-    if( geo == 'any' ) relevant_workers = get_tpn_cache( 'worker_ip_addresses', [] )
+    let { workers: relevant_workers } = await get_workers( { country_code: geo, limit: 1000 } )
     log.info( `Found ${ relevant_workers.length } relevant workers for geo ${ geo }` )
     if( blacklist?.length ) relevant_workers = relevant_workers.filter( ( { ip } ) => !blacklist.includes( ip ) )
     if( whitelist?.length ) relevant_workers = relevant_workers.filter( ( { ip } ) => whitelist.includes( ip ) )

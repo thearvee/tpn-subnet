@@ -177,9 +177,12 @@ export async function read_worker_broadcast_metadata( { mining_pool_uid, limit }
  * @returns {Promise<{success: true, workers: any[]} | {success: false, message: string}>} Result indicating success with workers or a not-found message.
  * @throws {Error} If the Postgres pool is unavailable or if the database query fails.
  */
-export async function get_workers( { ip, mining_pool_uid, limit=1 } ) {
+export async function get_workers( { ip, mining_pool_uid, country_code, limit=1 } ) {
     // Get the postgres pool
     const pool = await get_pg_pool()
+
+    // If country_code is 'any' then remove it
+    if( country_code === 'any' ) country_code = null
 
     // Formulate the query
     const wheres = []
@@ -191,6 +194,10 @@ export async function get_workers( { ip, mining_pool_uid, limit=1 } ) {
     if( mining_pool_uid ) {
         values.push( mining_pool_uid )
         wheres.push( `mining_pool_uid = $${ values.length }` )
+    }
+    if( country_code ) {
+        values.push( country_code )
+        wheres.push( `country_code = $${ values.length }` )
     }
     values.push( limit )
 
