@@ -40,9 +40,15 @@ router.get( '/mining_pools', async ( req, res ) => {
         if( !success ) throw new Error( `Failed to get scores from database: ${ message }` )
         log.info( `Fetched ${ scores?.length } scores` )
 
+        // Formulate scores as key value
+        const scores_by_pool = scores.reduce( ( acc, { mining_pool_uid, ...rest } ) => {
+            acc[ mining_pool_uid ] = rest
+            return acc
+        }, {} )
+
         // Cache and return scores
-        cache( 'mining_pool_scores', scores, 5_000 )
-        return res.json( scores )
+        cache( 'mining_pool_scores', scores_by_pool, 5_000 )
+        return res.json( scores_by_pool )
 
     } catch ( e ) {
         log.error( `Error fetching mining pool scores:`, e )
