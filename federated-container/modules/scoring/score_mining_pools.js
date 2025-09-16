@@ -2,9 +2,9 @@ import { cache, log, shuffle_array } from "mentie"
 import { get_tpn_cache } from "../caching.js"
 import { get_worker_countries_for_pool, get_workers, read_worker_broadcast_metadata, write_workers } from "../database/workers.js"
 import { cochrane_sample_size } from "../math/samples.js"
-import { get_worker_config_through_mining_pool, validate_and_annotate_workers } from "./score_workers.js"
+import { validate_and_annotate_workers } from "./score_workers.js"
 import { write_pool_score } from "../database/mining_pools.js"
-import { get_miners } from "../networking/miners.js"
+import { get_miners, get_worker_config_through_mining_pool } from "../networking/miners.js"
 const { CI_MODE, CI_MOCK_MINING_POOL_RESPONSES, CI_MOCK_WORKER_RESPONSES, CI_MINER_IP_OVERRIDES } = process.env
 
 /**
