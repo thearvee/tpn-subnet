@@ -28,7 +28,7 @@ export async function write_mining_pool_metadata( { mining_pool_uid, mining_pool
     try {
 
         await pool.query( query, [ mining_pool_uid, mining_pool_ip, protocol, url, port ] )
-        log.info( `Wrote mining pool metadata for ${ mining_pool_uid }@${ mining_pool_ip }` )
+        log.info( `Wrote mining pool metadata for ${ mining_pool_uid }@${ mining_pool_ip }: `, { mining_pool_uid, mining_pool_ip, protocol, url, port } )
         return { success: true, mining_pool_uid, mining_pool_ip, protocol, url, port }
 
 
@@ -64,7 +64,7 @@ export async function read_mining_pool_metadata( { mining_pool_uid, mining_pool_
             return { success: false, message: `No mining pool metadata found` }
         }
         log.info( `Read mining pool metadata for ${ mining_pool_uid }@${ mining_pool_ip }` )
-        return { success: true, data: result.rows[0] }
+        return { success: true, ...result.rows[0] }
     } catch ( e ) {
         log.error( `Error reading mining pool metadata: ${ e.message }` )
         throw new Error( `Error reading mining pool metadata: ${ e.message }` )
