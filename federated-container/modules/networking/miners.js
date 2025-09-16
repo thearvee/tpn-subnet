@@ -43,22 +43,27 @@ export const get_miners = async ( { ip_only=false, overrides_only=false, skip_ov
  * @returns {Promise<{ uid: number, ip: string } | {}>} Matched miner identity or empty object.
  */
 export async function is_miner_request( request ) {
-    // In CI mode, bypass this check
-    if( CI_MODE ) {
-        log.info( `CI_MODE is enabled, bypassing miner check` )
-        return { uid: 99999, ip: 'mock.mock.mock.mock' }
-    }
 
     // Extract the remote IP
     const { unspoofable_ip, spoofable_ip } = ip_from_req( request )
     log.info( `Request ip: ${ unspoofable_ip } (spoofable: ${ spoofable_ip } )` )
 
-    if( !is_ipv4( unspoofable_ip ) ) return {}
+    if( !is_ipv4( unspoofable_ip ) ) {
+        log.info( `Request IP is not a valid IPv4 address` )
+        return {}
+    }
 
     // Match against known miners from cache
     const miners = await get_miners()
     const miner = miners.find( m => m.ip === unspoofable_ip )
     if( miner ) return miner
+
+
+    // In CI mode, bypass this check
+    if( CI_MODE ) {
+        log.info( `CI_MODE is enabled, bypassing miner check` )
+        return { uid: 99999, ip: 'mock.mock.mock.mock' }
+    }
 
     // No match
     return {}

@@ -75,24 +75,29 @@ export const get_validators = async ( { ip_only=false, overrides_only=false, ski
  */
 export async function is_validator_request( request ) {
 
-    // In CI mode, bypass this check
-    if( CI_MODE ) {
-        log.info( `CI_MODE is enabled, bypassing validator check` )
-        return { uid: 99999, ip: 'mock.mock.mock.mock' }
-    }
-
     // Get the ip of the originating request
     const { unspoofable_ip, spoofable_ip } = ip_from_req( request )
     log.info( `Request ip: ${ unspoofable_ip } (spoofable: ${ spoofable_ip } )` )
 
     // Check if input is ipv4
-    if( !is_ipv4( unspoofable_ip ) ) return false
+    if( !is_ipv4( unspoofable_ip ) ) {
+        log.info( `Request IP is not a valid IPv4 address` )
+        return {}
+    }
 
 
     // Find first matching validator
     const validators = await get_validators()
     const validator = validators.find( val => val.ip == unspoofable_ip )
     if( validator ) return validator
+
+
+    // In CI mode, bypass this check
+    if( CI_MODE ) {
+        log.info( `CI_MODE is enabled, bypassing validator check` )
+        return { uid: 99999, ip: 'mock.mock.mock.mock' }
+    }
+
 
     // If no validator found, return false
     return {}
