@@ -71,7 +71,7 @@ export async function get_worker_config_through_mining_pool( { worker_ip, mining
         // Get mining pool data
         const { protocol, url, port } = await read_mining_pool_metadata( { mining_pool_ip, mining_pool_uid } )
         const endpoint = `${ protocol }://${ url }:${ port }/pool/config/new`
-        const query = `?lease_seconds=120&format=json&whitelist=${ worker_ip }`
+        const query = `?lease_seconds=120&format=text&whitelist=${ worker_ip }`
 
         // Mock response if needed
         const { CI_MOCK_MINING_POOL_RESPONSES } = process.env
@@ -83,7 +83,8 @@ export async function get_worker_config_through_mining_pool( { worker_ip, mining
         // Make retryable and cancellable request to mining pool for worker ip
         const timeout_ms = 10_000
         const { fetch_options } = abort_controller( { timeout_ms } )
-        const fetch_function = async () => fetch( `${ endpoint }${ query }`, fetch_options ).then( res => res.json() )
+        log.info( `Fetching worker config through mining pool at ${ endpoint }${ query }` )
+        const fetch_function = async () => fetch( `${ endpoint }${ query }`, fetch_options ).then( res => res.text() )
         const retryable_fetch = await make_retryable( fetch_function, { retry_times: 2, cooldown_in_s: 2 } )
         const worker_config = await retryable_fetch()
 
