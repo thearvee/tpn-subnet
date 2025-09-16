@@ -80,6 +80,8 @@ export async function write_pool_score( { mining_pool_ip, mining_pool_uid, stabi
     const query = `
         INSERT INTO scores (mining_pool_ip, mining_pool_uid, stability_score, size_score, performance_score, geo_score, score)
         VALUES ($1, $2, $3, $4, $5, $6, $7)
+        ON CONFLICT (mining_pool_ip, mining_pool_uid) DO UPDATE
+        SET stability_score = $3, size_score = $4, performance_score = $5, geo_score = $6, score = $7
     `
 
     try {
