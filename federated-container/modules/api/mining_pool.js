@@ -6,7 +6,7 @@ import { get_workers } from "../database/workers.js"
 import { base_url } from "../networking/url.js"
 const { CI_MODE, CI_MOCK_WORKER_RESPONSES } = process.env
 
-export async function get_worker_config_as_miner( { geo, format, whitelist, blacklist, lease_seconds } ) {
+export async function get_worker_config_as_miner( { geo, format='text', whitelist, blacklist, lease_seconds } ) {
 
     // Get relevant workers
     const workers_by_country = get_tpn_cache( 'worker_country_code_to_ips', {} )
@@ -32,7 +32,7 @@ export async function get_worker_config_as_miner( { geo, format, whitelist, blac
         const worker = relevant_workers[ attempts ]
         attempts++
         if( !is_ipv4( worker.ip ) ) continue
-        config = await get_wireguard_config_directly_from_worker( { worker, lease_seconds } )
+        config = await get_wireguard_config_directly_from_worker( { worker, format, lease_seconds } )
 
     }
 

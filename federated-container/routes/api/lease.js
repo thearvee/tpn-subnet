@@ -41,19 +41,16 @@ router.get( '/lease/new', async ( req, res ) => {
 
 
         // Prepare validation props based on run mode
-        const worker_props = [ 'lease_seconds', 'format' ]
-        const val_props = [ ...worker_props, 'geo' ]
-        const pool_props = val_props
-        const optional_props = [ 'whitelist', 'blacklist' ]
-        let mandatory_props = null
-        if( worker_mode ) mandatory_props = worker_props
-        if( validator_mode ) mandatory_props = val_props
-        if( miner_mode ) mandatory_props = pool_props
+        const mandatory_props = [ 'lease_seconds', 'format' ]
+        const optional_props = [ 'geo', 'whitelist', 'blacklist', 'priority' ]
+        // if( worker_mode ) mandatory_props = worker_props
+        // if( validator_mode ) mandatory_props = val_props
+        // if( miner_mode ) mandatory_props = pool_props
 
         // Get all relevant data
         require_props( req.query, mandatory_props, true )
         allow_props( req.query, [ ...mandatory_props, ...optional_props ], true )
-        let { lease_seconds, format, geo, whitelist, blacklist, priority=false } = req.query
+        let { lease_seconds, format, geo='any', whitelist, blacklist, priority=false } = req.query
         const workers_by_country = get_tpn_cache( 'worker_country_code_to_ips', {} )
 
         // Sanetise and parse inputs for each prop set
