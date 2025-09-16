@@ -8,7 +8,7 @@ const { CI_MODE, CI_MOCK_WORKER_RESPONSES } = process.env
 export async function get_worker_config_as_miner( { geo, format='text', whitelist, blacklist, lease_seconds } ) {
 
     // Get relevant workers
-    let { workers: relevant_workers } = await get_workers( { country_code: geo, limit: 1000 } )
+    let { workers: relevant_workers } = await get_workers( { country_code: geo, mining_pool_uid: 'internal' } )
     log.info( `Found ${ relevant_workers.length } relevant workers for geo ${ geo }` )
     if( blacklist?.length ) relevant_workers = relevant_workers.filter( ( { ip } ) => !blacklist.includes( ip ) )
     if( whitelist?.length ) relevant_workers = relevant_workers.filter( ( { ip } ) => whitelist.includes( ip ) )
