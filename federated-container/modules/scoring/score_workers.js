@@ -94,7 +94,7 @@ export async function get_worker_config_through_mining_pool( { worker_ip, mining
         return { json_config, text_config }
 
     } catch ( e ) {
-        log.info( `Error getting worker config for ${ worker_ip } through mining pool ${ mining_pool_ip }: ${ e.message }` )
+        log.info( `Error getting worker config for ${ worker_ip } through mining pool ${ mining_pool_ip }:`, e )
         return { error: e.message }
     }
 
