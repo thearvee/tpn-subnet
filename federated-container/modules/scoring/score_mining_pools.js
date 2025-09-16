@@ -95,8 +95,8 @@ async function score_single_mining_pool( { mining_pool_uid, mining_pool_ip, pool
     log.info( `Scoring mining pool ${ pool_label }` )
 
     // Get the latest broadcast metadata of the worker data
-    const [ { success: meta_success, last_known_worker_pool_size, updated }={} ]= await read_worker_broadcast_metadata( { mining_pool_uid, mining_pool_ip, limit: 1 } )
-    if( !meta_success ) throw new Error( `No worker broadcast metadata found for mining pool ${ mining_pool_uid }@${ mining_pool_ip }` )
+    const [ { last_known_worker_pool_size, updated }={} ]= await read_worker_broadcast_metadata( { mining_pool_uid, mining_pool_ip, limit: 1 } )
+    if( !updated ) throw new Error( `No worker broadcast metadata found for mining pool ${ mining_pool_uid }@${ mining_pool_ip }` )
 
     // Grab the latest workers
     const { success: workers_success, workers } = await get_workers( { mining_pool_uid, mining_pool_ip, limit: last_known_worker_pool_size } )
