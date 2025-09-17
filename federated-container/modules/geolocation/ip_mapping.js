@@ -7,17 +7,19 @@ const { CI_MODE } = process.env
  * Map a list of IP addresses to their geolocation data
  * @param {Object} param - The input parameters
  * @param {Array} param.ips - The list of IP addresses to map
+ * @param {Object} param.ip_to_uid - Optional mapping of IP addresses to UIDs (if known)
  * @param {string} param.cache_prefix - The cache prefix to use
  * @param {boolean} param.prefix_merge - Whether to merge the results with existing cache entries
  * @returns {Promise<{ ip_to_country: Object, country_count: Object, country_code_to_ips: Object, country_code_to_name: Object, country_name_to_code: Object, country_annotated_ips: Array }>} - The mapping of IP addresses to their geolocation data
  */
-export async function map_ips_to_geodata( { ips=[], cache_prefix, prefix_merge=false } ) {
+export async function map_ips_to_geodata( { ips=[], ip_to_uid={}, cache_prefix, prefix_merge=false } ) {
 
     // Sanetise input
     log.info( `Sanitising ${ ips.length } IP addresses`, ips[0] )
     ips = ips.map( ip => sanetise_ipv4( { ip } ) ).filter( is_ipv4 )
     ips = [ ...new Set( ips ) ]
     log.info( `Mapping ${ ips.length } unique ips to geodata` )
+    if( cache_prefix ) cache_prefix = cache_prefix.replaceAll( '__', '_' )
 
     const country_annotated_ips = await Promise.all( ips.map( async ip_address => {
     
@@ -26,7 +28,7 @@ export async function map_ips_to_geodata( { ips=[], cache_prefix, prefix_merge=f
             const { country_code } = await ip_geodata( ip_address )
             if( !country_code ) throw new Error( `Cannot determine country of ip ${ ip_address }` )
 
-            return { ip_address, country_code }
+            return { ip_address, country_code, uid: ip_to_uid[ ip_address ] || null }
 
         } catch ( e ) {
 
@@ -38,8 +40,8 @@ export async function map_ips_to_geodata( { ips=[], cache_prefix, prefix_merge=f
     } ) )
 
     // Reduce the ip array to a mapping of ips to country and uid
-    const ip_to_country = country_annotated_ips.reduce( ( acc, { ip, country, uid } ) => {
-        acc[ ip ] = { country, uid }
+    const ip_to_country = country_annotated_ips.reduce( ( acc, { ip_address, country_code, uid } ) => {
+        acc[ ip_address ] = { country_code, uid }
         return acc
     }, {} )
 
@@ -52,9 +54,9 @@ export async function map_ips_to_geodata( { ips=[], cache_prefix, prefix_merge=f
     } , {} )
 
     // Reduce the ip array to a mapping of country to ips
-    const country_code_to_ips = country_annotated_ips.reduce( ( acc, { ip, country_code } ) => {
+    const country_code_to_ips = country_annotated_ips.reduce( ( acc, { ip_address, country_code } ) => {
         if( !acc[ country_code ] ) acc[ country_code ] = []
-        acc[ country_code ].push( ip )
+        acc[ country_code ].push( ip_address )
         return acc
     }, {} )
 

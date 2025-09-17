@@ -27,7 +27,7 @@ export const get_miners = async ( { ip_only=false, overrides_only=false, skip_ov
         attempts++
     }
 
-    // Add ip overrised to validators
+    // Add ip overrides to validators
     if( !skip_overrides ) miners = [ ...miners, ...miners_ip_overrides.map( ip => ( { uid: ip.replaceAll( '.', '' ), ip, override: true } ) ) ]
 
     // Filter out miners with an ip of 0.0.0.0

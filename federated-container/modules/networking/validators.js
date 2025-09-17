@@ -49,7 +49,7 @@ export const get_validators = async ( { ip_only=false, overrides_only=false, ski
     // Return fallback validators if no validators found in cache
     if( !validators?.length ) {
         log.error( `No validators found in cache` )
-        return validators_ip_fallback
+        validators = [ ...validators_ip_fallback ]
     }
 
     // For all validators to use, check that their ip is not 0.0.0.0, if it is override with hardcoded list above

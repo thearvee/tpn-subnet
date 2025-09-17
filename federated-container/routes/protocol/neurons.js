@@ -89,14 +89,8 @@ router.post( "/broadcast/neurons", async ( req, res ) => {
         log.info( `Caching ${ miners.length } miner ip data` )
         set_tpn_cache( `last_known_miners`, miners )
         const ips = miners.map( miner => miner.ip )
-        const { ip_to_country, country_count, country_annotated_ips } = await map_ips_to_geodata( { ips, cache_prefix: 'miner_' } )
-
-        // Map ip to country into a mapping of uid to ip, and ip to uid
-        const ip_to_uid = Object.keys( ip_to_country ).reduce( ( acc, ip ) => {
-            const { uid } = ip_to_country[ ip ]
-            acc[ ip ] = uid
-            return acc
-        }, {} )
+        const ip_to_uid = valid_entries.map( ( { ip, uid } ) => ( { [ip]: uid } ) )
+        const { ip_to_country, country_count, country_annotated_ips } = await map_ips_to_geodata( { ips, ip_to_uid, cache_prefix: 'miner_' } )
 
         // Map uid to ip
         const uid_to_ip = Object.keys( ip_to_country ).reduce( ( acc, ip ) => {
@@ -106,7 +100,7 @@ router.post( "/broadcast/neurons", async ( req, res ) => {
         }, {} )
 
         // For each country, list the miner uids in there
-        const country_to_uids = country_annotated_ips.reduce( ( acc, { uid, country_code } ) => {
+        const country_to_uids = country_annotated_ips.reduce( ( acc, { ip_address, uid, country_code } ) => {
             if( !acc[ country_code ] ) acc[ country_code ] = []
             acc[ country_code ].push( uid )
             return acc

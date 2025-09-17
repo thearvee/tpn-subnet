@@ -9,7 +9,7 @@ export async function init_database() {
     const { validator_mode, miner_mode, worker_mode } = run_mode()
 
     // In dev, delete old table
-    if( CI_MODE ) {
+    if( CI_MODE === 'true' ) {
         log.info( 'Dropping old tables in CI mode' )
         await pool.query( `DROP TABLE IF EXISTS workers` )
         await pool.query( `DROP TABLE IF EXISTS timestamps` )

@@ -19,7 +19,7 @@ router.get( '/countries', async ( req, res ) => {
         if( ![ 'json', 'text' ].includes( format ) ) throw new Error( `Invalid format: ${ format }` )
         if( ![ 'code', 'name' ].includes( type ) ) throw new Error( `Invalid type: ${ type }` )
 
-        const worker_country_count = get_tpn_cache( 'worker_country_count' )
+        const worker_country_count = get_tpn_cache( 'worker_country_count', {} )
         const country_codes = Object.keys( worker_country_count )
         const country_names = country_codes.map( country_name_from_code )
 
@@ -36,7 +36,7 @@ router.get( '/countries', async ( req, res ) => {
         if( format == 'text' ) return res.send( response_data )
         return res.json( response_data )
     } catch ( error ) {
-        return res.status( 500 ).json( { error: `Error handling new lease route: ${ error.message }` } )
+        return res.status( 500 ).json( { error: `Error handling stats route: ${ error.message }` } )
     }
 } )
 

@@ -21,7 +21,8 @@ router.get( '/lease/new', async ( req, res ) => {
 
         // Caller validation based on run mode
         const { mode, worker_mode, miner_mode, validator_mode } = run_mode()
-        if( miner_mode && !is_validator_request( req ) ) throw new Error( `Miners only accept lease requests from validators, which you are not` )
+        const is_validator = await is_validator_request( req )
+        if( miner_mode && !is_validator ) throw new Error( `Miners only accept lease requests from validators, which you are not` )
 
         // Worker access controls
         if( worker_mode && !CI_MOCK_WORKER_RESPONSES ) {
@@ -59,15 +60,15 @@ router.get( '/lease/new', async ( req, res ) => {
         geo = geo && sanetise_string( geo )
         whitelist = whitelist && sanetise_string( whitelist ).split( ',' )
         blacklist = blacklist && sanetise_string( blacklist ).split( ',' )
-        priority = priority == true ? true : false
+        priority = priority === 'true'
         const config_meta = { lease_seconds, format, geo, whitelist, blacklist, priority }
 
         // Validate inputs as specified in props
-        if( mandatory_props.includes( 'lease_seconds' ) && isNaN( lease_seconds ) ) throw new Error( `Invalid lease_seconds: ${ lease_seconds }` )
-        if( mandatory_props.includes( 'format' ) && ![ 'json', 'text' ].includes( format ) ) throw new Error( `Invalid format: ${ format }` )
-        if( mandatory_props.includes( 'geo' ) && ( !workers_by_country[ geo ]?.length && geo != 'any' ) ) throw new Error( `No workers found for geo: ${ geo }` )
-        if( mandatory_props.includes( 'whitelist' ) && whitelist.some( ip => !is_ipv4( ip ) ) ) throw new Error( `Invalid ip addresses in whitelist` )
-        if( mandatory_props.includes( 'blacklist' ) && blacklist.some( ip => !is_ipv4( ip ) ) ) throw new Error( `Invalid ip addresses in blacklist` )
+        if( lease_seconds?.length && isNaN( lease_seconds ) ) throw new Error( `Invalid lease_seconds: ${ lease_seconds }` )
+        if( format?.length && ![ 'json', 'text' ].includes( format ) ) throw new Error( `Invalid format: ${ format }` )
+        if( geo?.length && ( !workers_by_country[ geo ]?.length && geo != 'any' ) ) throw new Error( `No workers found for geo: ${ geo }` )
+        if( whitelist?.length && whitelist.some( ip => !is_ipv4( ip ) ) ) throw new Error( `Invalid ip addresses in whitelist` )
+        if( blacklist?.length && blacklist.some( ip => !is_ipv4( ip ) ) ) throw new Error( `Invalid ip addresses in blacklist` )
 
         // Get relevant config based on run mode
         log.info( `Getting config as ${ mode } with params:`, config_meta )

@@ -9,10 +9,10 @@ export function ip_from_req( request ) {
     let { ip: request_ip, ips, connection, socket } = request
 
     // If the request has no ips, use the connection or socket remote address
-    let spoofable_ip = request_ip || ips[0] || request.get( 'x-forwarded-for' )
+    let spoofable_ip = request_ip || ips?.[0] || request.get( 'x-forwarded-for' )
 
     // Grab the remote address from the connection or socket
-    let unspoofable_ip = connection.remoteAddress || socket.remoteAddress
+    let unspoofable_ip = connection?.remoteAddress || socket?.remoteAddress
 
     // If unspoofable ip is a ipv6 address with a v4-mapped prefix, remove it
     unspoofable_ip = unspoofable_ip?.replace( '::ffff:', '' )
@@ -34,16 +34,17 @@ export function request_is_local( request ) {
     }
 
     // Check if the ip is local
+    const { TPN_INTERNAL_SUBNET='172.20.0.0/16' } = process.env
+    const internal_prefix = TPN_INTERNAL_SUBNET.split( '.' ).slice( 0, 3 ).join( '.' )
     const local_ip_patterns_v4_and_v6 = [
         // Localhost
-        /^127\.0\.0\.1$/,
-        /^::1$/,
-        /^::ffff:127\.0\.0\.1$/,
-        // Note: this is the ipv6 mock mask of the subnet defined in validator.docker-compose.yml
-        /^172\.29\.187\./,
-        /^::ffff:172\.29\.187\./,
+        '127.0.0.1',
+        '::1',
+        '::ffff:127.0.0.1',
+        internal_prefix,
+        `::ffff:${ internal_prefix }.`,
     ]
-    const is_local = local_ip_patterns_v4_and_v6.some( pattern => pattern.test( unspoofable_ip ) )   
+    const is_local = local_ip_patterns_v4_and_v6.some( internal_ip => unspoofable_ip.startsWith( internal_ip ) )
     
     return is_local
 

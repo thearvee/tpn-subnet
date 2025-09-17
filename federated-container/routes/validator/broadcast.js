@@ -98,7 +98,7 @@ router.post( '/mining_pool', async ( req, res ) => {
         if( !Number.isInteger( port ) || port < 1 || port > 65535 ) throw new Error( `Invalid port: ${ port }` )
 
         // Check that url resolved to the correct miner ip
-        const { ip } = resolve_domain_to_ip( { domain: url  } )
+        const { ip } = await resolve_domain_to_ip( { domain: url  } )
         if( CI_MODE !== 'true' && ip !== mining_pool_ip ) throw new Error( `Domain ${ url } does not resolve to metagraph ip address`  )
 
         // Save mining pool metadata

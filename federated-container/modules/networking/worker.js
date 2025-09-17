@@ -5,9 +5,12 @@ export const get_worker_mining_pool_url = () => {
     // Get url setting
     let { MINING_POOL_URL: _MINING_POOL_URL } = process.env
 
+    // Check if set at all
+    if( !`${ _MINING_POOL_URL }`.length ) return undefined 
+
     // Sanetise
     _MINING_POOL_URL = sanetise_string( _MINING_POOL_URL )
-
+    
     // Remove trailing slashes
     _MINING_POOL_URL = _MINING_POOL_URL.replace( /\/+$/, '' )
 
@@ -47,7 +50,7 @@ export async function get_wireguard_config_directly_from_worker( { worker, max_r
     }
 
     // On mock success
-    if( CI_MOCK_WORKER_RESPONSES ) config = config || {}
+    if( CI_MOCK_WORKER_RESPONSES ) config = config || format === 'json' ? { endpoint_ipv4: 'mock.mock.mock.mock' } : "Mock WireGuard config"
     
     return config
 }

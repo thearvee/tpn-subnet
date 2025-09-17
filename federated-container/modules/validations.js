@@ -30,7 +30,7 @@ export const is_valid_worker = ( worker ) => {
 
         // Check if country code is valid
         let valid_country = country_name_from_code( country_code )
-        if( CI_MODE && typeof country_code === 'string' && country_code.length > 0 ) valid_country = true
+        if( CI_MODE === 'true' && typeof country_code === 'string' && country_code.length > 0 ) valid_country = true
         if( !valid_country ) {
             log.info( `Worker country code is not valid: ${ country_code }` )
             return false
@@ -66,7 +66,7 @@ export const annotate_worker_with_defaults = worker => {
 export const run_mode = () => {
     const { RUN_MODE } = process.env
     const mode = sanetise_string( RUN_MODE )
-    if( ![ 'validator', 'miner', 'worker' ].includes( RUN_MODE ) ) throw new Error( `Invalid run mode: ${ RUN_MODE }` )
+    if( ![ 'validator', 'miner', 'worker' ].includes( mode ) ) throw new Error( `Invalid run mode: ${ RUN_MODE }` )
     return {
         mode,
         worker_mode: mode == 'worker',

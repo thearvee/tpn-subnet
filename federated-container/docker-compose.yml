@@ -35,6 +35,11 @@ services:
       - PAYMENT_ADDRESS_BITTENSOR=${PAYMENT_ADDRESS_BITTENSOR}
       - BROADCAST_MESSAGE=${BROADCAST_MESSAGE}
       - CONTACT_METHOD=${CONTACT_METHOD}
+
+      # Networking
+      - TPN_INTERNAL_SUBNET=${TPN_INTERNAL_SUBNET:-172.20.0.0/16}
+      - TPN_INTERNAL_GATEWAY=${TPN_INTERNAL_GATEWAY:-172.20.0.1}
+
     volumes:
       - ./config/tpn:/app/config
       - maxmind_data:/app/node_modules/geoip-lite/data
