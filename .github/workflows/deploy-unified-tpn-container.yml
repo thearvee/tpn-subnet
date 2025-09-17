@@ -26,9 +26,9 @@ jobs:
         id: version_check
         run: |
           # Extract previous version from package.json in the previous commit
-          PREV_VERSION=$(git show HEAD~1:node-stack/validator/package.json | jq -r .version)
+          PREV_VERSION=$(git show HEAD~1:federated-container/package.json | jq -r .version)
           # Extract current version from the current package.json
-          CUR_VERSION=$(jq -r .version node-stack/validator/package.json)
+          CUR_VERSION=$(jq -r .version federated-container/package.json)
           echo "Previous version: $PREV_VERSION"
           echo "Current version: $CUR_VERSION"
           if [ "$PREV_VERSION" = "$CUR_VERSION" ]; then
