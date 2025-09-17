@@ -12,9 +12,12 @@ The TPN federated network consists of three types of nodes:
 
 ## Quick Start
 
+The below commands assume you are inside a cloned version of the TPN repository, for example through `cd ~/tpn-subnet/federated-container`.
+
 1. Copy the environment file and configure it:
    ```bash
-   cp .env.example .env
+   # Select the appropriate templste
+   cp .env.{worker,miner,validator} .env
    # Edit .env with your specific configuration
    ```
 
@@ -37,7 +40,7 @@ The TPN federated network consists of three types of nodes:
 All node types include:
 
 - **tpn-federated**: Main application container
-- **swag**: Reverse proxy with SSL/TLS termination
+- **swag**: Reverse proxy with SSL/TLS termination (optional)
 - **postgres**: Database for storing network state
 - **watchtower**: Automatic container updates
 - **autoheal**: Container health monitoring and restart
@@ -60,86 +63,36 @@ The setup uses three Docker networks with specific IP subnets for deterministic 
 
 ### Required Environment Variables
 
-See `.env.example` for a complete list of configuration options.
-
-**Essential variables:**
-- `POSTGRES_PASSWORD`: Database password
-- `SERVER_PUBLIC_URL`: Your public domain
-- `MAXMIND_LICENSE_KEY`: For GeoIP lookups
-- `IP2LOCATION_DOWNLOAD_TOKEN`: Alternative GeoIP service
-
-**Node-specific variables:**
-
-*Validators:*
-- All shared variables
-
-*Mining Pools:*
-- `MINING_POOL_WEBSITE_URL`: Terms and conditions URL
-- `MINING_POOL_REWARDS`: Reward structure description
-
-*Workers:*
-- `MINING_POOL`: IP address, UID, or 'auto'
-- `PAYMENT_ADDRESS_EVM`: Ethereum-compatible address
-- `PAYMENT_ADDRESS_BITTENSOR`: Bittensor wallet address
-
-### SSL/TLS Configuration
-
-The SWAG container handles SSL certificate generation. Configure these variables:
-
-- `DOMAIN_NAME`: Your domain
-- `EMAIL`: Email for Let's Encrypt
-- `VALIDATION`: Validation method (http, dns, etc.)
+See `.env.example` for a complete list of configuration options. Note the required and optional sections. Setting these incompletely will result in missing rewards.
 
 ## API Endpoints
 
-### Shared Endpoints
+### Shared endpoints
 
-- `POST /protocol/broadcast/miners` - Receive miner data (worker exempt)
-- `POST /protocol/broadcast/validators` - Receive validator data (worker exempt)
-- `GET /protocol/stats` - TPN cache for debugging
 - `GET /` - Health endpoint with version and uptime
+- `GET /api/countries?format=json|text&type=code|name` - list the countries available through children pools/workers
+- `GET /api/stats/` - Get statistics like how many nodes there are er country and so forth
+- `GET /api/lease/new?format=json|text&lease_seconds=&geo=any|countrycode&whitelist=ip1,ip2&blacklist=ip1,ip2` - Endpoint to receive a config file, this endpoint is permissioned and can for example only be called by the relevant mining pool on workers etc.
+- |
+
+### Shared Endpoints (miner + validator)
+
+- `POST /protocol/broadcast/neurons` - Reveive data from the neuron runnin on the same machine
+- `GET /protocol/stats` - Get statistics and current memory values or the running container
+- `GET /protocol/stats` - TPN cache for debugging
+- `GET /protocol/challenge/new` - Generate a new challenge
+- `GET /protocol/challenge/:challenge` - Endpoint to get the solution to a challenge
+- `GET /protocol/challenge/:challenge/:solution` - Endpoint that checks if a challenge/response pair is correct
 
 ### Validator Endpoints
 
-- `GET /api/config/new` - Get optimized worker config
-- `GET /api/countries` - List available countries
+- `POST /validator/broadcast/workers` - Endpoint miners use to submit their worker list to validators
+- `POST /validator/broadcast/mining_pool` - Endpoint where mining pools announce their metadata to validators
+- `GET /validator/score/mining_pools` - Endpoint that the neuron uses to get the latest scores of the mining pools
 
 ### Mining Pool Endpoints
 
-- `GET /pool/config/new` - Get worker config (validators only)
-- `GET /pool/countries` - List pool's available countries
-
-### Worker Endpoints
-
-- `GET /worker/config/new` - Serve config files
-
-## Management Commands
-
-**View logs:**
-```bash
-docker-compose logs -f [service_name]
-```
-
-**Restart services:**
-```bash
-docker-compose restart [service_name]
-```
-
-**Update containers:**
-```bash
-docker-compose pull
-docker-compose up -d
-```
-
-**Stop all services:**
-```bash
-docker-compose down
-```
-
-**Remove all data (careful!):**
-```bash
-docker-compose down -v
-```
+- `POST /miner/broadcast/worker` - The endpoint where workers register with mining pools
 
 ## Monitoring
 
@@ -152,26 +105,28 @@ docker-compose down -v
 
 **Check service health:**
 ```bash
-docker-compose ps
+docker compose ps
 docker inspect <container_name> --format='{{.State.Health.Status}}'
 ```
 
 **View detailed logs:**
 ```bash
-docker-compose logs --tail=100 tpn-federated
+docker compose logs --tail=100 tpn-federated
 ```
 
 **Test network connectivity:**
 ```bash
-docker-compose exec tpn-federated ping postgres
+docker compose exec tpn-federated ping postgres
 ```
 
 **Database connection test:**
 ```bash
-docker-compose exec postgres psql -U $POSTGRES_USER -d $POSTGRES_DB -c "SELECT version();"
+docker compose exec postgres psql -U $POSTGRES_USER -d $POSTGRES_DB -c "SELECT version();"
 ```
 
 ## Security Considerations
+
+Note: this depends wildly on how you customise the setup
 
 - The `tpn-internal` network is isolated from the internet
 - Only the SWAG reverse proxy is exposed externally

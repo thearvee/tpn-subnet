@@ -166,7 +166,7 @@ if( miner_mode ) {
         let success = false
         while( ! success ) {
             const { successes } = await register_mining_pool_with_validators()
-            success = !!successes.length
+            success = !!successes?.length
         }
         
         // One-time scoring for CI testing

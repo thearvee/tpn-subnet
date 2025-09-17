@@ -50,6 +50,7 @@ export async function register_with_mining_pool() {
         
     } catch ( e ) {
         log.error( `Error registering with mining pool ${ MINING_POOL_URL }: `, e )
+        return { registered: false, error: e.message }
     }
 
 }
