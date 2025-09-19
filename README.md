@@ -2,10 +2,10 @@
 
 The TPN subnet coordinares miners that offer VPN connections in a wide variety of geographic locations.
 
-In the TPN subnet, there are two kinds of nodes:
+In the TPN subnet, there are three kinds of nodes:
 
 - **Workers**: These are easy to run nodes that provide VPN connections and get rewarded by mining pools
-- **Miners**: These nodes offer the VPN connections that workers provide and are given subnet emissions, they are responsible for distriburing those rewards to workers however they see fit
+- **Miners**: These nodes offer the VPN connections that workers provide and are given subnet emissions, they are responsible for distributing those rewards to workers however they see fit
 - **Validators**: These nodes validate the work of miners and act as an interface to end users
 
 If you want to contribute to the TPN subnet, the easiers way to do so it to run a worker. This requires only a server and no bittensor activity at all. This page will explain how to run a worker, a miner, or a validator. Keep in mind that you should:
@@ -55,7 +55,7 @@ sudo modprobe wireguard
 
 # Clone the TPN repository, it contains all the required code
 cd ~
-git clone https://github.com/beyond-stake/tpn-subnet.git
+git clone https://github.com/taofu-labs/tpn-subnet.git
 # Add the current user to docker for rootless docker running
 if [ -z "$USER" ]; then
     USER=$(whoami)
@@ -92,7 +92,7 @@ If you have existing keys that you are deploying, copy them in the following str
 ├── tpn_coldkey # This directory name is how btcli knows the name of your coldkey
 │   ├── coldkeypub.txt # This file contains your public coldkey, NOT THE PRIVATE KEY, the miner machine does not need the private key
 |   └── hotkeys # This directory contains the private keys of your hotkeys
-|       ├── hotkey # This file contains the private key of your hotkey in json format
+|       ├── tpn_hotkey # This file contains the private key of your hotkey in json format
 ```
 
 If you want to generate new keys, execute the following commands:
@@ -110,7 +110,7 @@ You need so set some settings so make sure your server operates how you want. Th
 
 ```bash
 cd tpn-subnet/federated-container
-# Select the appropriate templste
+# Select the appropriate template
 cp .env.{worker,miner,validator} .env
 # Edit .env with your specific configuration
 ```
@@ -223,7 +223,7 @@ The validator also consists out of two components:
 1. A validator docker container that is managed through `docker`
 2. A validator neuron that is managed through `pm2`
 
-To start the docker container run the command below. Docker will know to run as a mining pool due to your `.env` settings.
+To start the docker container run the command below. Docker will know to run as a validator due to your `.env` settings.
 
 
 ```bash
