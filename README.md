@@ -4,26 +4,24 @@ The TPN subnet coordinares miners that offer VPN connections in a wide variety o
 
 In the TPN subnet, there are two kinds of nodes:
 
-- **Miners**: These nodes offer VPN connections to users and are rewarded for their service
+- **Workers**: These are easy to run nodes that provide VPN connections and get rewarded by mining pools
+- **Miners**: These nodes offer the VPN connections that workers provide and are given subnet emissions, they are responsible for distriburing those rewards to workers however they see fit
 - **Validators**: These nodes validate the work of miners and act as an interface to end users
 
-If you want to contribute to the TPN subnet, the easiers way to do so it to run a miner. This page will explain how to run a miner and a validator. Keep in mind that you should:
+If you want to contribute to the TPN subnet, the easiers way to do so it to run a worker. This requires only a server and no bittensor activity at all. This page will explain how to run a worker, a miner, or a validator. Keep in mind that you should:
 
-- Decide if you want to run a miner or a validator
-- Make sure you have the necessary hardware for the miner or validator
-- Running a miner is easier than running a validator
+- Decide if you want to run a worker, miner, or a validator
+- Make sure you have the necessary hardware for the worker, miner, or validator
+- Running a worker is easiest, running a mining pool is harder, and running a validator is hardest
 
 **CURRENT SUBNET STATUS**
-
-The TPN is currently in beta mode, VPN scaffolding is present and consumer endpoints will be released soon.
-
 
 > [!CAUTION]
 > This documentation is a work in public alpha. Expect things to break. Specifically the validator instructions are currently unstable due to development pace.
 
 ## Preparing your machine
 
-Before starting your miner and/or validator, please prepare your machine by setting up the required enrivonment.
+Before starting your server, please prepare your machine by setting up the required enrivonment.
 
 ### 1: Installing dependencies
 
@@ -31,11 +29,11 @@ Requirements:
 
 - Linux OS (Ubuntu LTS recommended)
 - 2 CPU cores
-- 2GB RAM
-- 50GB disk space
+- 1-2GB RAM for a worker, 4-8GB RAM for a mining pool, 8-16GB RAM for a validator
+- 10-20 GB disk space for a worker, 50GB disk space for a mining pool or validator
 - Publically accessible IP address
 
-The miner and validator share the same dependencies. No matter which you choose to run, please install the dependencies by executing the following commands:
+All servers share some of the same dependencies. No matter which you choose to run, please install the dependencies by executing the following commands:
 
 ```bash
 # Install the required system dependencies
@@ -58,14 +56,6 @@ sudo modprobe wireguard
 # Clone the TPN repository, it contains all the required code
 cd ~
 git clone https://github.com/beyond-stake/tpn-subnet.git
-
-# Install the required python dependencies
-cd tpn-subnet
-python3 -m venv venv
-source venv/bin/activate
-pip3 install -r requirements.txt
-export PYTHONPATH=.
-
 # Add the current user to docker for rootless docker running
 if [ -z "$USER" ]; then
     USER=$(whoami)
@@ -77,7 +67,18 @@ newgrp docker << EOF
 EOF
 ```
 
-### 2: Configure keys
+For miners and validators, you also need to install Bittensor components:
+
+```bash
+# Install the required python dependencies
+cd tpn-subnet
+python3 -m venv venv
+source venv/bin/activate
+pip3 install -r requirements.txt
+export PYTHONPATH=.
+```
+
+### 2: Configure keys (mining pool/validator only)
 
 The next step is to configure the Bittensor keys for your miner and/or validator. Note that these keys are stored in the `~/.bittensor` directory. You have 2 options:
 
@@ -103,32 +104,40 @@ btcli w new_hotkey --wallet.name tpn_hotkey
 
 Note that the above will generate a private key for your coldkey as well. This is a key with security implications and should be stored securely. Ideally you delete it from your miner server after backing it up safely.
 
-## Running a miner
+### 3: Configure your environment
 
-Note that your rewards depend on the uniqueness of the location of your miner. Once you have chosen a location, either as a hosted VPS or as physical hardware, you can start the miner.
+You need so set some settings so make sure your server operates how you want. This influences things like on what address you get paid and so forth.
 
-The consists out of two components:
+```bash
+cd tpn-subnet/federated-container
+# Select the appropriate templste
+cp .env.{worker,miner,validator} .env
+# Edit .env with your specific configuration
+```
+
+Take note of the mandatory and optional sections.
+
+## Running a worker
+
+A worker is just a docker image with some settings. To start it run:
+
+```
+cd tpn-subnet
+docker compose -f federated-container/docker-compose.yml --profile worker up -d
+```
+
+## Running a mining pool
+
+The miner consists out of two components:
 
 1. A miner docker container that is managed through `docker`
 2. A miner neuron that is managed through `pm2`
 
-To start the docker container, there are 2 steps. Creating a `.env` file and starting the container.
-
-Create a `.env` file in the `node-stack/miner` directory with the following content:
-
-```bash
-POSTGRES_PASSWORD=xxxx # REQUIRED, may be any valid string, choose something random
-LOGLEVEL=info # optional, this controls the log level, valid values are: info, warn, error
-POSTGRES_HOST=postgres # optional, only use if you have a remote database (not recommended)
-POSTGRES_PORT=5432 # optional, this changes the postgres port (not recommended)
-WIREGUARD_PEER_COUNT=250 # optional, this changes the amount of connections the miner offers, must be between 15 and 250
-```
-
-Then start the miner docker container:
+To start the miner docker container, run the command below. Docker will know to run as a mining pool due to your `.env` settings.
 
 ```bash
 # NOTE: this assumes you are in the tpn-subnet directory
-docker compose -f node-stack/miner/miner.docker-compose.yml up -d
+docker compose -f federated-container/docker-compose.yml up -d
 ```
 
 To start the miner neuron:
@@ -207,30 +216,6 @@ fi
 eval $export_line
 ```
 
-The validator needs to be configured with some settings and third party API keys. These values are stored in `node-stack/validator/.env`. Populate that file like so:
-
-```bash
-# This controls the verbosity of the logs. Possible values are: info, warn, error
-LOGLEVEL=info # Optional
-
-# A free license key, obtained by creating an account and API key at http://maxmind.com/en/accounts/
-MAXMIND_LICENSE_KEY=xxxx
-
-# This is the public URL where the validator can be reached.
-PUBLIC_VALIDATOR_URL=http://1.2.3.4
-
-# This is 3000 by default, you should only change it if your device is behind a firewall or reverse proxy.
-# Miners MUST be able to call your validator at this port. If they cannot, your validator is NOT valid. Test this by running `curl $PUBLIC_VALIDATOR_URL:$PUBLIC_PORT`
-PUBLIC_PORT=3000
-
-# The free ip2location lite API key, obtained by creating an account at https://lite.ip2location.com/login
-IP2LOCATION_DOWNLOAD_TOKEN=xxxx
-POSTGRES_PASSWORD=xxxx # May be any valid string, choose something random, it does not matter what.
-
-# Configure the max RAM the validator may use, above 8GB is recommended
-VALIDATOR_MAX_PROCESS_RAM_MB=8192 # Find the max of your system by running: awk '/MemTotal/ { print int($2 / 1024) }' /proc/meminfo
-```
-
 ### Step 3: Start the validator
 
 The validator also consists out of two components:
@@ -238,11 +223,12 @@ The validator also consists out of two components:
 1. A validator docker container that is managed through `docker`
 2. A validator neuron that is managed through `pm2`
 
-To start the docker container:
+To start the docker container run the command below. Docker will know to run as a mining pool due to your `.env` settings.
+
 
 ```bash
 # NOTE: this assumes you are in the tpn-subnet directory
-docker compose -f node-stack/validator/validator.docker-compose.yml up -d
+docker compose -f federated-container/docker-compose.yml up -d
 ```
 
 To start the validator neuron:

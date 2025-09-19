@@ -101,12 +101,12 @@ if [ "$FORCE_RESTART" = "true" ]; then
 fi
 
 # Pull the latest docker images
-docker compose -f node-stack/miner/miner.docker-compose.yml pull
+docker compose -f federated-container/docker-compose.yml pull
 
 # Restart the miner docker container if needed
 if [ "$REPO_UP_TO_DATE" -eq 0 ]; then
     echo "Repository has changes, force restarting docker process..."
-    docker compose -f node-stack/miner/miner.docker-compose.yml down
+    docker compose -f federated-container/docker-compose.yml down
     echo "Pruning unused images..."
     docker image prune -f || echo "Failed to prune unused images."
     echo "Pruning unused networks..."
@@ -116,7 +116,7 @@ else
 fi
 
 # Bring miner back up
-docker compose -f node-stack/miner/miner.docker-compose.yml up -d
+docker compose -f federated-container/docker-compose.yml up -d
 
 # Restart the pm2 process if needed
 if [ "$REPO_UP_TO_DATE" -eq 0 ]; then
