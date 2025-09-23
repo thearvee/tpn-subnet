@@ -1,6 +1,6 @@
 {
   "name": "tpn-node",
-  "version": "0.0.5",
+  "version": "0.0.6",
   "description": "TPN Node docker container code, used for validators, miners, and workers",
   "main": "app.js",
   "type": "module",
@@ -9,7 +9,7 @@
     "eslint-plugin-import": "^2.32.0",
     "husky": "^9.1.7",
     "nodemon": "^3.1.10",
-    "start-server-and-test": "^2.1.1"
+    "start-server-and-test": "^2.1.2"
   },
   "scripts": {
     "lint": "eslint --fix src",
