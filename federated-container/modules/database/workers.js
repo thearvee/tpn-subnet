@@ -267,12 +267,14 @@ export async function get_workers( { ip, mining_pool_uid, mining_pool_url, count
     }
 
     // Create the limit clause
+    const simple_limit = limit && !randomize
+    const randomize_limit = limit && randomize
     let limit_q = ``
-    if( limit && !randomize ) {
+    if( simple_limit ) {
         values.push( limit )
         limit_q = `LIMIT $${ values.length }`
     }
-    if( limit && randomize ) {
+    if( randomize_limit ) {
         values.push( limit )
         limit_q = `TABLESAMPLE SYSTEM_ROWS ($${ values.length })`
     }
@@ -282,8 +284,9 @@ export async function get_workers( { ip, mining_pool_uid, mining_pool_url, count
     const query = `
         SELECT *
         FROM workers
+        ${ randomize_limit ? limit_q : '' }
         ${ wheres.length > 0 ? `WHERE ${ wheres.join( ' AND ' ) }` : '' }
-        ${ limit_q }
+        ${ simple_limit ? limit_q : '' }
     `
 
     // Execute the query
