@@ -291,7 +291,7 @@ export async function test_wireguard_connection( { wireguard_config, verbose=CI_
     const { challenge_url, solution: correct_solution } = await generate_challenge( { tag } )
 
     // Get relevant interfaces
-    const { interface_id, veth_id, namespace_id, veth_subnet_prefix, clear_interfaces } = await get_free_interfaces( { log_tag } )
+    const { interface_id, veth_id, namespace_id, veth_subnet_prefix, uplink_interface, clear_interfaces } = await get_free_interfaces( { log_tag } )
     const { Address, Endpoint } = json_config.interface
 
     // Path for the WireGuard configuration file.
@@ -312,99 +312,71 @@ export async function test_wireguard_connection( { wireguard_config, verbose=CI_
 
     // Set up network namespace and WireGuard interface.
     const network_setup_command = `
-set -euo pipefail
 
-# Discover egress interface
-WAN_IF=$(ip -o -4 route get 1.1.1.1 | awk '{for(i=1;i<=NF;i++) if($i=="dev"){print $(i+1); exit}}')
+        # Check current ip
+        curl -m 5 -s icanhazip.com
 
-# Check current public IP
-curl -m 5 -s icanhazip.com || true
+        # Add namespace
+        ip netns add ${ namespace_id }
+        ip netns list
 
-# Namespace
-ip netns add ${ namespace_id } 2>/dev/null || true
-ip netns list
+        # Create loopback interface
+        ip -n ${ namespace_id } link set lo up
 
-# Loopback up
-ip -n ${ namespace_id } link set lo up
+        # Create wireguard interface and move it to namespace
+        ip -n ${ namespace_id } link add ${ interface_id } type wireguard
+        # ip link set ${ interface_id } netns ${ namespace_id } # alternate way to do the above
 
-# WireGuard iface inside namespace
-ip -n ${ namespace_id } link add ${ interface_id } type wireguard
+        # veth pairing of the isolated interface
+        ip link add veth${ veth_id }n type veth peer name veth${ veth_id }h
+        ip link set veth${ veth_id }n netns ${ namespace_id }
 
-# veth pair
-ip link add veth${ veth_id }n type veth peer name veth${ veth_id }h 2>/dev/null || true
-ip link set veth${ veth_id }n netns ${ namespace_id } || true
+        # host side veth cofig
+        ip addr add ${ veth_subnet_prefix }.1/24 dev veth${ veth_id }h
+        ip link set veth${ veth_id }h up
+        
+        # namespace side veth config
+        ip -n ${ namespace_id } addr add ${ veth_subnet_prefix }.2/24 dev veth${ veth_id }n
+        ip -n ${ namespace_id } link set veth${ veth_id }n up
 
-# Host side veth config
-ip addr flush dev veth${ veth_id }h || true
-ip addr add ${ veth_subnet_prefix }.1/24 dev veth${ veth_id }h
-ip link set veth${ veth_id }h up
+        # enable iptables nat
+        sysctl -w net.ipv4.ip_forward=1
+        iptables -t nat -A POSTROUTING -s ${ veth_subnet_prefix }.0/24 -o ${ uplink_interface } -j MASQUERADE
+        iptables -A FORWARD -i veth${ veth_id }h -o ${ uplink_interface } -s ${ veth_subnet_prefix }.0/24 -j ACCEPT
+        iptables -A FORWARD -o veth${ veth_id }h -m state --state ESTABLISHED,RELATED -j ACCEPT
 
-# Namespace side veth config
-ip -n ${ namespace_id } addr flush dev veth${ veth_id }n || true
-ip -n ${ namespace_id } addr add ${ veth_subnet_prefix }.2/24 dev veth${ veth_id }n
-ip -n ${ namespace_id } link set veth${ veth_id }n up
+        # Before setting things, check properties and routes of the interface
+        ip -n ${ namespace_id } addr
+        ip -n ${ namespace_id } link show ${ interface_id }
+        ip -n ${ namespace_id } route show
 
-# Enable forwarding + correct NAT on real egress
-sysctl -w net.ipv4.ip_forward=1
+        # Apply wireguard config to interface
+        ip netns exec ${ namespace_id } wg setconf ${ interface_id } ${ wg_config_path }
+        ip netns exec ${ namespace_id } wg showconf ${ interface_id }
 
-# Safe iptables inserts (idempotent)
-iptables -C FORWARD -i veth${ veth_id }h -o $WAN_IF -m conntrack --ctstate NEW,ESTABLISHED,RELATED -j ACCEPT 2>/dev/null || \
-iptables -A FORWARD -i veth${ veth_id }h -o $WAN_IF -m conntrack --ctstate NEW,ESTABLISHED,RELATED -j ACCEPT
+        # Pre routing, check what addresses are inside the namespace
+        ip -n ${ namespace_id } addr
 
-iptables -C FORWARD -i $WAN_IF -o veth${ veth_id }h -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT 2>/dev/null || \
-iptables -A FORWARD -i $WAN_IF -o veth${ veth_id }h -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+        # Add routing table
+        ip -n ${ namespace_id } a add ${ Address } dev ${ interface_id }
+        ip -n ${ namespace_id } link set ${ interface_id } up
+        ip -n ${ namespace_id } route add default dev ${ interface_id }
 
-# Remove stale NAT on eth0 if present
-iptables -t nat -C POSTROUTING -s ${ veth_subnet_prefix }.0/24 -o eth0 -j MASQUERADE 2>/dev/null && \
-iptables -t nat -D POSTROUTING -s ${ veth_subnet_prefix }.0/24 -o eth0 -j MASQUERADE || true
+        # give wg endpoint exception to default route
+        ip -n ${ namespace_id } route add ${ endpoint_ipv4 }/32 via ${ veth_subnet_prefix }.1
 
-# Ensure NAT on actual WAN_IF
-iptables -t nat -C POSTROUTING -s ${ veth_subnet_prefix }.0/24 -o $WAN_IF -j MASQUERADE 2>/dev/null || \
-iptables -t nat -A POSTROUTING -s ${ veth_subnet_prefix }.0/24 -o $WAN_IF -j MASQUERADE
+        # Add DNS
+        mkdir -p /etc/netns/${ namespace_id }/ && echo "nameserver 1.1.1.1" > /etc/netns/${ namespace_id }/resolv.conf
 
-# Inspect ns state
-ip -n ${ namespace_id } addr
-ip -n ${ namespace_id } link show ${ interface_id } || true
-ip -n ${ namespace_id } route show || true
+        # Quick DNS and ping sanity checks over namespace with 1 second timeout
+        ip netns exec ${ namespace_id } ping -c 1 -W 1 1.1.1.1
+        ip netns exec ${ namespace_id } ping -c 1 -W 1 ${ endpoint_ipv4 }
+        ip netns exec ${ namespace_id } dig +time=1 +short google.com
 
-# WireGuard config
-ip netns exec ${ namespace_id } wg setconf ${ interface_id } ${ wg_config_path }
-ip netns exec ${ namespace_id } wg showconf ${ interface_id }
+        # Check ip address
+        curl -m 5 -s icanhazip.com && ip netns exec ${ namespace_id } curl -m 5 -s icanhazip.com
 
-# Bring WG up and add addresses/routes
-ip -n ${ namespace_id } addr add ${ Address } dev ${ interface_id } 2>/dev/null || true
-ip -n ${ namespace_id } link set ${ interface_id } up
-
-# Exception route for WG endpoint via host
-ip -n ${ namespace_id } route replace ${ endpoint_ipv4 }/32 via ${ veth_subnet_prefix }.1
-
-# === Sanity: test plain NAT without WG default ===
-ip -n ${ namespace_id } route replace default via ${ veth_subnet_prefix }.1
-ip netns exec ${ namespace_id } ping -c1 -W1 1.1.1.1 || true
-ip netns exec ${ namespace_id } curl -m 3 -s icanhazip.com || true
-
-# If plain NAT worked, switch default to WG
-ip -n ${ namespace_id } route replace default dev ${ interface_id }
-
-# DNS in the namespace
-mkdir -p /etc/netns/${ namespace_id }/
-echo "nameserver 1.1.1.1" > /etc/netns/${ namespace_id }/resolv.conf
-
-# Quick checks via namespace
-ip netns exec ${ namespace_id } ping -c1 -W1 1.1.1.1 || true
-ip netns exec ${ namespace_id } ping -c1 -W1 ${ endpoint_ipv4 } || true
-ip netns exec ${ namespace_id } dig +time=1 +short google.com || true
-
-# Verify external IPs and WG handshake
-curl -m 5 -s icanhazip.com || true
-ip netns exec ${ namespace_id } curl -m 5 -s icanhazip.com || true
-ip netns exec ${ namespace_id } wg show ${ interface_id } || true
-
-# Show rules hit counters
-iptables -vnL FORWARD
-iptables -t nat -S POSTROUTING
-`
-
+    `
 
 
     // Command to test connectivity via WireGuard.
@@ -417,6 +389,8 @@ iptables -t nat -S POSTROUTING
         ip link del ${ interface_id } || echo "Interface ${ interface_id } does not exist"
         ip netns del ${ namespace_id } || echo "Namespace ${ namespace_id } does not exist"
         iptables -t nat -D POSTROUTING -s ${ veth_subnet_prefix }.0/24 -o eth0 -j MASQUERADE || echo "iptables rule does not exist"
+        iptables -D FORWARD -i veth${ veth_id }h -o ${ uplink_interface } -s ${ veth_subnet_prefix }.0/24 -j ACCEPT || echo "iptables rule does not exist"
+        iptables -D FORWARD -o veth${ veth_id }h -m state --state ESTABLISHED,RELATED -j ACCEPT || echo "iptables rule does not exist"
         rm -f ${ tmp_config_path } || echo "Config file ${ tmp_config_path } does not exist"
         rm -f ${ wg_config_path } || echo "Config file ${ wg_config_path } does not exist"
     `
