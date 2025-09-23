@@ -127,7 +127,7 @@ export async function get_worker_config_through_mining_pool( { worker_ip, mining
         const { config_valid, json_config, text_config } = parse_wireguard_config( { wireguard_config: worker_config, expected_endpoint_ip: worker_ip } )
         if( !config_valid ) throw new Error( `Invalid wireguard config for ${ worker_ip }` )
 
-        return { json_config, text_config }
+        return format === 'json' ? json_config : text_config
 
     } catch ( e ) {
         log.info( `Error getting worker config for ${ worker_ip } through mining pool ${ mining_pool_ip }:`, e )
