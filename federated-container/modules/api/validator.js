@@ -2,6 +2,7 @@ import { is_ipv4, log, shuffle_array } from "mentie"
 import { get_workers } from "../database/workers.js"
 import { get_worker_config_through_mining_pool } from "../networking/miners.js"
 import { worker_matches_miner } from "../scoring/score_workers.js"
+import { resolve_domain_to_ip } from "../networking/network.js"
 
 export async function get_worker_config_as_validator( { geo, whitelist, blacklist, lease_seconds } ) {
 
@@ -41,7 +42,8 @@ export async function get_worker_config_as_validator( { geo, whitelist, blacklis
     
         // Fetch config
         log.info( `Attempting to get config from worker:`, worker )
-        const { ip, mining_pool_uid, mining_pool_ip } = worker || {}
+        const { ip, mining_pool_uid, mining_pool_url } = worker || {}
+        const { ip: mining_pool_ip } = await resolve_domain_to_ip( { domain: mining_pool_url } )
         attempts++
         if( !is_ipv4( ip ) ) continue
         config = await get_worker_config_through_mining_pool( { worker_ip: ip, mining_pool_ip, mining_pool_uid } )
