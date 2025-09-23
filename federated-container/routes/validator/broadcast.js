@@ -25,7 +25,10 @@ router.post( '/workers', async ( req, res ) => {
 
         // Get workers from the request
         let { workers=[] } = req.body || {}
-        log.info( `Received ${ workers.length } workers from validator ${ mining_pool_uid }@${ mining_pool_ip }` )
+
+        // Ensure workers is an array
+        if( !Array.isArray( workers ) ) throw new Error( `Invalid workers format, must be an array` )
+        log.info( `Received ${ workers.length } workers from mining pool ${ mining_pool_uid }@${ mining_pool_ip }, example: `, workers[0] )
 
         // Clean up the worker data
         workers = workers.reduce( ( acc, worker ) => {
@@ -42,7 +45,7 @@ router.post( '/workers', async ( req, res ) => {
             return acc
 
         }, [] )
-        log.info( `Sanetised worker data, ${ workers.length } valid entries` )
+        log.info( `Sanetised worker data, ${ workers.length } valid entries, example: `, workers[0] )
 
         // Save worker ips to cache
         const ips = workers.map( worker => worker.ip )

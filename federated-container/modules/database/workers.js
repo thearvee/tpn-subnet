@@ -51,7 +51,7 @@ export async function write_workers( { workers, mining_pool_uid='internal', is_m
             updated_at = EXCLUDED.updated_at
     `, values )
 
-    if( CI_MODE === 'true' ) log.info( `Valid worker example:`, values.slice( 0,1 )[0] )
+    if( CI_MODE === 'true' ) log.info( `Valid worker example:`, values[0] )
 
     // Execute the query
     try {
