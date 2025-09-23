@@ -40,6 +40,7 @@ describe( 'GET /api/lease/new (worker mode)', () => {
     } )
 
     test( 'supports format=json returns JSON', async () => {
+        console.log( `${ BASE_URL }/api/lease/new?lease_seconds=60&format=json` )
         const { response, data } = await json.get( `${ BASE_URL }/api/lease/new?lease_seconds=60&format=json` )
         // When mocked/available, should return a JSON object representing the config
         assert.ok( typeof data === 'object' && data !== null )

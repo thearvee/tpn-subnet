@@ -59,6 +59,38 @@ export const annotate_worker_with_defaults = worker => {
 
 }
 
+export const sanetise_worker = worker => {
+
+    // If not object, return
+    if( !worker || typeof worker !== 'object' ) return {}
+
+    // Sanetise ip property
+    if( worker?.ip ) worker.ip = sanetise_string( worker.ip )
+
+    // Sanetise country_code property
+    if( worker?.country_code ) worker.country_code = sanetise_string( worker.country_code ).toUpperCase()
+
+    // If mining pool url is a multiline string, take the longest line
+    if( worker?.mining_pool_url && worker.mining_pool_url.includes( '\n' ) ) {
+        const lines = worker.mining_pool_url.split( '\n' ).map( line => sanetise_string( line ) )
+        worker.mining_pool_url = lines.find( line => line.length == Math.max( ...lines.map( l => l.length ) ) )
+    }
+
+    // Sanetise mining_pool_url property
+    if( worker?.mining_pool_url ) worker.mining_pool_url = sanetise_string( worker.mining_pool_url )
+    if( worker?.mining_pool_url && worker.mining_pool_url.endsWith( '/' ) ) worker.mining_pool_url = worker.mining_pool_url.replace( /\/+$/g, '' )
+
+    // Sanetise public_port property
+    if( worker?.public_port ) {
+        let port = Number( worker.public_port )
+        if( isNaN( port ) || port < 1 || port > 65535 ) port = 3000
+        worker.public_port = port
+    }
+
+    return worker
+
+}
+
 /**
  * Gets the current run mode and its associated flags.
  * @returns {Object<{ run_mode: string, worker_mode: boolean, miner_mode: boolean, validator_mode: boolean }>} - An object containing the run mode and its flags.

@@ -18,6 +18,7 @@ describe( 'GET /api/lease/new (miner mode)', () => {
     } )
 
     test( 'returns 500 when lease_seconds is not a number', async () => {
+        console.log( `${ BASE_URL }/api/lease/new?geo=any&lease_seconds=abc&format=json` )
         const { response, data } = await json.get( `${ BASE_URL }/api/lease/new?geo=any&lease_seconds=abc&format=json` )
         assert.strictEqual( response.status, 500 )
         assert.ok( data && typeof data === 'object' )

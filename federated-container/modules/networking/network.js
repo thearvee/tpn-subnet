@@ -2,6 +2,7 @@ import { lookup } from "dns/promises"
 import { cache, is_ipv4, log, random_number_between, random_string_of_length, wait } from "mentie"
 import { v4 as uuidv4 } from "uuid"
 import { run } from "../system/shell.js"
+const { CI_MODE } = process.env
 
 export function ip_from_req( request ) {
 
@@ -16,6 +17,9 @@ export function ip_from_req( request ) {
 
     // If unspoofable ip is a ipv6 address with a v4-mapped prefix, remove it
     unspoofable_ip = unspoofable_ip?.replace( '::ffff:', '' )
+
+    // If we are in ci mode and ip is an ipv6 localhost, change to ipv4 localhost
+    if( CI_MODE === 'true' && unspoofable_ip === '::1' ) unspoofable_ip = '127.0.0.1'
     
     return { unspoofable_ip, spoofable_ip }
 }

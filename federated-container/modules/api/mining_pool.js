@@ -3,19 +3,19 @@ import { get_wireguard_config_directly_from_worker } from "../networking/worker.
 import { get_validators } from "../networking/validators.js"
 import { get_workers } from "../database/workers.js"
 import { base_url } from "../networking/url.js"
-const { CI_MODE, CI_MOCK_WORKER_RESPONSES } = process.env
+const { CI_MODE, CI_MOCK_MINING_POOL_RESPONSES } = process.env
 
 export async function get_worker_config_as_miner( { geo, format='text', whitelist, blacklist, lease_seconds } ) {
 
     // Get relevant workers
-    let { workers: relevant_workers } = await get_workers( { country_code: geo, mining_pool_uid: 'internal' } )
+    let { workers: relevant_workers } = await get_workers( { country_code: geo, mining_pool_uid: 'internal', status: 'up', limit: 50 } )
     log.info( `Found ${ relevant_workers.length } relevant workers for geo ${ geo }` )
     if( blacklist?.length ) relevant_workers = relevant_workers.filter( ( { ip } ) => !blacklist.includes( ip ) )
     if( whitelist?.length ) relevant_workers = relevant_workers.filter( ( { ip } ) => whitelist.includes( ip ) )
     log.info( `Filtered to ${ relevant_workers.length } relevant workers for geo ${ geo }` )
 
     // If no workers, exit
-    if( !CI_MOCK_WORKER_RESPONSES && !relevant_workers?.length ) {
+    if( CI_MOCK_MINING_POOL_RESPONSES !== 'true' && !relevant_workers?.length ) {
         log.info( `No workers available for geo ${ geo } after applying whitelist(${ whitelist?.length })/blacklist(${ blacklist?.length })` )
         return null
     }
@@ -36,9 +36,9 @@ export async function get_worker_config_as_miner( { geo, format='text', whitelis
 
     }
 
-    // On mock succees
-    if( CI_MOCK_WORKER_RESPONSES ) config = config || {}
-
+    // On mock success
+    if( CI_MOCK_MINING_POOL_RESPONSES === 'true' ) config = config || format === 'json' ? { endpoint_ipv4: 'mock.mock.mock.mock' } : "Mock WireGuard config"
+    
     // Return the config
     return config
 

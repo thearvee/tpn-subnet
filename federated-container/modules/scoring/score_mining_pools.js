@@ -99,7 +99,7 @@ async function score_single_mining_pool( { mining_pool_uid, mining_pool_ip, pool
     if( !updated ) throw new Error( `No worker broadcast metadata found for mining pool ${ mining_pool_uid }@${ mining_pool_ip }` )
 
     // Grab the latest workers
-    const { success: workers_success, workers } = await get_workers( { mining_pool_uid, mining_pool_ip, limit: last_known_worker_pool_size } )
+    const { success: workers_success, workers } = await get_workers( { mining_pool_uid, limit: last_known_worker_pool_size, status: 'up' } )
     if( !workers_success ) throw new Error( `No workers found for mining pool ${ mining_pool_uid }@${ mining_pool_ip }` )
 
     // Calculate sample size to use
