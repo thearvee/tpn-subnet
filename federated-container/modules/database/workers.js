@@ -1,6 +1,7 @@
 import { log, sanetise_string } from "mentie"
 import { get_pg_pool, format } from "./postgres.js"
 import { annotate_worker_with_defaults, is_valid_worker, sanetise_worker } from "../validations.js"
+const { CI_MODE } = process.env
 
 /**
  * Write an array of worker objects to the WORKERS table, where the composite primary key is (mining_pool_uid, mining_pool_ip, ip), and the entry is updated if it already exists.
@@ -49,6 +50,8 @@ export async function write_workers( { workers, mining_pool_uid='internal', is_m
             status = EXCLUDED.status,
             updated_at = EXCLUDED.updated_at
     `, values )
+
+    if( CI_MODE === 'true' ) log.info( `Valid worker example:`, values.slice( 0,1 )[0] )
 
     // Execute the query
     try {
