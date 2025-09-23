@@ -40,7 +40,7 @@ router.post( '/workers', async ( req, res ) => {
             // Sanetise the IP address
             let { ip, country_code } = worker || {}
             ip = sanetise_ipv4( { ip, validate: true } )
-            acc.push( { ip, country_code } )
+            acc.push( { ...worker, ip, country_code } )
 
             return acc
 
