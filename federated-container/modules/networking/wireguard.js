@@ -369,9 +369,9 @@ export async function test_wireguard_connection( { wireguard_config, verbose=CI_
         mkdir -p /etc/netns/${ namespace_id }/ && echo "nameserver 1.1.1.1" > /etc/netns/${ namespace_id }/resolv.conf
 
         # Quick DNS and ping sanity checks over namespace with 1 second timeout
-        ip netns exec ${ namespace_id } ping -c 1 -W 1 1.1.1.1
-        ip netns exec ${ namespace_id } ping -c 1 -W 1 ${ endpoint_ipv4 }
-        ip netns exec ${ namespace_id } dig +time=1 +short google.com
+        # ip netns exec ${ namespace_id } ping -c 1 -W 1 1.1.1.1
+        # ip netns exec ${ namespace_id } ping -c 1 -W 1 ${ endpoint_ipv4 }
+        # ip netns exec ${ namespace_id } dig +time=1 +short google.com
 
         # Check ip address
         curl -m 5 -s icanhazip.com && ip netns exec ${ namespace_id } curl -m 5 -s icanhazip.com

@@ -272,7 +272,10 @@ export async function get_workers( { ip, mining_pool_uid, mining_pool_url, count
         values.push( limit )
         limit_q = `LIMIT $${ values.length }`
     }
-    if( limit && randomize ) limit_q = `TABLESAMPLE SYSTEM_ROWS ($${ values.length })`
+    if( limit && randomize ) {
+        values.push( limit )
+        limit_q = `TABLESAMPLE SYSTEM_ROWS ($${ values.length })`
+    }
     if( !limit && randomize ) log.warn( `Randomize cannot sample without a limit` )
 
     // Prepare the query
