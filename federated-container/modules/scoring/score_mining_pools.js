@@ -99,7 +99,7 @@ async function score_single_mining_pool( { mining_pool_uid, mining_pool_ip, pool
     if( !updated ) throw new Error( `No worker broadcast metadata found for mining pool ${ mining_pool_uid }@${ mining_pool_ip }` )
 
     // Grab the latest workers
-    const { success: workers_success, workers } = await get_workers( { mining_pool_uid, mining_pool_ip, limit: last_known_worker_pool_size } )
+    const { success: workers_success, workers } = await get_workers( { mining_pool_uid, limit: last_known_worker_pool_size, status: 'up' } )
     if( !workers_success ) throw new Error( `No workers found for mining pool ${ mining_pool_uid }@${ mining_pool_ip }` )
 
     // Calculate sample size to use
@@ -143,7 +143,7 @@ async function score_single_mining_pool( { mining_pool_uid, mining_pool_ip, pool
     const mean_test_length_s = successes.reduce( ( acc, { test_duration_s } ) => acc + test_duration_s, 0 ) / successes.length
     log.info( `Mean test length ${ mean_test_length_s } based on ${ successes.length } tests` )
     const s_considered_good = 3
-    const performance_score = Math.min( 100 / ( mean_test_length_s/ s_considered_good ), 100 )
+    const performance_score = Math.min( 100 / ( mean_test_length_s / s_considered_good ), 100 )
     const performance_fraction = performance_score / 100
 
     // Calculate the geographic score
@@ -152,13 +152,15 @@ async function score_single_mining_pool( { mining_pool_uid, mining_pool_ip, pool
     const geo_score = Math.max( geo_completeness_fraction * 100, 1 )
     log.info( `Geo completeness for mining pool ${ pool_label }: ${ countries_in_pool.length } unique countries out of ${ total_countries }, geo_score: ${ geo_score }` )
 
-    // Calculate the composit score
-    const score = size_score * performance_fraction * geo_completeness_fraction
+    // Calculate the composite score
+    log.info( `Scoring inputs: `, { size_score, stability_score, stability_fraction, performance_score, performance_fraction, geo_score, geo_completeness_fraction } )
+    const score = size_score * performance_fraction * geo_completeness_fraction * stability_fraction
+    log.info( `Final score for mining pool ${ pool_label }: ${ score }` )
 
     // Return the scores
     return {
-        stability_score: Math.floor( stability_score ),
         size_score: Math.floor( size_score ),
+        stability_score: Math.floor( stability_score ),
         performance_score: Math.floor( performance_score ),
         geo_score: Math.floor( geo_score ),
         score: Math.floor( score )

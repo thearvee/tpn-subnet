@@ -98,7 +98,7 @@ export function get_miner_by_ip( ip ) {
  * @param {string} params.mining_pool_ip - IP address of the mining pool
  * @returns {Promise<Object>} - Promise resolving to the worker config
  */
-export async function get_worker_config_through_mining_pool( { worker_ip, mining_pool_uid, mining_pool_ip } ) {
+export async function get_worker_config_through_mining_pool( { worker_ip, mining_pool_uid, mining_pool_ip, format='text', lease_seconds } ) {
 
     try {
 
@@ -106,7 +106,7 @@ export async function get_worker_config_through_mining_pool( { worker_ip, mining
         const { protocol, url, port } = await read_mining_pool_metadata( { mining_pool_ip, mining_pool_uid } )
         if( !url?.includes( port ) || !url?.includes( protocol ) ) log.warn( `Mining pool URL ${ url } does not include port ${ port } or protocol ${ protocol }, this suggests misconfiguration of the miner` )
         const endpoint = `${ url }/api/lease/new`
-        const query = `?lease_seconds=120&format=text&whitelist=${ worker_ip }`
+        const query = `?lease_seconds=${ lease_seconds }&format=${ format }&whitelist=${ worker_ip }`
 
         // Mock response if needed
         const { CI_MOCK_MINING_POOL_RESPONSES } = process.env
@@ -127,7 +127,7 @@ export async function get_worker_config_through_mining_pool( { worker_ip, mining
         const { config_valid, json_config, text_config } = parse_wireguard_config( { wireguard_config: worker_config, expected_endpoint_ip: worker_ip } )
         if( !config_valid ) throw new Error( `Invalid wireguard config for ${ worker_ip }` )
 
-        return { json_config, text_config }
+        return format === 'json' ? json_config : text_config
 
     } catch ( e ) {
         log.info( `Error getting worker config for ${ worker_ip } through mining pool ${ mining_pool_ip }:`, e )

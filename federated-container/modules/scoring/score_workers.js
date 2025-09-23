@@ -60,6 +60,35 @@ export async function score_all_known_workers( max_duration_minutes=15 ) {
 }
 
 /**
+ * 
+ * @param {Object} params
+ * @param {Object} params.worker - Worker object
+ * @param {string} params.worker.ip - IP address of the worker
+ * @param {number} params.worker.public_port - Public port of the worker
+ * @param {string} params.mining_pool_url - URL of the mining pool the worker is expected to be associated with
+ * @param {boolean} params.throw_on_mismatch - Whether to throw an error on mismatch (default: false)
+ * @returns 
+ */
+export async function worker_matches_miner( { worker, mining_pool_url, throw_on_mismatch=false } ) {
+
+    try {
+
+        // Check that the worker broadcasts mining pool membership
+        const mock_pool_check = CI_MOCK_WORKER_RESPONSES === 'true' 
+        const { MINING_POOL_URL } = mock_pool_check ? { MINING_POOL_URL: 'http://mock.mock.mock.mock' } : await fetch( `http://${ worker.ip }:${ worker.public_port }` ).then( res => res.json() )
+        if( !mock_pool_check && !MINING_POOL_URL ) throw new Error( `Worker does not broadcast mining pool membership` )
+        if( CI_MODE !== 'true' && MINING_POOL_URL !== mining_pool_url && MINING_POOL_URL !== default_mining_pool ) throw new Error( `Worker broadcast ${ MINING_POOL_URL } which does not correspond to our expectation of ${ mining_pool_url }` )
+
+        return true
+    
+    } catch ( e ) {
+        log.info( `Error checking worker ${ worker.ip } matches miner at ${ mining_pool_url }: ${ e.message }:`, e )
+        if( throw_on_mismatch ) throw e
+        return false
+    }
+}
+
+/**
  * Checks whether the worker objects are valid and work
  * @param {Object} params
  * @param {Array} params.workers_with_configs
@@ -111,11 +140,8 @@ export async function validate_and_annotate_workers( { workers_with_configs=[] }
 
 
             // Check that the worker broadcasts mining pool membership
-            const mock_pool_check = CI_MOCK_WORKER_RESPONSES === 'true' 
-            const { MINING_POOL_URL } = mock_pool_check ? { MINING_POOL_URL: 'http://mock.mock.mock.mock' } : await fetch( `http://${ worker.ip }:${ worker.public_port }` ).then( res => res.json() )
-            if( !mock_pool_check && !MINING_POOL_URL ) throw new Error( `Worker does not broadcast mining pool membership` )
-            if( CI_MODE !== 'true' && MINING_POOL_URL !== mining_pool_url && MINING_POOL_URL !== default_mining_pool ) throw new Error( `Worker broadcast ${ MINING_POOL_URL } which does not correspond to our expectation of ${ mining_pool_url }` )
-    
+            await worker_matches_miner( { worker, mining_pool_url, throw_on_mismatch: true } )
+
             // Validate that wireguard config works
             const { valid, message } = await test_wireguard_connection( { wireguard_config: text_config } )
             if( !valid ) throw new Error( `Wireguard config invalid: ${ message }` )

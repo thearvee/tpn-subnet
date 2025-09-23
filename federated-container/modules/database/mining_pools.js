@@ -51,14 +51,27 @@ export async function read_mining_pool_metadata( { mining_pool_uid, mining_pool_
     // Get the postgres pool
     const pool = await get_pg_pool()
 
+    // Dynamic wheres depending on params
+    const wheres = []
+    const values = []
+    if( mining_pool_uid ) {
+        values.push( mining_pool_uid )
+        wheres.push( `mining_pool_uid = $${ values.length }` )
+    }
+    if( mining_pool_ip ) {
+        values.push( mining_pool_ip )
+        wheres.push( `mining_pool_ip = $${ values.length }` )
+    }
+
     // Create query
     const query = `
         SELECT * FROM mining_pool_metadata_broadcast
-        WHERE mining_pool_uid = $1 AND mining_pool_ip = $2
+        ${ wheres.length > 0 ? `WHERE ${ wheres.join( ' AND ' ) }` : '' }
+        LIMIT 1
     `
 
     try {
-        const result = await pool.query( query, [ mining_pool_uid, mining_pool_ip ] )
+        const result = await pool.query( query, values )
         if( result.rows.length === 0 ) {
             log.warn( `No mining pool metadata found for ${ mining_pool_uid }@${ mining_pool_ip }` )
             return { success: false, message: `No mining pool metadata found` }

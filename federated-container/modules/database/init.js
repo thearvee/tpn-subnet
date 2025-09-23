@@ -20,6 +20,12 @@ export async function init_database() {
         await pool.query( `DROP TABLE IF EXISTS worker_wireguard_configs` )
     }
 
+    // Enable extension that can sample rows randomly
+    if( miner_mode || validator_mode ) {
+        await pool.query( `CREATE EXTENSION IF NOT EXISTS tsm_system_rows` )
+        log.info( `✅ tsm_system_rows extension enabled` )
+    }
+
     // Create the WORKERS table if it doesn't exist
     if( miner_mode || validator_mode ) {
         await pool.query( `

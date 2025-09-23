@@ -167,6 +167,7 @@ if( miner_mode ) {
         while( ! success ) {
             const { successes } = await register_mining_pool_with_validators()
             success = !!successes?.length
+            await wait( 5_000 )
         }
         
         // One-time scoring for CI testing
@@ -197,7 +198,7 @@ if( CI_MODE === 'true' ) {
 
     const pull = async () => {
         let { stderr, stdout, error } = await run( `git pull`, { silent: true } )
-        while( !stdout?.includes( `Already up to date` ) ) {
+        while( !stdout?.includes( `Already up to date` ) && !stderr?.includes( `commit or stash` ) ) {
             log.info( `♻️ Pulled remote version` )
             await run( `npm i` ).catch( e => log.error( `Error installing dependencies: ${ e.message }` ) )
             await wait( interval );

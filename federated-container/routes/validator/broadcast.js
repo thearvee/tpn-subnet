@@ -25,7 +25,10 @@ router.post( '/workers', async ( req, res ) => {
 
         // Get workers from the request
         let { workers=[] } = req.body || {}
-        log.info( `Received ${ workers.length } workers from validator ${ mining_pool_uid }@${ mining_pool_ip }` )
+
+        // Ensure workers is an array
+        if( !Array.isArray( workers ) ) throw new Error( `Invalid workers format, must be an array` )
+        log.info( `Received ${ workers.length } workers from mining pool ${ mining_pool_uid }@${ mining_pool_ip }, example: `, workers[0] )
 
         // Clean up the worker data
         workers = workers.reduce( ( acc, worker ) => {
@@ -37,12 +40,12 @@ router.post( '/workers', async ( req, res ) => {
             // Sanetise the IP address
             let { ip, country_code } = worker || {}
             ip = sanetise_ipv4( { ip, validate: true } )
-            acc.push( { ip, country_code } )
+            acc.push( { ...worker, ip, country_code } )
 
             return acc
 
         }, [] )
-        log.info( `Sanetised worker data, ${ workers.length } valid entries` )
+        log.info( `Sanetised worker data, ${ workers.length } valid entries, example: `, workers[0] )
 
         // Save worker ips to cache
         const ips = workers.map( worker => worker.ip )
@@ -98,7 +101,7 @@ router.post( '/mining_pool', async ( req, res ) => {
         if( !Number.isInteger( port ) || port < 1 || port > 65535 ) throw new Error( `Invalid port: ${ port }` )
 
         // Check that url resolved to the correct miner ip
-        const { ip } = await resolve_domain_to_ip( { domain: url  } )
+        const { ip } = await resolve_domain_to_ip( { domain: url } )
         if( CI_MODE !== 'true' && ip !== mining_pool_ip ) throw new Error( `Domain ${ url } does not resolve to metagraph ip address`  )
 
         // Save mining pool metadata

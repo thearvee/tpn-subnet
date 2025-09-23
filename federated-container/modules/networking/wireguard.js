@@ -182,7 +182,7 @@ export function parse_wireguard_config( { wireguard_config, expected_endpoint_ip
             { type: 'interface', key: 'DNS', validate: is_ipv4 },
             { type: 'peer', key: 'PublicKey', validate: value => /^[A-Za-z0-9+/=]+$/.test( value ) },
             { type: 'peer', key: 'PresharedKey', validate: value => /^[A-Za-z0-9+/=]+$/.test( value ) },
-            { type: 'peer', key: 'AllowedIPs', validate: value => [ '0.0.0.0/0', '0.0.0.0/0, ::0' ].includes( value ) },
+            { type: 'peer', key: 'AllowedIPs', validate: value => [ '0.0.0.0/0', '0.0.0.0/0, ::/0' ].includes( value ) },
             { type: 'peer', key: 'Endpoint', validate: value => is_ipv4( `${ value }`.split( ':' )[ 0 ] ) }
         ]
 
@@ -212,7 +212,7 @@ export function parse_wireguard_config( { wireguard_config, expected_endpoint_ip
             // log.info( `Checking ${ type } ${ key }: `, value )
             const is_valid = !validate || validate( value )
             return !is_valid
-        } )
+        } ).map( k => `${ k.type }.${ k.key } = ${ json_config[ k.type ][ k.key ] }` )
 
         // If the address is not in CIDR notation, add /32
         if( !json_config.interface.Address?.includes( '/' ) ) {
@@ -291,7 +291,7 @@ export async function test_wireguard_connection( { wireguard_config, verbose=CI_
     const { challenge_url, solution: correct_solution } = await generate_challenge( { tag } )
 
     // Get relevant interfaces
-    const { interface_id, veth_id, namespace_id, veth_subnet_prefix, clear_interfaces } = await get_free_interfaces( { log_tag } )
+    const { interface_id, veth_id, namespace_id, veth_subnet_prefix, uplink_interface, clear_interfaces } = await get_free_interfaces( { log_tag } )
     const { Address, Endpoint } = json_config.interface
 
     // Path for the WireGuard configuration file.
@@ -325,21 +325,25 @@ export async function test_wireguard_connection( { wireguard_config, verbose=CI_
 
         # Create wireguard interface and move it to namespace
         ip -n ${ namespace_id } link add ${ interface_id } type wireguard
-        # ip link set ${ interface_id } netns ${ namespace_id }
+        # ip link set ${ interface_id } netns ${ namespace_id } # alternate way to do the above
 
         # veth pairing of the isolated interface
         ip link add veth${ veth_id }n type veth peer name veth${ veth_id }h
         ip link set veth${ veth_id }n netns ${ namespace_id }
+
         # host side veth cofig
         ip addr add ${ veth_subnet_prefix }.1/24 dev veth${ veth_id }h
         ip link set veth${ veth_id }h up
+        
         # namespace side veth config
         ip -n ${ namespace_id } addr add ${ veth_subnet_prefix }.2/24 dev veth${ veth_id }n
         ip -n ${ namespace_id } link set veth${ veth_id }n up
+
         # enable iptables nat
         sysctl -w net.ipv4.ip_forward=1
-        iptables -t nat -A POSTROUTING -s ${ veth_subnet_prefix }.0/24 -o eth0 -j MASQUERADE
-
+        iptables -t nat -A POSTROUTING -s ${ veth_subnet_prefix }.0/24 -o ${ uplink_interface } -j MASQUERADE
+        iptables -A FORWARD -i veth${ veth_id }h -o ${ uplink_interface } -s ${ veth_subnet_prefix }.0/24 -j ACCEPT
+        iptables -A FORWARD -o veth${ veth_id }h -m state --state ESTABLISHED,RELATED -j ACCEPT
 
         # Before setting things, check properties and routes of the interface
         ip -n ${ namespace_id } addr
@@ -357,11 +361,17 @@ export async function test_wireguard_connection( { wireguard_config, verbose=CI_
         ip -n ${ namespace_id } a add ${ Address } dev ${ interface_id }
         ip -n ${ namespace_id } link set ${ interface_id } up
         ip -n ${ namespace_id } route add default dev ${ interface_id }
+
         # give wg endpoint exception to default route
         ip -n ${ namespace_id } route add ${ endpoint_ipv4 }/32 via ${ veth_subnet_prefix }.1
 
         # Add DNS
         mkdir -p /etc/netns/${ namespace_id }/ && echo "nameserver 1.1.1.1" > /etc/netns/${ namespace_id }/resolv.conf
+
+        # Quick DNS and ping sanity checks over namespace with 1 second timeout
+        # ip netns exec ${ namespace_id } ping -c 1 -W 1 1.1.1.1
+        # ip netns exec ${ namespace_id } ping -c 1 -W 1 ${ endpoint_ipv4 }
+        # ip netns exec ${ namespace_id } dig +time=1 +short google.com
 
         # Check ip address
         curl -m 5 -s icanhazip.com && ip netns exec ${ namespace_id } curl -m 5 -s icanhazip.com
@@ -379,6 +389,8 @@ export async function test_wireguard_connection( { wireguard_config, verbose=CI_
         ip link del ${ interface_id } || echo "Interface ${ interface_id } does not exist"
         ip netns del ${ namespace_id } || echo "Namespace ${ namespace_id } does not exist"
         iptables -t nat -D POSTROUTING -s ${ veth_subnet_prefix }.0/24 -o eth0 -j MASQUERADE || echo "iptables rule does not exist"
+        iptables -D FORWARD -i veth${ veth_id }h -o ${ uplink_interface } -s ${ veth_subnet_prefix }.0/24 -j ACCEPT || echo "iptables rule does not exist"
+        iptables -D FORWARD -o veth${ veth_id }h -m state --state ESTABLISHED,RELATED -j ACCEPT || echo "iptables rule does not exist"
         rm -f ${ tmp_config_path } || echo "Config file ${ tmp_config_path } does not exist"
         rm -f ${ wg_config_path } || echo "Config file ${ wg_config_path } does not exist"
     `

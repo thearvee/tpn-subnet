@@ -2,6 +2,7 @@ import { lookup } from "dns/promises"
 import { cache, is_ipv4, log, random_number_between, random_string_of_length, wait } from "mentie"
 import { v4 as uuidv4 } from "uuid"
 import { run } from "../system/shell.js"
+const { CI_MODE } = process.env
 
 export function ip_from_req( request ) {
 
@@ -16,6 +17,9 @@ export function ip_from_req( request ) {
 
     // If unspoofable ip is a ipv6 address with a v4-mapped prefix, remove it
     unspoofable_ip = unspoofable_ip?.replace( '::ffff:', '' )
+
+    // If we are in ci mode and ip is an ipv6 localhost, change to ipv4 localhost
+    if( CI_MODE === 'true' && unspoofable_ip === '::1' ) unspoofable_ip = '127.0.0.1'
     
     return { unspoofable_ip, spoofable_ip }
 }
@@ -97,6 +101,20 @@ export async function get_free_interfaces( { log_tag=uuidv4(), verbose } ) {
     const mk_veth_id = () => `tpn${ random_string_of_length( 5 ) }`
     const mk_subnet_prefix = () => `10.200.${ random_number_between( 1, 254 ) }`
     const mk_namespace_id = () => `ns_${ mk_interface_id() }`
+
+    // Host level info
+    let uplink_interface = cache( 'host_uplink_interface' )
+    if( !uplink_interface ) {
+        const { stdout } = await run( `ip route show default | awk '/^default/ {print $5}'`, { silent: !verbose, log_tag } )
+        uplink_interface = stdout.trim()
+        if( !uplink_interface ) {
+            log.warn( `${ log_tag } Could not determine host uplink interface, defaulting to eth0` )
+            uplink_interface = 'eth0'
+        }
+        cache( 'host_uplink_interface', uplink_interface, 60_000 )
+    }
+    if( verbose ) log.info( `${ log_tag } Host uplink interface: ${ uplink_interface }` )
+    
 
     // Run specific variables
     let interface_id = mk_interface_id()
@@ -214,6 +232,7 @@ export async function get_free_interfaces( { log_tag=uuidv4(), verbose } ) {
         namespace_id,
         veth_subnet_prefix,
         default_route,
+        uplink_interface,
         clear_interfaces
     }
 
