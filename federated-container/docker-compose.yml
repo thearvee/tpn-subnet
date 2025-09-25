@@ -4,9 +4,9 @@ services:
   # Main TPN Federated Application Container
   tpn-federated:
     image: taofuprotocol/tpn-federated:latest
-    build:
-      context: .
-      dockerfile: tpn_federated.Dockerfile
+    # build:
+    #   context: .
+    #   dockerfile: tpn_federated.Dockerfile
     container_name: tpn-federated
     restart: unless-stopped
     environment:
