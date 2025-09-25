@@ -3,7 +3,7 @@ version: '3.8'
 services:
   # Main TPN Federated Application Container
   tpn-federated:
-    image: taofuprotocol/tpn-federated:latest
+    image: "taofuprotocol/tpn-federated:${TPN_IMAGE_TAG:-latest}"
     # build:
     #   context: .
     #   dockerfile: tpn_federated.Dockerfile

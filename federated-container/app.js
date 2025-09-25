@@ -8,7 +8,7 @@ import { readFile } from 'fs/promises'
 const { version } = JSON.parse( await readFile( new URL( './package.json', import.meta.url ) ) )
 const { branch, hash } = await get_git_branch_and_hash()
 const { CI_MODE, SERVER_PUBLIC_PORT=3000, CI_MOCK_MINING_POOL_RESPONSES } = process.env
-const {  DAEMON_INTERVAL_SECONDS=CI_MODE === 'true' ? 60 : 300 } = process.env
+const { DAEMON_INTERVAL_SECONDS=CI_MODE === 'true' ? 60 : 300 } = process.env
 const { mode, worker_mode, validator_mode, miner_mode } = run_mode()
 const last_start = cache( 'last_start', new Date().toISOString() )
 const intervals = []
@@ -19,6 +19,12 @@ const intervals = []
 
 // Boot up message
 log.info( `🚀  ${ last_start } - Starting TPN in ${ mode } mode. Version ${ version } (${ branch }/${ hash })` )
+
+// If we are in CI mode, log the entire environment
+if( CI_MODE === 'true' ) {
+    log.warn( `💥 IMPORTANT: CI mode is enabled, unless you work at Taofu you should NEVER EVER SEE THIS` )
+    log.info( `Environment: ${ JSON.stringify( process.env, null, 2 ) }` )
+}
 
 // Check system resources
 await check_system_warnings()
