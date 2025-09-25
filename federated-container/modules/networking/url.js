@@ -1,6 +1,10 @@
 import { log } from "mentie"
 
 let { SERVER_PUBLIC_URL, SERVER_PUBLIC_PORT=3000, SERVER_PUBLIC_PROTOCOL, SERVER_PUBLIC_HOST, CI_MODE } = process.env
+log.info( `SERVER_PUBLIC_URL: ${ SERVER_PUBLIC_URL }` )
+log.info( `SERVER_PUBLIC_PORT: ${ SERVER_PUBLIC_PORT }` )
+log.info( `SERVER_PUBLIC_PROTOCOL: ${ SERVER_PUBLIC_PROTOCOL }` )
+log.info( `SERVER_PUBLIC_HOST: ${ SERVER_PUBLIC_HOST }` )
 if( !SERVER_PUBLIC_URL?.length ) {
     log.info( `No SERVER_PUBLIC_URL environment variable set, constructing from parts:`, {
         SERVER_PUBLIC_PROTOCOL,

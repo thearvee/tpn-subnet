@@ -9,39 +9,39 @@ services:
     #   dockerfile: tpn_federated.Dockerfile
     container_name: tpn-federated
     restart: unless-stopped
+    # .env note: environment variable interpolation is done with the .env in the folder where you run docker compose, this .env file only passes into the container
     env_file:
       - .env
     environment:
 
       # Shared - All node types
-      - LOG_LEVEL=${LOG_LEVEL:-info}
-      - POSTGRES_HOST=postgres
-      - POSTGRES_USER=${POSTGRES_USER:-tpn}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - LOG_LEVEL
+      - POSTGRES_HOST
+      - POSTGRES_USER
+      - POSTGRES_PASSWORD
       - NODE_OPTIONS=--max-old-space-size=${CONTAINER_MAX_PROCESS_RAM_MB:-8192}
-      - SERVER_PUBLIC_PROTOCOL=${SERVER_PUBLIC_PROTOCOL:-http}
-      - SERVER_PUBLIC_URL="${SERVER_PUBLIC_PROTOCOL:-http}://${SERVER_PUBLIC_HOST}:${SERVER_PUBLIC_PORT:-3000}"
-      - SERVER_PUBLIC_HOST=${SERVER_PUBLIC_HOST}
-      - SERVER_PUBLIC_PORT=${SERVER_PUBLIC_PORT:-3000}
+      - SERVER_PUBLIC_PROTOCOL
+      - SERVER_PUBLIC_URL
+      - SERVER_PUBLIC_HOST
+      - SERVER_PUBLIC_PORT
 
       # Validator and Mining pool
-      - MAXMIND_LICENSE_KEY=${MAXMIND_LICENSE_KEY}
-      - IP2LOCATION_DOWNLOAD_TOKEN=${IP2LOCATION_DOWNLOAD_TOKEN}
+      - MAXMIND_LICENSE_KEY
+      - IP2LOCATION_DOWNLOAD_TOKEN
 
       # Mining pool only
-      - MINING_POOL_WEBSITE_URL=${MINING_POOL_WEBSITE_URL}
-      - MINING_POOL_REWARDS=${MINING_POOL_REWARDS}
+      - MINING_POOL_WEBSITE_URL
+      - MINING_POOL_REWARDS
 
       # Worker only
-      - MINING_POOL_URL=${MINING_POOL_URL:-https://pool.taofu.xyz}
-      - PAYMENT_ADDRESS_EVM=${PAYMENT_ADDRESS_EVM}
-      - PAYMENT_ADDRESS_BITTENSOR=${PAYMENT_ADDRESS_BITTENSOR}
-      - BROADCAST_MESSAGE=${BROADCAST_MESSAGE}
-      - CONTACT_METHOD=${CONTACT_METHOD}
+      - MINING_POOL_URL
+      - PAYMENT_ADDRESS_EVM
+      - PAYMENT_ADDRESS_BITTENSOR
+      - BROADCAST_MESSAGE
+      - CONTACT_METHOD
 
       # Networking
-      - TPN_INTERNAL_SUBNET=${TPN_INTERNAL_SUBNET:-172.20.0.0/16}
-      - TPN_INTERNAL_GATEWAY=${TPN_INTERNAL_GATEWAY:-172.20.0.1}
+      - TPN_INTERNAL_SUBNET
 
     volumes:
       - ./config/tpn:/app/config
@@ -204,6 +204,7 @@ networks:
     internal: true
     ipam:
       config:
+        # Make sure that if you overrise this in the cli environment, you add it to .env too so the container knows
         - subnet: ${TPN_INTERNAL_SUBNET:-172.20.0.0/16}
           gateway: ${TPN_INTERNAL_GATEWAY:-172.20.0.1}
 
@@ -212,6 +213,7 @@ networks:
     driver: bridge
     ipam:
       config:
+        # Make sure that if you overrise this in the cli environment, you add it to .env too so the container knows
         - subnet: ${TPN_EXTERNAL_SUBNET:-172.21.0.0/16}
           gateway: ${TPN_EXTERNAL_GATEWAY:-172.21.0.1}
 

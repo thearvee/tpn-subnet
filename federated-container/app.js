@@ -22,7 +22,7 @@ log.info( `🚀  ${ last_start } - Starting TPN in ${ mode } mode. Version ${ ve
 
 // If we are in CI mode, log the entire environment
 if( branch == 'development' ) {
-    log.warn( `💥 IMPORTANT: CI mode is enabled, unless you work at Taofu you should NEVER EVER SEE THIS` )
+    log.warn( `💥 IMPORTANT: you are in the development branch, THIS IS NOT SAFE FOR PRODUCTION` )
     log.info( `Environment: ${ JSON.stringify( process.env, null, 2 ) }` )
 }
 
@@ -33,17 +33,18 @@ await check_system_warnings()
 import { init_database } from './modules/database/init.js'
 await init_database()
 
-// Update geolocation databases
+// Update geolocation databases on start and update geolocation before app starts
 if( validator_mode || miner_mode ) {
 
-    const { geolocation_update_interval_ms } = await import( './modules/geolocation/helpers.js' )
     const { update_maxmind } = await import( './modules/geolocation/maxmind.js' )
     const { update_ip2location_bin } = await import( './modules/geolocation/ip2location.js' )
 
+    log.info( `Updating geolocation databases before starting server, this may take a while...` )
     await Promise.allSettled( [
         update_maxmind(),
         update_ip2location_bin()
     ] )
+
 
     // On start, clear network
     const { clean_up_tpn_interfaces, clean_up_tpn_namespaces } = await import( "./modules/networking/wireguard.js" )

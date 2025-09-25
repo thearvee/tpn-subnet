@@ -157,7 +157,11 @@ export async function restore_tpn_cache_from_disk() {
 
     // Read the cache from disk async
     try {
-        const data = await fs.readFile( cache_persistence_path, 'utf8' )
+        const data = await fs.readFile( cache_persistence_path, 'utf8' ).catch( e => {
+            log.warn( `No existing TPN cache file found at path: ${ cache_persistence_path }` )
+            return false
+        } )
+        if( !data ) return
         const tpn_cache = JSON.parse( data )
         log.info( `TPN cache restored from disk successfully` )
 
