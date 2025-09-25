@@ -4,9 +4,9 @@ services:
   # Main TPN Federated Application Container
   tpn-federated:
     image: "taofuprotocol/tpn-federated:${TPN_IMAGE_TAG:-latest}"
-    # build:
-    #   context: .
-    #   dockerfile: tpn_federated.Dockerfile
+    build:
+      context: .
+      dockerfile: tpn_federated.Dockerfile
     container_name: tpn-federated
     restart: unless-stopped
     # .env note: environment variable interpolation is done with the .env in the folder where you run docker compose, this .env file only passes into the container
