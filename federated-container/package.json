@@ -13,7 +13,6 @@
   },
   "scripts": {
     "lint": "eslint --fix src",
-    "prepare": "husky",
     "start": "RUN_MODE=oneshot node --env-file-if-exists .env --env-file-if-exists .env.development app.js",
     "start:docker": "docker compose build --build-arg CACHEBUST=$(date +%s) && docker compose up; docker compose down -v",
     "start:validator": "RUN_MODE=validator node --watch --env-file-if-exists .env --env-file-if-exists .env.validator app.js",
