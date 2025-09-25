@@ -4,12 +4,8 @@ FROM node:24-slim
 # Set the working directory inside the container
 WORKDIR /app
 
-# Copy package management files
-COPY package*.json ./
-
-# Install dependencies, data files from maxmind and ip2location are downloaded later and not during build
-RUN npm i -g npm
-RUN npm ci --omit=dev
+# Memory default
+ENV MAX_PROCESS_RAM_MB=8192
 
 # Run available security updates
 ENV DEBIAN_FRONTEND=noninteractive
@@ -32,8 +28,12 @@ RUN dpkg --configure resolvconf
 RUN apt update && apt install -y git
 RUN git config --global --add safe.directory /app
 
-# Memory default
-ENV MAX_PROCESS_RAM_MB=8192
+# Copy package management files
+COPY package*.json ./
+
+# Install dependencies, data files from maxmind and ip2location are downloaded later and not during build
+RUN npm i -g npm
+RUN npm ci --omit=dev
 
 # Cachebuster
 ARG CACHEBUST=1

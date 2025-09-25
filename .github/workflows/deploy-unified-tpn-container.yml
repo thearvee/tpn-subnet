@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      
+
       # 1. Checkout with enough history to compare previous commit
       - name: Checkout code
         uses: actions/checkout@v3
@@ -54,8 +54,8 @@ jobs:
         if: steps.version_check.outputs.deploy == 'true'
         uses: docker/build-push-action@v4
         with:
-          context: ./node-stack/validator       # Build context location
-          file: ./node-stack/validator/Dockerfile # Dockerfile location
+          context: ./federated-container
+          file: ./federated-container/tpn_federated.Dockerfile # Dockerfile location
           push: true
           tags: |
             taofuprotocol/tpn-federated:${{ steps.version_check.outputs.version }}${{ github.ref == 'refs/heads/development' && '-dev'  || '' }}
