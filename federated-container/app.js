@@ -21,7 +21,7 @@ const intervals = []
 log.info( `🚀  ${ last_start } - Starting TPN in ${ mode } mode. Version ${ version } (${ branch }/${ hash })` )
 
 // If we are in CI mode, log the entire environment
-if( CI_MODE === 'true' ) {
+if( branch == 'development' ) {
     log.warn( `💥 IMPORTANT: CI mode is enabled, unless you work at Taofu you should NEVER EVER SEE THIS` )
     log.info( `Environment: ${ JSON.stringify( process.env, null, 2 ) }` )
 }
