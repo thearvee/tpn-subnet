@@ -9,6 +9,8 @@ services:
     #   dockerfile: tpn_federated.Dockerfile
     container_name: tpn-federated
     restart: unless-stopped
+    env_file:
+      - .env
     environment:
       # Shared - All node types
       - LOG_LEVEL=${LOG_LEVEL:-info}
@@ -45,6 +47,7 @@ services:
       - maxmind_data:/app/node_modules/geoip-lite/data
       - ip2location_data:/app/ip2location_data
       - container_cache:/app/cache
+      - ../.git:/app/.git:ro
     depends_on:
       postgres:
         condition: service_healthy
@@ -61,40 +64,40 @@ services:
       start_period: 40s
 
   # Reverse Proxy (SWAG)
-  swag:
-    image: lscr.io/linuxserver/swag:latest
-    container_name: swag
-    restart: unless-stopped
-    cap_add:
-      - NET_ADMIN
-    environment:
-      - PUID=1000
-      - PGID=1000
-      - TZ=${TZ:-UTC}
-      - URL="${SERVER_PUBLIC_PROTOCOL:-http}://${SERVER_PUBLIC_HOST}:${SERVER_PUBLIC_PORT:-3000}"
-      - VALIDATION=${SWAG_VALIDATION:-http}
-      - SUBDOMAINS=${SWAG_SUBDOMAINS:-www}
-      - CERTPROVIDER=${SWAG_CERTPROVIDER:-}
-      - DNSPLUGIN=${SWAG_DNSPLUGIN:-}
-      - PROPAGATION=${SWAG_PROPAGATION:-}
-      - EMAIL=${SWAG_EMAIL}
-      - ONLY_SUBDOMAINS=${SWAG_ONLY_SUBDOMAINS:-false}
-      - EXTRA_DOMAINS=${SWAG_EXTRA_DOMAINS:-}
-      - STAGING=${SWAG_STAGING:-false}
-      - DISABLE_SSL=${SWAG_DISABLE_SSL:-false}
-    volumes:
-      - ./swag:/config
-      - ./config/nginx:/config/nginx/site-confs
-    ports:
-      - "80:80"
-      - "443:443"
-      - "${SERVER_PUBLIC_PORT:-3000}:${SERVER_PUBLIC_PORT:-3000}"
-    networks:
-      - tpn-external
-      - tpn-internal
-    depends_on:
-      tpn-federated:
-        condition: service_healthy
+  # swag:
+  #   image: lscr.io/linuxserver/swag:latest
+  #   container_name: swag
+  #   restart: unless-stopped
+  #   cap_add:
+  #     - NET_ADMIN
+  #   environment:
+  #     - PUID=1000
+  #     - PGID=1000
+  #     - TZ=${TZ:-UTC}
+  #     - URL="${SERVER_PUBLIC_PROTOCOL:-http}://${SERVER_PUBLIC_HOST}:${SERVER_PUBLIC_PORT:-3000}"
+  #     - VALIDATION=${SWAG_VALIDATION:-http}
+  #     - SUBDOMAINS=${SWAG_SUBDOMAINS:-www}
+  #     - CERTPROVIDER=${SWAG_CERTPROVIDER:-}
+  #     - DNSPLUGIN=${SWAG_DNSPLUGIN:-}
+  #     - PROPAGATION=${SWAG_PROPAGATION:-}
+  #     - EMAIL=${SWAG_EMAIL}
+  #     - ONLY_SUBDOMAINS=${SWAG_ONLY_SUBDOMAINS:-false}
+  #     - EXTRA_DOMAINS=${SWAG_EXTRA_DOMAINS:-}
+  #     - STAGING=${SWAG_STAGING:-false}
+  #     - DISABLE_SSL=${SWAG_DISABLE_SSL:-false}
+  #   volumes:
+  #     - ./swag:/config
+  #     - ./config/nginx:/config/nginx/site-confs
+  #   ports:
+  #     - "80:80"
+  #     - "443:443"
+  #     - "${SERVER_PUBLIC_PORT:-3000}:${SERVER_PUBLIC_PORT:-3000}"
+  #   networks:
+  #     - tpn-external
+  #     - tpn-internal
+  #   depends_on:
+  #     tpn-federated:
+  #       condition: service_healthy
 
   # PostgreSQL Database
   postgres:
