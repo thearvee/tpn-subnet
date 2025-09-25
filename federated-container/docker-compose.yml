@@ -50,6 +50,7 @@ services:
         condition: service_healthy
     networks:
       - tpn-internal
+      - tpn-external
     ports:
       - "127.0.0.1:3001:3000" # Make this container available from localhost so the neuron can access it.
     healthcheck:
