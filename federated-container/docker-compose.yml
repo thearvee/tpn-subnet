@@ -3,7 +3,7 @@ version: '3.8'
 services:
   # Main TPN Federated Application Container
   tpn-federated:
-    image: tpn-federated:latest
+    image: taofuprotocol/tpn-federated:latest
     build:
       context: .
       dockerfile: tpn_federated.Dockerfile
@@ -20,15 +20,15 @@ services:
       - SERVER_PUBLIC_URL="${SERVER_PUBLIC_PROTOCOL:-http}://${SERVER_PUBLIC_HOST}:${SERVER_PUBLIC_PORT:-3000}"
       - SERVER_PUBLIC_HOST=${SERVER_PUBLIC_HOST}
       - SERVER_PUBLIC_PORT=${SERVER_PUBLIC_PORT:-3000}
-      
+
       # Validator and Mining pool
       - MAXMIND_LICENSE_KEY=${MAXMIND_LICENSE_KEY}
       - IP2LOCATION_DOWNLOAD_TOKEN=${IP2LOCATION_DOWNLOAD_TOKEN}
-      
+
       # Mining pool only
       - MINING_POOL_WEBSITE_URL=${MINING_POOL_WEBSITE_URL}
       - MINING_POOL_REWARDS=${MINING_POOL_REWARDS}
-      
+
       # Worker only
       - MINING_POOL_URL=${MINING_POOL_URL:-https://pool.taofu.xyz}
       - PAYMENT_ADDRESS_EVM=${PAYMENT_ADDRESS_EVM}
@@ -53,7 +53,7 @@ services:
     ports:
       - "127.0.0.1:3001:3000" # Make this container available from localhost so the neuron can access it.
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000/"]
+      test: [ "CMD", "curl", "-f", "http://localhost:3000/" ]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -111,7 +111,7 @@ services:
     networks:
       - tpn-internal
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-tpn} -d ${POSTGRES_DB:-tpn}"]
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-tpn} -d ${POSTGRES_DB:-tpn}" ]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -184,7 +184,7 @@ services:
     profiles:
       - worker
     healthcheck:
-      test: ["CMD", "wg", "show"]
+      test: [ "CMD", "wg", "show" ]
       interval: 30s
       timeout: 10s
       retries: 3
