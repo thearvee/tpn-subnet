@@ -12,31 +12,32 @@ services:
     env_file:
       - .env
     environment:
+
       # Shared - All node types
       - LOG_LEVEL=${LOG_LEVEL:-info}
       - POSTGRES_HOST=postgres
-      - POSTGRES_USER=${POSTGRES_USER:-tpn}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_USER
+      - POSTGRES_PASSWORD
       - NODE_OPTIONS=--max-old-space-size=${CONTAINER_MAX_PROCESS_RAM_MB:-8192}
-      - SERVER_PUBLIC_PROTOCOL=${SERVER_PUBLIC_PROTOCOL:-http}
-      - SERVER_PUBLIC_URL="${SERVER_PUBLIC_PROTOCOL:-http}://${SERVER_PUBLIC_HOST}:${SERVER_PUBLIC_PORT:-3000}"
-      - SERVER_PUBLIC_HOST=${SERVER_PUBLIC_HOST}
-      - SERVER_PUBLIC_PORT=${SERVER_PUBLIC_PORT:-3000}
+      - SERVER_PUBLIC_PROTOCOL
+      - SERVER_PUBLIC_URL
+      - SERVER_PUBLIC_HOST
+      - SERVER_PUBLIC_PORT
 
       # Validator and Mining pool
-      - MAXMIND_LICENSE_KEY=${MAXMIND_LICENSE_KEY}
-      - IP2LOCATION_DOWNLOAD_TOKEN=${IP2LOCATION_DOWNLOAD_TOKEN}
+      - MAXMIND_LICENSE_KEY
+      - IP2LOCATION_DOWNLOAD_TOKEN
 
       # Mining pool only
-      - MINING_POOL_WEBSITE_URL=${MINING_POOL_WEBSITE_URL}
-      - MINING_POOL_REWARDS=${MINING_POOL_REWARDS}
+      - MINING_POOL_WEBSITE_URL
+      - MINING_POOL_REWARDS
 
       # Worker only
-      - MINING_POOL_URL=${MINING_POOL_URL:-https://pool.taofu.xyz}
-      - PAYMENT_ADDRESS_EVM=${PAYMENT_ADDRESS_EVM}
-      - PAYMENT_ADDRESS_BITTENSOR=${PAYMENT_ADDRESS_BITTENSOR}
-      - BROADCAST_MESSAGE=${BROADCAST_MESSAGE}
-      - CONTACT_METHOD=${CONTACT_METHOD}
+      - MINING_POOL_URL
+      - PAYMENT_ADDRESS_EVM
+      - PAYMENT_ADDRESS_BITTENSOR
+      - BROADCAST_MESSAGE
+      - CONTACT_METHOD
 
       # Networking
       - TPN_INTERNAL_SUBNET=${TPN_INTERNAL_SUBNET:-172.20.0.0/16}
@@ -64,40 +65,42 @@ services:
       start_period: 40s
 
   # Reverse Proxy (SWAG)
-  # swag:
-  #   image: lscr.io/linuxserver/swag:latest
-  #   container_name: swag
-  #   restart: unless-stopped
-  #   cap_add:
-  #     - NET_ADMIN
-  #   environment:
-  #     - PUID=1000
-  #     - PGID=1000
-  #     - TZ=${TZ:-UTC}
-  #     - URL="${SERVER_PUBLIC_PROTOCOL:-http}://${SERVER_PUBLIC_HOST}:${SERVER_PUBLIC_PORT:-3000}"
-  #     - VALIDATION=${SWAG_VALIDATION:-http}
-  #     - SUBDOMAINS=${SWAG_SUBDOMAINS:-www}
-  #     - CERTPROVIDER=${SWAG_CERTPROVIDER:-}
-  #     - DNSPLUGIN=${SWAG_DNSPLUGIN:-}
-  #     - PROPAGATION=${SWAG_PROPAGATION:-}
-  #     - EMAIL=${SWAG_EMAIL}
-  #     - ONLY_SUBDOMAINS=${SWAG_ONLY_SUBDOMAINS:-false}
-  #     - EXTRA_DOMAINS=${SWAG_EXTRA_DOMAINS:-}
-  #     - STAGING=${SWAG_STAGING:-false}
-  #     - DISABLE_SSL=${SWAG_DISABLE_SSL:-false}
-  #   volumes:
-  #     - ./swag:/config
-  #     - ./config/nginx:/config/nginx/site-confs
-  #   ports:
-  #     - "80:80"
-  #     - "443:443"
-  #     - "${SERVER_PUBLIC_PORT:-3000}:${SERVER_PUBLIC_PORT:-3000}"
-  #   networks:
-  #     - tpn-external
-  #     - tpn-internal
-  #   depends_on:
-  #     tpn-federated:
-  #       condition: service_healthy
+  swag:
+    image: lscr.io/linuxserver/swag:latest
+    container_name: swag
+    restart: unless-stopped
+    profiles:
+      - proxy
+    cap_add:
+      - NET_ADMIN
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=${TZ:-UTC}
+      - URL="${SERVER_PUBLIC_PROTOCOL:-http}://${SERVER_PUBLIC_HOST}:${SERVER_PUBLIC_PORT:-3000}"
+      - VALIDATION=${SWAG_VALIDATION:-http}
+      - SUBDOMAINS=${SWAG_SUBDOMAINS:-www}
+      - CERTPROVIDER=${SWAG_CERTPROVIDER:-}
+      - DNSPLUGIN=${SWAG_DNSPLUGIN:-}
+      - PROPAGATION=${SWAG_PROPAGATION:-}
+      - EMAIL=${SWAG_EMAIL}
+      - ONLY_SUBDOMAINS=${SWAG_ONLY_SUBDOMAINS:-false}
+      - EXTRA_DOMAINS=${SWAG_EXTRA_DOMAINS:-}
+      - STAGING=${SWAG_STAGING:-false}
+      - DISABLE_SSL=${SWAG_DISABLE_SSL:-false}
+    volumes:
+      - ./swag:/config
+      - ./config/nginx:/config/nginx/site-confs
+    ports:
+      - "80:80"
+      - "443:443"
+      - "${SERVER_PUBLIC_PORT:-3000}:${SERVER_PUBLIC_PORT:-3000}"
+    networks:
+      - tpn-external
+      - tpn-internal
+    depends_on:
+      tpn-federated:
+        condition: service_healthy
 
   # PostgreSQL Database
   postgres:
