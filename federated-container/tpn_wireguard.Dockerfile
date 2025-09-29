@@ -6,4 +6,4 @@ COPY tpn_wireguard.init.sh /etc/s6-overlay/s6-rc.d/init-wireguard-confs/run
 RUN chmod +x /etc/s6-overlay/s6-rc.d/init-wireguard-confs/run
 
 # Add a healthcheck
-HEALTHCHECK --interval=2s --timeout=2s --start-period=120s --retries=5 CMD ip link show wg0
+HEALTHCHECK --interval=5s --timeout=5s --start-period=120s --retries=5 CMD ip link show wg0
