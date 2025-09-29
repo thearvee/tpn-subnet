@@ -44,7 +44,7 @@ services:
       - TPN_INTERNAL_SUBNET
 
     volumes:
-      - ./config/tpn:/app/config
+      - ./wg_configs:/app/wg_configs
       - maxmind_data:/app/node_modules/geoip-lite/data
       - ip2location_data:/app/ip2location_data
       - container_cache:/app/cache
@@ -181,7 +181,7 @@ services:
       - LOG_CONFS=${WIREGUARD_LOG_CONFS:-false}
       - REGEN_MISSING_CONFIGS_INTERVAL=${WIREGUARD_REGEN_MISSING_CONFIGS_INTERVAL:-300}
     volumes:
-      - ./wg_configs:/app/wg_configs
+      - ./wg_configs:/config
       - /lib/modules:/lib/modules:ro
     ports:
       - "${WIREGUARD_SERVERPORT:-51820}:51820/udp"
