@@ -56,7 +56,8 @@ services:
       - tpn-internal
       - tpn-external
     ports:
-      - "127.0.0.1:3001:3000" # Make this container available from localhost so the neuron can access it.
+      # - "127.0.0.1:3001:3000" # Make this container available from localhost so the neuron can access it
+      - 3000:3000
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://localhost:3000/" ]
       interval: 30s

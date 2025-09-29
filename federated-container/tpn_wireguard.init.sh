@@ -31,8 +31,14 @@ generate_confs () {
         umask 077
         wg genkey | tee /config/server/privatekey-server | wg pubkey > /config/server/publickey-server
     fi
+    # Build into a prefile and atomically replace final config at the end
+    local WG_DIR="/config/wg_confs"
+    local PREFILE="${WG_DIR}/wg0.conf.pre"
+    local FINALFILE="${WG_DIR}/wg0.conf"
+    mkdir -p "${WG_DIR}"
+
     eval "$(printf %s)
-    cat <<DUDE > /config/wg_confs/wg0.conf
+    cat <<DUDE > ${PREFILE}
 $(cat /config/templates/server.conf)
 
 DUDE"
@@ -81,8 +87,8 @@ DUDE"
                 cat <<DUDE > /config/${PEER_ID}/${PEER_ID}.conf
 $(cat /config/templates/peer.conf)
 DUDE"
-                # add peer info to server conf with presharedkey
-                cat <<DUDE >> /config/wg_confs/wg0.conf
+                # add peer info to pre server conf with presharedkey
+                cat <<DUDE >> ${PREFILE}
 [Peer]
 # ${PEER_ID}
 PublicKey = $(cat "/config/${PEER_ID}/publickey-${PEER_ID}")
@@ -95,33 +101,33 @@ DUDE
                 cat <<DUDE > /config/${PEER_ID}/${PEER_ID}.conf
 $(sed '/PresharedKey/d' "/config/templates/peer.conf")
 DUDE"
-                # add peer info to server conf without presharedkey
-                cat <<DUDE >> /config/wg_confs/wg0.conf
+                # add peer info to pre server conf without presharedkey
+                cat <<DUDE >> ${PREFILE}
 [Peer]
 # ${PEER_ID}
 PublicKey = $(cat "/config/${PEER_ID}/publickey-${PEER_ID}")
 DUDE
             fi
             SERVER_ALLOWEDIPS=SERVER_ALLOWEDIPS_PEER_${i}
-            # add peer's allowedips to server conf
+            # add peer's allowedips to pre server conf
             if [[ -n "${!SERVER_ALLOWEDIPS}" ]]; then
                 echo "Adding ${!SERVER_ALLOWEDIPS} to wg0.conf's AllowedIPs for peer ${i}"
-                cat <<DUDE >> /config/wg_confs/wg0.conf
+                cat <<DUDE >> ${PREFILE}
 AllowedIPs = ${CLIENT_IP}/32,${!SERVER_ALLOWEDIPS}
 DUDE
             else
-                cat <<DUDE >> /config/wg_confs/wg0.conf
+                cat <<DUDE >> ${PREFILE}
 AllowedIPs = ${CLIENT_IP}/32
 DUDE
             fi
             # add PersistentKeepalive if the peer is specified
             if [[ -n "${PERSISTENTKEEPALIVE_PEERS_ARRAY}" ]] && ([[ "${PERSISTENTKEEPALIVE_PEERS_ARRAY[0]}" = "all" ]] || printf '%s\0' "${PERSISTENTKEEPALIVE_PEERS_ARRAY[@]}" | grep -Fxqz -- "${i}"); then
-                cat <<DUDE >> /config/wg_confs/wg0.conf
+                cat <<DUDE >> ${PREFILE}
 PersistentKeepalive = 25
 
 DUDE
             else
-                cat <<DUDE >> /config/wg_confs/wg0.conf
+                cat <<DUDE >> ${PREFILE}
 
 DUDE
             fi
@@ -136,6 +142,9 @@ DUDE
             # qrencode -o "/config/${PEER_ID}/${PEER_ID}.png" < "/config/${PEER_ID}/${PEER_ID}.conf"
         fi
     done
+
+    # Atomically move the prefile into place
+    mv -f "${PREFILE}" "${FINALFILE}"
 }
 
 save_vars () {
