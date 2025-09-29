@@ -281,12 +281,17 @@ lsiown -R abc:abc \
     /config
 
 
+# Always run generate confs on first-run to regenerate missing confs
+echo "**** Running generate_confs to regenerate any missing confs ****"
+generate_confs
+echo "**** generate_confs complete ****"
+
 # Run a background job with REGEN_MISSING_CONFIGS_INTERVAL, it triggers generate_confs if it is not running already
 while true; do
 
     # Check if generate confs is already running
     if pgrep "generate_confs" >/dev/null 2>&1; then
-        echo "**** generate_confs is already running, sleeping for ${REGEN_MISSING_CONFIGS_INTERVAL:-300} seconds until next check ****"
+        echo "**** generate_confs is still running, sleeping for ${REGEN_MISSING_CONFIGS_INTERVAL:-300} seconds until next check ****"
         sleep "${REGEN_MISSING_CONFIGS_INTERVAL:-300}"
         continue
     fi
