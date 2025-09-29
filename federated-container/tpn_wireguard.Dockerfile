@@ -22,7 +22,7 @@ RUN echo -e "# Setting up background regeneration of missing wireguard config fi
     " >> /etc/s6-overlay/s6-rc.d/init-wireguard-confs/run
 
 # Disable qrencode lines by commenting them out
-RUN sed -i 's/^qrencode/#qrencode/' /etc/s6-overlay/s6-rc.d/init-wireguard-confs/run
+RUN sed -i 's/^qrencode/#qrencode/g' /etc/s6-overlay/s6-rc.d/init-wireguard-confs/run
 
 # Edit the generate_confg function so there is a force block option
 RUN sed -i '/^[[:space:]]*generate_confs () {/a\
