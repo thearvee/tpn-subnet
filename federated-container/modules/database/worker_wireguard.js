@@ -1,6 +1,7 @@
 import { cache, log, wait } from "mentie"
 import { get_pg_pool } from "./postgres.js"
 import { delete_wireguard_configs, restart_wg_container, wireguard_server_ready } from "../networking/wg-container.js"
+const { WIREGUARD_PEER_COUNT=254 } = process.env 
 
 async function cleanup_expired_wireguard_configs() {
 
@@ -43,7 +44,7 @@ async function cleanup_expired_wireguard_configs() {
  * @returns {boolean} result.recycled - Whether the ID was recycled from an expired lease.
  * @throws {Error} If no available WireGuard config slots are found within the specified range.
  */
-export async function register_wireguard_lease( { start_id=1, end_id=250, expires_at } ) {
+export async function register_wireguard_lease( { start_id=1, end_id=WIREGUARD_PEER_COUNT, expires_at } ) {
 
     try {
         log.info( `Registering WireGuard lease between ${ start_id } and ${ end_id }, expires at ${ expires_at }`, new Date( expires_at ) )

@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # Main TPN Federated Application Container
   tpn-federated:
@@ -9,7 +7,8 @@ services:
       dockerfile: tpn_federated.Dockerfile
     container_name: tpn-federated
     restart: unless-stopped
-    # .env note: environment variable interpolation is done with the .env in the folder where you run docker compose, this .env file only passes into the container
+    # .env note: environment variable interpolation is done with the .env in the folder where you run docker compose
+    # the env_file only passes into the container
     env_file:
       - .env
     environment:
@@ -39,6 +38,7 @@ services:
       - PAYMENT_ADDRESS_BITTENSOR
       - BROADCAST_MESSAGE
       - CONTACT_METHOD
+      - WIREGUARD_PEER_COUNT=${WIREGUARD_PEER_COUNT:-254}
 
       # Networking
       - TPN_INTERNAL_SUBNET
@@ -159,10 +159,10 @@ services:
   # WireGuard VPN Container (Worker-specific)
   # This container is only needed for worker nodes
   wireguard:
-    image: taofuprotocol/wireguard:latest
+    image: taofuprotocol/tpn-wireguard:latest
     build:
       context: .
-      dockerfile: wireguard.Dockerfile
+      dockerfile: tpn_wireguard.Dockerfile
     container_name: wireguard
     restart: unless-stopped
     cap_add:
@@ -174,11 +174,12 @@ services:
       - TZ=${TZ:-UTC}
       - SERVERURL=${WIREGUARD_SERVERURL:-auto}
       - SERVERPORT=${WIREGUARD_SERVERPORT:-51820}
-      - PEERS=${WIREGUARD_PEERS:-254}
+      - PEERS=${WIREGUARD_PEER_COUNT:-254}
       - PEERDNS=${WIREGUARD_PEERDNS:-auto}
       - INTERNAL_SUBNET=${WIREGUARD_INTERNAL_SUBNET:-10.13.13.0}
       - ALLOWEDIPS=${WIREGUARD_ALLOWEDIPS:-0.0.0.0/0}
       - LOG_CONFS=${WIREGUARD_LOG_CONFS:-true}
+      - REGEN_MISSING_CONFIGS_INTERVAL=${WIREGUARD_REGEN_MISSING_CONFIGS_INTERVAL:-300}
     volumes:
       - ./wg_configs:/config
       - /lib/modules:/lib/modules:ro
@@ -213,7 +214,7 @@ networks:
     driver: bridge
     ipam:
       config:
-        # Make sure that if you overrise this in the cli environment, you add it to .env too so the container knows
+        # Make sure that if you override this in the cli environment, you add it to .env too so the container knows
         - subnet: ${TPN_EXTERNAL_SUBNET:-172.21.0.0/16}
           gateway: ${TPN_EXTERNAL_GATEWAY:-172.21.0.1}
 

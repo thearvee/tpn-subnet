@@ -6,6 +6,20 @@ FROM lscr.io/linuxserver/wireguard:latest
 RUN echo "echo 'Force-generating missing wireguard config files'" >> /etc/s6-overlay/s6-rc.d/init-wireguard-confs/run
 RUN echo "generate_confs" >> /etc/s6-overlay/s6-rc.d/init-wireguard-confs/run
 
+# Add a background looping line to run that regenerates deleted configs every REGEN_MISSING_CONFIGS_INTERVAL seconds
+# The loop checks if the previous command is still running, if so it skips this iteration
+RUN echo "\n\
+    while true; do\n\
+    if ! pgrep -f 'generate_confs' > /dev/null; then\n\
+    echo 'Regenerating missing wireguard config files';\n\
+    generate_confs;\n\
+    else\n\
+    echo 'Skipping regeneration of wireguard config files, previous generation still running';\n\
+    fi\n\
+    sleep \${REGEN_MISSING_CONFIGS_INTERVAL:-300};\n\
+    done &\n\
+    " >> /etc/s6-overlay/s6-rc.d/init-wireguard-confs/run
+
 # Disable qrencode lines by commenting them out
 RUN sed -i 's/^qrencode/#qrencode/' /etc/s6-overlay/s6-rc.d/init-wireguard-confs/run
 

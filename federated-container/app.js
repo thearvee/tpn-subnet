@@ -98,6 +98,10 @@ if( validator_mode ) {
 // Worker routes
 if( worker_mode ) {
 
+    // Wait for the wg container to be ready
+    const { wait_for_wireguard_config_count } = await import( './modules/networking/wg-container.js' )
+    await wait_for_wireguard_config_count()
+
     const { router: worker_register_router } = await import( './routes/worker/register.js' )
     app.use( '/worker/register', worker_register_router )
     if( CI_MODE === 'true' && CI_MOCK_MINING_POOL_RESPONSES === 'true' ) {
