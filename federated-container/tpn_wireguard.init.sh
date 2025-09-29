@@ -222,16 +222,20 @@ lsiown -R abc:abc \
     /config
 
 
+# Force regen on boot
+generate_confs 
+
+# Disabled for now, it requires a wg restart
 # Run a background job with REGEN_MISSING_CONFIGS_INTERVAL, it triggers generate_confs if it is not running already
-while true; do
+# while true; do
 
-    # Run the regen
-    echo "**** Running generate_confs to regenerate any missing confs ****"
-    generate_confs
-    echo "**** generate_confs complete ****"
+#     # Run the regen
+#     echo "**** Running generate_confs to regenerate any missing confs ****"
+#     generate_confs
+#     echo "**** generate_confs complete ****"
 
-    # Wait before regen
-    echo "**** Sleeping for ${REGEN_MISSING_CONFIGS_INTERVAL:-300} seconds until next check for missing configs ****"
-    sleep "${REGEN_MISSING_CONFIGS_INTERVAL:-300}"
+#     # Wait before regen
+#     echo "**** Sleeping for ${REGEN_MISSING_CONFIGS_INTERVAL:-300} seconds until next check for missing configs ****"
+#     sleep "${REGEN_MISSING_CONFIGS_INTERVAL:-300}"
 
-done &
+# done &
