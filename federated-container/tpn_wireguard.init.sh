@@ -293,7 +293,7 @@ while true; do
 
     # Always run generate confs on first-run to regenerate missing confs
     echo "**** Running generate_confs to regenerate any missing confs ****"
-    generate_confs &
+    generate_confs
     echo "**** generate_confs complete ****"
 
     # wait for regen
@@ -301,4 +301,4 @@ while true; do
     sleep "${REGEN_MISSING_CONFIGS_INTERVAL:-300}"
     
 
-done
+done &
