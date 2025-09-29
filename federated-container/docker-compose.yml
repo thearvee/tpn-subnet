@@ -181,7 +181,7 @@ services:
       - LOG_CONFS=${WIREGUARD_LOG_CONFS:-false}
       - REGEN_MISSING_CONFIGS_INTERVAL=${WIREGUARD_REGEN_MISSING_CONFIGS_INTERVAL:-300}
     volumes:
-      - ./wg_configs:/config
+      - ./wg_configs:/wg_configs
       - /lib/modules:/lib/modules:ro
     ports:
       - "${WIREGUARD_SERVERPORT:-51820}:51820/udp"
