@@ -25,35 +25,92 @@ fi
 
 generate_confs () {
 
-    # Create server keys and conf if not present
+    # Create server keys if not present
     mkdir -p /config/server
     if [[ ! -f /config/server/privatekey-server ]]; then
         umask 077
         wg genkey | tee /config/server/privatekey-server | wg pubkey > /config/server/publickey-server
     fi
+
+    # Temporary workspace to avoid races between parallel jobs
+    TMPWG="/config/wg_confs/.tmp"
+    rm -rf "${TMPWG}" 2>/dev/null || true
+    mkdir -p "${TMPWG}" "${TMPWG}/peer_fragments" "${TMPWG}/ip_map"
+
+    # Write server header to temp file (final assembly happens later)
     eval "$(printf %s)
-    cat <<DUDE > /config/wg_confs/wg0.conf
+    cat <<DUDE > ${TMPWG}/wg0.header.conf
 $(cat /config/templates/server.conf)
 
 DUDE"
 
-    # Run up to nproc amount of generate_single_conf in parallel
-    local nproc
-    nproc=$(nproc --all)
+    # Precompute unique IPs serially to avoid duplicate allocation under parallel load
     for i in "${PEERS_ARRAY[@]}"; do
-        generate_single_conf "${i}" &
-        if (( $(jobs -r -p | wc -l) >= nproc )); then
-            wait -n
+        if [[ ! "${i}" =~ ^[[:alnum:]]+$ ]]; then
+            echo "**** Peer ${i} contains non-alphanumeric characters and thus will be skipped. No config for peer ${i} will be generated. ****"
+            continue
+        fi
+        if [[ "${i}" =~ ^[0-9]+$ ]]; then
+            PEER_ID="peer${i}"
+        else
+            PEER_ID="peer_${i}"
+        fi
+
+        CLIENT_IP=""
+        if [[ -f "/config/${PEER_ID}/${PEER_ID}.conf" ]]; then
+            CLIENT_IP=$(grep "Address" "/config/${PEER_ID}/${PEER_ID}.conf" | awk '{print $NF}')
+            if [[ -n "${ORIG_INTERFACE}" ]] && [[ "${INTERFACE}" != "${ORIG_INTERFACE}" ]]; then
+                CLIENT_IP="${CLIENT_IP//${ORIG_INTERFACE}/${INTERFACE}}"
+            fi
+        else
+            for idx in {2..254}; do
+                PROPOSED_IP="${INTERFACE}.${idx}"
+                if ! grep -q -R "${PROPOSED_IP}" /config/peer*/*.conf 2>/dev/null \
+                   && ([[ -z "${ORIG_INTERFACE}" ]] || ! grep -q -R "${ORIG_INTERFACE}.${idx}" /config/peer*/*.conf 2>/dev/null) \
+                   && [[ ! -f "${TMPWG}/ip_map/${PROPOSED_IP}" ]]; then
+                    CLIENT_IP="${PROPOSED_IP}"
+                    : > "${TMPWG}/ip_map/${PROPOSED_IP}"
+                    break
+                fi
+            done
+        fi
+
+        if [[ -z "${CLIENT_IP}" ]]; then
+            echo "**** Could not determine IP for ${PEER_ID}; skipping. ****"
+            continue
+        fi
+        printf '%s' "${CLIENT_IP}" > "${TMPWG}/ip_map/${PEER_ID}.ip"
+    done
+
+    # Parallelize per-peer generation, but avoid writing to wg0.conf directly
+    local num_procs
+    num_procs=$(nproc 2>/dev/null || getconf _NPROCESSORS_ONLN 2>/dev/null || echo 4)
+    num_procs=$((num_procs * 5))
+    for i in "${PEERS_ARRAY[@]}"; do
+        # process only peers with an assigned IP
+        if [[ -f "${TMPWG}/ip_map/peer_${i}.ip" || -f "${TMPWG}/ip_map/peer${i}.ip" ]]; then
+            generate_single_conf "${i}" &
+            if (( $(jobs -r -p | wc -l) >= num_procs )); then
+                wait -n
+            fi
         fi
     done
     wait
 
+    # Assemble final wg0.conf atomically: header + all peer fragments
+    {
+        cat "${TMPWG}/wg0.header.conf";
+        for frag in $(ls -1 "${TMPWG}/peer_fragments"/*.server.conf 2>/dev/null | LC_ALL=C sort); do
+            cat "$frag"
+        done
+    } > "${TMPWG}/wg0.conf"
+    mv -f "${TMPWG}/wg0.conf" /config/wg_confs/wg0.conf
+    rm -rf "${TMPWG}" 2>/dev/null || true
 }
 
 generate_single_conf() {
 
     local i="$1"
-    echo "**** Generating conf for peer ${i} ****"
 
     if [[ ! "${i}" =~ ^[[:alnum:]]+$ ]]; then
             echo "**** Peer ${i} contains non-alphanumeric characters and thus will be skipped. No config for peer ${i} will be generated. ****"
@@ -74,20 +131,14 @@ generate_single_conf() {
                 wg genpsk > "/config/${PEER_ID}/presharedkey-${PEER_ID}"
             fi
 
-            # If conf already exists, extract the IP from it, otherwise find a new IP
-            if [[ -f "/config/${PEER_ID}/${PEER_ID}.conf" ]]; then
-                CLIENT_IP=$(grep "Address" "/config/${PEER_ID}/${PEER_ID}.conf" | awk '{print $NF}')
-                if [[ -n "${ORIG_INTERFACE}" ]] && [[ "${INTERFACE}" != "${ORIG_INTERFACE}" ]]; then
-                    CLIENT_IP="${CLIENT_IP//${ORIG_INTERFACE}/${INTERFACE}}"
-                fi
-            else
-                for idx in {2..254}; do
-                PROPOSED_IP="${INTERFACE}.${idx}"
-                if ! grep -q -R "${PROPOSED_IP}" /config/peer*/*.conf 2>/dev/null && ([[ -z "${ORIG_INTERFACE}" ]] || ! grep -q -R "${ORIG_INTERFACE}.${idx}" /config/peer*/*.conf 2>/dev/null); then
-                    CLIENT_IP="${PROPOSED_IP}"
-                    break
-                fi
-                done
+            # Use precomputed IP to avoid races with other jobs
+            local CLIENT_IP=""
+            if [[ -f "/config/wg_confs/.tmp/ip_map/${PEER_ID}.ip" ]]; then
+                CLIENT_IP=$(cat "/config/wg_confs/.tmp/ip_map/${PEER_ID}.ip")
+            fi
+            if [[ -z "${CLIENT_IP}" ]]; then
+                echo "**** Skipping ${PEER_ID}; no precomputed IP found ****"
+                return 0
             fi
 
             # Create peer conf file and add peer to server conf
@@ -97,8 +148,9 @@ generate_single_conf() {
                 cat <<DUDE > /config/${PEER_ID}/${PEER_ID}.conf
 $(cat /config/templates/peer.conf)
 DUDE"
-                # add peer info to server conf with presharedkey
-                cat <<DUDE >> /config/wg_confs/wg0.conf
+                # write peer fragment with presharedkey
+                mkdir -p /config/wg_confs/.tmp/peer_fragments
+                cat <<DUDE > /config/wg_confs/.tmp/peer_fragments/${PEER_ID}.server.conf
 [Peer]
 # ${PEER_ID}
 PublicKey = $(cat "/config/${PEER_ID}/publickey-${PEER_ID}")
@@ -111,33 +163,34 @@ DUDE
                 cat <<DUDE > /config/${PEER_ID}/${PEER_ID}.conf
 $(sed '/PresharedKey/d' "/config/templates/peer.conf")
 DUDE"
-                # add peer info to server conf without presharedkey
-                cat <<DUDE >> /config/wg_confs/wg0.conf
+                # write peer fragment without presharedkey
+                mkdir -p /config/wg_confs/.tmp/peer_fragments
+                cat <<DUDE > /config/wg_confs/.tmp/peer_fragments/${PEER_ID}.server.conf
 [Peer]
 # ${PEER_ID}
 PublicKey = $(cat "/config/${PEER_ID}/publickey-${PEER_ID}")
 DUDE
             fi
             SERVER_ALLOWEDIPS=SERVER_ALLOWEDIPS_PEER_${i}
-            # add peer's allowedips to server conf
+            # add peer's allowedips to server fragment
             if [[ -n "${!SERVER_ALLOWEDIPS}" ]]; then
                 echo "Adding ${!SERVER_ALLOWEDIPS} to wg0.conf's AllowedIPs for peer ${i}"
-                cat <<DUDE >> /config/wg_confs/wg0.conf
+                cat <<DUDE >> /config/wg_confs/.tmp/peer_fragments/${PEER_ID}.server.conf
 AllowedIPs = ${CLIENT_IP}/32,${!SERVER_ALLOWEDIPS}
 DUDE
             else
-                cat <<DUDE >> /config/wg_confs/wg0.conf
+                cat <<DUDE >> /config/wg_confs/.tmp/peer_fragments/${PEER_ID}.server.conf
 AllowedIPs = ${CLIENT_IP}/32
 DUDE
             fi
             # add PersistentKeepalive if the peer is specified
             if [[ -n "${PERSISTENTKEEPALIVE_PEERS_ARRAY}" ]] && ([[ "${PERSISTENTKEEPALIVE_PEERS_ARRAY[0]}" = "all" ]] || printf '%s\0' "${PERSISTENTKEEPALIVE_PEERS_ARRAY[@]}" | grep -Fxqz -- "${i}"); then
-                cat <<DUDE >> /config/wg_confs/wg0.conf
+                cat <<DUDE >> /config/wg_confs/.tmp/peer_fragments/${PEER_ID}.server.conf
 PersistentKeepalive = 25
 
 DUDE
             else
-                cat <<DUDE >> /config/wg_confs/wg0.conf
+                cat <<DUDE >> /config/wg_confs/.tmp/peer_fragments/${PEER_ID}.server.conf
 
 DUDE
             fi
@@ -145,7 +198,7 @@ DUDE
             # Log the conf file and QR code
             if [[ -z "${LOG_CONFS}" ]] || [[ "${LOG_CONFS}" = "true" ]]; then
                 echo "PEER ${i} QR code (conf file is saved under /config/${PEER_ID}):"
-                # qrencode -t ansiutf8 < "/config/${PEER_ID}/${PEER_ID}.conf"
+                qrencode -t ansiutf8 < "/config/${PEER_ID}/${PEER_ID}.conf"
             else
                 echo "PEER ${i} conf and QR code png saved in /config/${PEER_ID}"
             fi
@@ -232,7 +285,7 @@ lsiown -R abc:abc \
 while true; do
 
     # Check if generate confs is already running
-    if pgrep -f "generate_confs" >/dev/null 2>&1; then
+    if pgrep "generate_confs" >/dev/null 2>&1; then
         echo "**** generate_confs is already running, sleeping for ${REGEN_MISSING_CONFIGS_INTERVAL:-300} seconds until next check ****"
         sleep "${REGEN_MISSING_CONFIGS_INTERVAL:-300}"
         continue
