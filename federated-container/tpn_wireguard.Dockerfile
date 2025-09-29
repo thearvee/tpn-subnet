@@ -9,6 +9,7 @@ RUN echo "generate_confs" >> /etc/s6-overlay/s6-rc.d/init-wireguard-confs/run
 # Add a background looping line to run that regenerates deleted configs every REGEN_MISSING_CONFIGS_INTERVAL seconds
 # The loop checks if the previous command is still running, if so it skips this iteration
 RUN echo "\n\
+    # Background loop to regenerate missing wireguard config files every REGEN_MISSING_CONFIGS_INTERVAL seconds (default 300)\n\
     while true; do\n\
     if ! pgrep -f 'generate_confs' > /dev/null; then\n\
     echo 'Regenerating missing wireguard config files';\n\
