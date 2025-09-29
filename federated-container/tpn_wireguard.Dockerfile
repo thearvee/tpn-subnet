@@ -1,32 +1,9 @@
 # Use linuxserver wireguard image base
 FROM lscr.io/linuxserver/wireguard:latest
 
-# Modify the startup script so it always regenerates the client files that are missing
-# by appending "generate_confs" to the /etc/s6-overlay/s6-rc.d/init-wireguard-confs/run script
-RUN echo "echo 'Force-generating missing wireguard config files'" >> /etc/s6-overlay/s6-rc.d/init-wireguard-confs/run
-RUN echo "generate_confs" >> /etc/s6-overlay/s6-rc.d/init-wireguard-confs/run
-
-# Add a background looping line to run that regenerates deleted configs every REGEN_MISSING_CONFIGS_INTERVAL seconds
-# The loop checks if the previous command is still running, if so it skips this iteration
-RUN echo -e "# Setting up background regeneration of missing wireguard config files \n\
-    while true; do\n\
-    if ! pgrep -f 'generate_confs' > /dev/null; then\n\
-    echo 'Regenerating missing wireguard config files';\n\
-    generate_confs;\n\
-    echo 'Regeneration complete';\n\
-    else\n\
-    echo 'Skipping regeneration of wireguard config files, previous generation still running';\n\
-    fi\n\
-    sleep \${REGEN_MISSING_CONFIGS_INTERVAL:-300};\n\
-    done &\n\
-    " >> /etc/s6-overlay/s6-rc.d/init-wireguard-confs/run
-
-# Disable qrencode lines by commenting them out
-RUN sed -i 's/qrencode/#qrencode/g' /etc/s6-overlay/s6-rc.d/init-wireguard-confs/run
-
-# Edit the generate_confg function so there is a force block option
-RUN sed -i '/^[[:space:]]*generate_confs () {/a\
-    if [[ -n "$FORCE_BLOCK_CONFIG_GENERATION" ]]; then echo "Force blocking config generation due to FORCE_BLOCK_CONFIG_GENERATION being set"; return; fi' /etc/s6-overlay/s6-rc.d/init-wireguard-confs/run
+# Overwrite the /etc/s6-overlay/s6-rc.d/init-wireguard-confs/run file with our local ./tpn_wireguard.init.sh file
+COPY tpn_wireguard.init.sh /etc/s6-overlay/s6-rc.d/init-wireguard-confs/run
+RUN chmod +x /etc/s6-overlay/s6-rc.d/init-wireguard-confs/run
 
 # Add a healthcheck
 HEALTHCHECK --interval=2s --timeout=2s --start-period=120s --retries=5 CMD ip link show wg0
