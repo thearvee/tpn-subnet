@@ -232,7 +232,7 @@ lsiown -R abc:abc \
 while true; do
 
     # Check if generate confs is already running
-    if pgrep -f "/etc/s6-overlay/s6-rc.d/init-wireguard-confs/run" >/dev/null 2>&1; then
+    if pgrep -f "generate_confs" >/dev/null 2>&1; then
         echo "**** generate_confs is already running, sleeping for ${REGEN_MISSING_CONFIGS_INTERVAL:-300} seconds until next check ****"
         sleep "${REGEN_MISSING_CONFIGS_INTERVAL:-300}"
         continue
