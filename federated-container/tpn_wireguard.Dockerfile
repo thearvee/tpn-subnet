@@ -1,9 +1,6 @@
 # Use linuxserver wireguard image base
 FROM lscr.io/linuxserver/wireguard:latest
 
-# Apt update and upgrade -y for security updates
-RUN apt update && apt upgrade -y
-
 # Overwrite the /etc/s6-overlay/s6-rc.d/init-wireguard-confs/run file with our local ./tpn_wireguard.init.sh file
 COPY tpn_wireguard.init.sh /etc/s6-overlay/s6-rc.d/init-wireguard-confs/run
 RUN chmod +x /etc/s6-overlay/s6-rc.d/init-wireguard-confs/run
