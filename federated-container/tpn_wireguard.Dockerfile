@@ -13,6 +13,7 @@ RUN echo -e "# Setting up background regeneration of missing wireguard config fi
     if ! pgrep -f 'generate_confs' > /dev/null; then\n\
     echo 'Regenerating missing wireguard config files';\n\
     generate_confs;\n\
+    echo 'Regeneration complete';\n\
     else\n\
     echo 'Skipping regeneration of wireguard config files, previous generation still running';\n\
     fi\n\
