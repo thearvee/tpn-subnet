@@ -112,7 +112,7 @@ You need so set some settings so make sure your server operates how you want. Th
 ```bash
 cd tpn-subnet/federated-container
 # Select the appropriate template
-cp .env.{worker,miner,validator} .env
+cp .env.{worker,miner,validator}.example .env
 # Edit .env with your specific configuration
 nano .env
 ```
