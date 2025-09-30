@@ -54,11 +54,11 @@ async def forward(self):
                     bt.logging.error(f"Unexpected response format: {result}")
                     all_uids = []
                 else:
-                    all_uids = list(result.keys()).map(lambda x: int(x))
+                    all_uids = [int(x) for x in result.keys()]
                     bt.logging.info(f"Retrieved {len(all_uids)} UIDs from mining pool scores response")
-                    
+                    all_scores = [float(x['score']) for x in result.values()]
                     # Update the scores in the metagraph
-                    self.update_scores(result.values().map(lambda x: float(x['score'])), all_uids)
+                    self.update_scores(all_scores, all_uids)
     except Exception as e:
         bt.logging.error(f"Failed to broadcast neurons info: {e}")
 
