@@ -173,7 +173,7 @@ def add_miner_args(cls, parser):
         "--miner.server",
         type=str,
         help="The url of the miner server.",
-        default="http://127.0.0.1:3001",
+        default="http://127.0.0.1:3000",
     )
 
 
