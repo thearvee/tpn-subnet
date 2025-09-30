@@ -38,16 +38,13 @@ All servers share some of the same dependencies. No matter which you choose to r
 ```bash
 # Install the required system dependencies
 sudo apt update
-sudo apt install -y git python3 python3-venv python3-pip
+sudo apt install -y git
 sudo apt upgrade -y # OPTIONAL, this updated system packages
 
 # Install docker
 curl -fsSL https://get.docker.com -o get-docker.sh
 sudo sh get-docker.sh
 
-# Install node and pm2
-sudo apt install -y nodejs npm
-npm install -g pm2
 
 # Install wireguard and wireguard-tools, these are commonly preinstalled on Ubuntu
 sudo apt install -y wireguard wireguard-tools
@@ -67,9 +64,13 @@ newgrp docker << EOF
 EOF
 ```
 
-For miners and validators, you also need to install Bittensor components:
+For miners and validators (NOT workers), you also need to install python and Bittensor components:
 
 ```bash
+# Install python, node and pm2
+sudo apt install -y nodejs npm python3 python3-venv python3-pip
+npm install -g pm2
+
 # Install the required python dependencies
 cd tpn-subnet
 python3 -m venv venv
@@ -113,13 +114,23 @@ cd tpn-subnet/federated-container
 # Select the appropriate template
 cp .env.{worker,miner,validator} .env
 # Edit .env with your specific configuration
+nano .env
 ```
 
-Take note of the mandatory and optional sections.
+Take note of the mandatory and optional sections. For miners and validators, you need to get these two external API keys:
+
+- Make an account at https://lite.ip2location.com/. Set it as the `IP2LOCATION_DOWNLOAD_TOKEN` environment variable in the docker compose file. Add this in the specified location in the `.env` file you copied above.
+- Make an account at https://www.maxmind.com and generate a license key in account settings. Add this in the specified location in the `.env` file you copied above.
 
 ## Running a worker
 
-A worker is just a docker image with some settings. To start it run:
+A worker is just a docker image with some settings.
+
+> [!NOTE]
+> Before doing this, set up your .env file correctly. See the section "3: Configure your environment"
+
+
+To start the worker run:
 
 ```
 cd tpn-subnet
@@ -133,7 +144,22 @@ The miner consists out of two components:
 1. A miner docker container that is managed through `docker`
 2. A miner neuron that is managed through `pm2`
 
-To start the miner docker container, run the command below. Docker will know to run as a mining pool due to your `.env` settings.
+To start the miner docker container, three things must be done: setting up an env and starting docker. Docker will know to run as a mining pool due to your `.env` settings. 
+
+
+> [!NOTE]
+> Before doing this, set up your .env file correctly. See the section "3: Configure your environment"
+
+```bash
+# Copy the example .env
+cd tpn-subnet
+cp federated-container/.env.worker federated-container/.env
+
+# Edit the values in there
+nano .env
+```
+
+Then start docker compose like so:
 
 ```bash
 # NOTE: this assumes you are in the tpn-subnet directory
@@ -224,6 +250,10 @@ The validator also consists out of two components:
 2. A validator neuron that is managed through `pm2`
 
 To start the docker container run the command below. Docker will know to run as a validator due to your `.env` settings.
+
+
+> [!NOTE]
+> Before doing this, set up your .env file correctly. See the section "3: Configure your environment"
 
 
 ```bash
