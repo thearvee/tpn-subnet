@@ -42,7 +42,7 @@ router.post( "/broadcast/neurons", async ( req, res ) => {
         } )
 
         // If there are no valid entries, throw an error
-        if( valid_entries.length == 0 ) throw new Error( `No valid neurons provided` )
+        if( valid_entries.length == 0 ) return { error: `No valid neuron entries found` }
 
         // Split the validators, miners, and weight copiers
         const { validators=[], miners=[], weight_copiers=[], excluded=[] } = valid_entries.reduce( ( acc, entry ) => {

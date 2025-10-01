@@ -190,7 +190,7 @@ services:
     sysctls:
       - net.ipv4.conf.all.src_valid_mark=1
     networks:
-      - tpn-internal
+      - tpn-external
     profiles:
       - worker
     healthcheck:
