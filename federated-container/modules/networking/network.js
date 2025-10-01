@@ -37,15 +37,20 @@ export function request_is_local( request ) {
         return false
     }
 
-    // Check if the ip is local
-    const { TPN_INTERNAL_SUBNET='172.20.0.0/16' } = process.env
+    // Check if the ip is local, internal subnet means other docker containers, external subnet means host machine
+    // These subnets must match the docker network subnets in docker-compose.yml and the .env file
+    // Default values are set here, but should be overridden by environment variables
+    const { TPN_INTERNAL_SUBNET='172.20.0.0/16', TPN_EXTERNAL_SUBNET='172.21.0.0/16' } = process.env
     const internal_prefix = TPN_INTERNAL_SUBNET.split( '.' ).slice( 0, 3 ).join( '.' )
+    const external_prefix = TPN_EXTERNAL_SUBNET.split( '.' ).slice( 0, 3 ).join( '.' )
     const local_ip_patterns_v4_and_v6 = [
         // Localhost
         '127.0.0.1',
         '::1',
         '::ffff:127.0.0.1',
         internal_prefix,
+        external_prefix,
+        `::ffff:${ external_prefix }.`,
         `::ffff:${ internal_prefix }.`,
     ]
     const is_local = local_ip_patterns_v4_and_v6.some( internal_ip => unspoofable_ip.startsWith( internal_ip ) )

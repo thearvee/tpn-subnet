@@ -40,8 +40,9 @@ services:
       - CONTACT_METHOD
       - WIREGUARD_PEER_COUNT=${WIREGUARD_PEER_COUNT:-254}
 
-      # Networking
+      # Networking so the container knows the docker network subnets
       - TPN_INTERNAL_SUBNET
+      - TPN_EXTERNAL_SUBNET
 
     volumes:
       - ./wg_configs:/app/wg_configs
@@ -206,7 +207,7 @@ networks:
     internal: true
     ipam:
       config:
-        # Make sure that if you overrise this in the cli environment, you add it to .env too so the container knows
+        # Subnet edits must be synced in: .env (so the container knows), AND either in environment variables where docker compose is started OR in the values hardcoded below (so docker-compose.yml interpolation works)
         - subnet: ${TPN_INTERNAL_SUBNET:-172.20.0.0/16}
           gateway: ${TPN_INTERNAL_GATEWAY:-172.20.0.1}
 
@@ -215,7 +216,7 @@ networks:
     driver: bridge
     ipam:
       config:
-        # Make sure that if you override this in the cli environment, you add it to .env too so the container knows
+        # Subnet edits must be synced in: .env (so the container knows), AND either in environment variables where docker compose is started OR in the values hardcoded below (so docker-compose.yml interpolation works)
         - subnet: ${TPN_EXTERNAL_SUBNET:-172.21.0.0/16}
           gateway: ${TPN_EXTERNAL_GATEWAY:-172.21.0.1}
 

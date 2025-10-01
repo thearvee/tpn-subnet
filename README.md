@@ -132,7 +132,12 @@ A worker is just a docker image with some settings.
 
 To start the worker run:
 
-```
+```bash
+# These lines are optional but recommended, they tell the docker container how much memory it can safely use on your system
+QUARTER_OF_FREE_RAM=$(($(free -m | awk 'NR==2{print $2}') * 3 / 4))
+export CONTAINER_MAX_PROCESS_RAM_MB="$QUARTER_OF_FREE_RAM"
+
+# NOTE: this assumes you are in the tpn-subnet directory
 cd tpn-subnet
 docker compose -f federated-container/docker-compose.yml --profile worker up -d
 ```
@@ -162,6 +167,10 @@ nano .env
 Then start docker compose like so:
 
 ```bash
+# These lines are optional but recommended, they tell the docker container how much memory it can safely use on your system
+QUARTER_OF_FREE_RAM=$(($(free -m | awk 'NR==2{print $2}') * 3 / 4))
+export CONTAINER_MAX_PROCESS_RAM_MB="$QUARTER_OF_FREE_RAM"
+
 # NOTE: this assumes you are in the tpn-subnet directory
 docker compose -f federated-container/docker-compose.yml up -d
 ```
@@ -257,6 +266,10 @@ To start the docker container run the command below. Docker will know to run as 
 
 
 ```bash
+# These lines are optional but recommended, they tell the docker container how much memory it can safely use on your system
+QUARTER_OF_FREE_RAM=$(($(free -m | awk 'NR==2{print $2}') * 3 / 4))
+export CONTAINER_MAX_PROCESS_RAM_MB="$QUARTER_OF_FREE_RAM"
+
 # NOTE: this assumes you are in the tpn-subnet directory
 docker compose -f federated-container/docker-compose.yml up -d
 ```
