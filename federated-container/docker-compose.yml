@@ -8,7 +8,7 @@ services:
     container_name: tpn-federated
     restart: unless-stopped
     # .env note: environment variable interpolation is done with the .env in the folder where you run docker compose
-    # the env_file only passes into the container
+    # the env_file only passes into the container, meaning they do not get added in ${VAR} fields in docker-compose.yml
     env_file:
       - .env
     environment:

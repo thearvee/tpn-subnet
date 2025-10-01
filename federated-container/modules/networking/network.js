@@ -49,6 +49,9 @@ export function request_is_local( request ) {
         `::ffff:${ internal_prefix }.`,
     ]
     const is_local = local_ip_patterns_v4_and_v6.some( internal_ip => unspoofable_ip.startsWith( internal_ip ) )
+
+    // If not local, log a warning
+    if( !is_local ) log.info( `Request from non-local ip ${ unspoofable_ip }/${ spoofable_ip } does not match patterns: ${ local_ip_patterns_v4_and_v6.join( ', ' ) }` )
     
     return is_local
 
