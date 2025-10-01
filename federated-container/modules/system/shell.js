@@ -62,7 +62,7 @@ export async function check_system_warnings() {
 
         // Check system ram amount
         const { mode, worker_mode, validator_mode, miner_mode } = run_mode()
-        const ram_reccs = { miner: 8, validator: 8, worker: 2 }
+        const ram_reccs = { miner: 4, validator: 8, worker: 1 }
         const min_ram_gib = ram_reccs[ mode ] || 8
         const ram_check = await run( `${ precall_setup }free -g | grep Mem | awk '{print $2}'` )
         const ram_gib = ram_check.stdout && parseInt( ram_check.stdout.trim() )
@@ -82,7 +82,7 @@ export async function check_system_warnings() {
 
         // Check if the host user is root
         const is_root = process.getuid && process.getuid() === 0
-        if( is_root ) log.warn( `You are running this validator as root, which is not recommended. Please run it as a non-root user to avoid potential security issues.` )
+        if( is_root ) log.warn( `You are running this ${ mode } as root, which is not recommended. Please run it as a non-root user to avoid potential security issues.` )
 
         // If the constinuent variables are set, but not the SERVER_PUBLIC_URL this is probably a raw nodejs run, we'll declare the env var
         const { SERVER_PUBLIC_URL, SERVER_PUBLIC_PROTOCOL, SERVER_PUBLIC_HOST, SERVER_PUBLIC_PORT } = process.env
