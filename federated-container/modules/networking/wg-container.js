@@ -20,15 +20,12 @@ export async function check_if_wg_reachable() {
         const { WIREGUARD_SERVERPORT, SERVER_PUBLIC_HOST } = process.env
         if( !WIREGUARD_SERVERPORT ) throw new Error( 'WIREGUARD_SERVERPORT not set' )
         if( !SERVER_PUBLIC_HOST ) throw new Error( 'SERVER_PUBLIC_HOST not set' )
-        log.info( `Checking if wireguard is reachable at ${ SERVER_PUBLIC_HOST }:${ WIREGUARD_SERVERPORT }` )
-        const command = `nc -vzu -w 10 ${ SERVER_PUBLIC_HOST } ${ WIREGUARD_SERVERPORT } && echo "reachable" || echo "unreachable"`
+        const command = `nc -vzu -w 10 ${ SERVER_PUBLIC_HOST } ${ WIREGUARD_SERVERPORT }`
+        log.info( `Checking if wireguard is reachable with command: ${ command }` )
         const { stdout, stderr } = await run( command )
-        if( stderr ) {
-            log.error( `Error checking if wireguard is reachable:`, stderr )
-            return false
-        }
-        const reachable = stdout.trim() === 'reachable'
-        log.info( `Wireguard reachable: ${ reachable }` )
+        const outputs = `stdout: ${ stdout }, stderr: ${ stderr }`
+        const reachable = outputs.includes( 'succeeded' )
+        log.info( `Wireguard reachable: ${ reachable }. ${ outputs }` )
         return reachable
 
 
