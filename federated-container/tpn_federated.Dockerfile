@@ -28,6 +28,9 @@ RUN dpkg --configure resolvconf
 RUN apt update && apt install -y git
 RUN git config --global --add safe.directory /app
 
+# Install netcat
+RUN apt update && apt install -y netcat
+
 # Copy package management files
 COPY package*.json ./
 
