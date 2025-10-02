@@ -1,7 +1,9 @@
 import { cache, is_ipv4, log, multiline_trim, random_number_between, sanetise_ipv4, wait } from "mentie"
-import { run } from "../system/shell.js"
+import { get_git_branch_and_hash, run } from "../system/shell.js"
 import { generate_challenge } from "../scoring/challenge_response.js"
 import { get_free_interfaces } from "./network.js"
+const { branch, hash } = await get_git_branch_and_hash()
+
 
 // Timeout used for curl commands
 const { CI_MODE } = process.env
@@ -272,7 +274,7 @@ export function parse_wireguard_config( { wireguard_config, expected_endpoint_ip
  * @param {boolean} params.verbose - Whether to log verbosely.
  * @returns {Promise<{ valid: boolean, message: string }>} - The result of the wireguard connection test.
  */
-export async function test_wireguard_connection( { wireguard_config, verbose=CI_MODE === 'true' } ) {
+export async function test_wireguard_connection( { wireguard_config, verbose=CI_MODE === 'true' || branch === 'development' } ) {
 
     // Check if we should mock
     const { CI_MOCK_WORKER_RESPONSES } = process.env
