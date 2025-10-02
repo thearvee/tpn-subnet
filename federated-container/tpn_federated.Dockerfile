@@ -29,7 +29,7 @@ RUN apt update && apt install -y git
 RUN git config --global --add safe.directory /app
 
 # Install netcat
-RUN apt update && apt install -y netcat
+RUN apt update && apt install -y netcat-openbsd
 
 # Copy package management files
 COPY package*.json ./

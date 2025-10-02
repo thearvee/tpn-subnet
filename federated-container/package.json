@@ -1,6 +1,6 @@
 {
   "name": "tpn-node",
-  "version": "0.0.19",
+  "version": "0.0.20",
   "description": "TPN Node docker container code, used for validators, miners, and workers",
   "main": "app.js",
   "type": "module",
