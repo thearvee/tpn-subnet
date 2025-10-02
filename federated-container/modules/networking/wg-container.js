@@ -3,9 +3,68 @@ import { promises as fs } from "fs"
 import { join } from "path"
 import { exec } from "child_process"
 import { register_wireguard_lease } from '../database/worker_wireguard.js'
+import { run } from "../system/shell.js"
 const { dirname } = import.meta
 const wireguard_folder = join( dirname, '../../', 'wg_configs' )
 const { CI_MODE, CI_MOCK_WG_CONTAINER, WIREGUARD_PEER_COUNT=254 } = process.env
+
+/**
+ * Checks if the WireGuard server is reachable on its public IP and port.
+ * @returns {Promise<boolean>} - A promise that resolves to true if the WireGuard server is reachable, false otherwise.
+ */
+export async function check_if_wg_reachable() {
+
+    try {
+
+        // Run netcat command to check if we can reach the wg container on the public ip
+        const { WIREGUARD_SERVERPORT, SERVER_PUBLIC_HOST } = process.env
+        if( !WIREGUARD_SERVERPORT ) throw new Error( 'WIREGUARD_SERVERPORT not set' )
+        if( !SERVER_PUBLIC_HOST ) throw new Error( 'SERVER_PUBLIC_HOST not set' )
+        log.info( `Checking if wireguard is reachable at ${ SERVER_PUBLIC_HOST }:${ WIREGUARD_SERVERPORT }` )
+        const command = `nc -vzu -w 10 ${ SERVER_PUBLIC_HOST } ${ WIREGUARD_SERVERPORT } && echo "reachable" || echo "unreachable"`
+        const { stdout, stderr } = await run( command )
+        if( stderr ) {
+            log.error( `Error checking if wireguard is reachable:`, stderr )
+            return false
+        }
+        const reachable = stdout.trim() === 'reachable'
+        log.info( `Wireguard reachable: ${ reachable }` )
+        return reachable
+
+
+    } catch ( e ) {
+        log.error( `Error in check_if_wg_reachable:`, e )
+        return false
+    }
+
+}
+
+/**
+ * Waits until the WireGuard port is reachable or until the maximum wait time is exceeded.
+ * @param {Object} params - The parameters for the function.
+ * @param {number} [params.max_wait_ms=120000] - The maximum time in milliseconds to wait.
+ * @returns {Promise<boolean>} - A promise that resolves to true if the WireGuard port becomes reachable within the grace period, or false otherwise.
+ * */
+export async function wait_for_wg_port_to_be_reachable( { max_wait_ms=Infinity }={} ) {
+
+    // Time tracking
+    const start = Date.now()
+    let time_passed = 0
+    log.info( `Waiting for wireguard port to be reachable, max wait time ${ max_wait_ms }ms` )
+
+    // Wait for count
+    let reachable = await check_if_wg_reachable()
+    while( !reachable && time_passed < max_wait_ms ) {
+        log.info( `Wireguard port not reachable, waiting...` )
+        await wait( 5_000 )
+        reachable = await check_if_wg_reachable()
+        time_passed = Date.now() - start
+    }
+
+    // Return if we reached the count
+    return reachable
+
+}
 
 /**
  * Asynchronously checks if the Wireguard server is ready by ensuring the necessary folders and configuration file exist.

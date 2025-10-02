@@ -99,8 +99,9 @@ if( validator_mode ) {
 if( worker_mode ) {
 
     // Wait for the wg container to be ready
-    const { wait_for_wireguard_config_count } = await import( './modules/networking/wg-container.js' )
+    const { wait_for_wireguard_config_count, wait_for_wg_port_to_be_reachable } = await import( './modules/networking/wg-container.js' )
     await wait_for_wireguard_config_count()
+    await wait_for_wg_port_to_be_reachable()
 
     const { router: worker_register_router } = await import( './routes/worker/register.js' )
     app.use( '/worker/register', worker_register_router )

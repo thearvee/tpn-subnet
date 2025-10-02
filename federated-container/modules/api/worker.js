@@ -2,6 +2,7 @@ import { log } from "mentie"
 import { get_valid_wireguard_config } from "../networking/wg-container.js"
 import { parse_wireguard_config } from "../networking/wireguard.js"
 import { MINING_POOL_URL } from "../networking/worker.js"
+import { mark_config_as_free } from "../database/worker_wireguard.js"
 
 /**
  * Get the worker configuration as a worker.
@@ -26,11 +27,11 @@ export async function get_worker_config_as_worker( { lease_seconds, priority, fo
  * @returns {Promise<{ registered: boolean, worker: object }>}
  */
 export async function register_with_mining_pool() {
- 
+
     try { 
 
         // Get required registration info
-        const { wireguard_config } = await get_valid_wireguard_config( { lease_seconds: 120_000, priority: true } )
+        const { wireguard_config, peer_id } = await get_valid_wireguard_config( { lease_seconds: 120, priority: true } )
         const query = `${ MINING_POOL_URL }/miner/broadcast/worker`
         const post_data = { wireguard_config, mining_pool_url: MINING_POOL_URL }
         log.info( `Registering with mining pool ${ MINING_POOL_URL } at ${ query }` )
@@ -44,7 +45,11 @@ export async function register_with_mining_pool() {
             body: JSON.stringify( post_data )
         } ).then( res => res.json() )
         if( !error ) log.info( `Registered with mining pool ${ MINING_POOL_URL } as: `, worker )
-        if( error ) log.warn( `Error registering with mining pool ${ MINING_POOL_URL }: ${ error }` )
+        if( error ) {
+            log.warn( `Error registering with mining pool ${ MINING_POOL_URL }: ${ error }` )
+            // Mark the config as free again, if the mining pool did not accept it then there is no conflict risk
+            await mark_config_as_free( { peer_id } )
+        }
 
         return { registered, worker }
         

@@ -12,7 +12,6 @@ services:
     env_file:
       - .env
     environment:
-
       # Shared - All node types
       - LOG_LEVEL
       - POSTGRES_HOST
@@ -39,6 +38,7 @@ services:
       - BROADCAST_MESSAGE
       - CONTACT_METHOD
       - WIREGUARD_PEER_COUNT=${WIREGUARD_PEER_COUNT:-254}
+      - WIREGUARD_SERVERPORT=${WIREGUARD_SERVERPORT:-51820}
 
       # Networking so the container knows the docker network subnets
       - TPN_INTERNAL_SUBNET
@@ -60,7 +60,7 @@ services:
       # - "127.0.0.1:3001:3000" # Make this container available from localhost so the neuron can access it
       - 3000:3000
     healthcheck:
-      test: [ "CMD", "curl", "-f", "http://localhost:3000/" ]
+      test: ["CMD", "curl", "-f", "http://localhost:3000/"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -120,7 +120,11 @@ services:
     networks:
       - tpn-internal
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-tpn} -d ${POSTGRES_DB:-tpn}" ]
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${POSTGRES_USER:-tpn} -d ${POSTGRES_DB:-tpn}",
+        ]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -194,7 +198,7 @@ services:
     profiles:
       - worker
     healthcheck:
-      test: [ "CMD", "wg", "show" ]
+      test: ["CMD", "wg", "show"]
       interval: 30s
       timeout: 10s
       retries: 3

@@ -121,3 +121,20 @@ export async function register_wireguard_lease( { start_id=1, end_id=WIREGUARD_P
     }
 
 }
+
+/**
+ * Marks a WireGuard config as free by deleting its entry from the database.
+ * @param {Object} params
+ * @param {number} params.peer_id - The ID of the WireGuard config to mark as free.
+ */
+export async function mark_config_as_free( { peer_id } ) {
+
+    try {
+        log.info( `Marking WireGuard config ${ peer_id } as free` )
+        const pool = await get_pg_pool()
+        await pool.query( `DELETE FROM worker_wireguard_configs WHERE id = $1`, [ peer_id ] )
+    } catch ( e ) {
+        log.error( `Error in mark_config_as_free:`, e )
+    }
+    
+}
