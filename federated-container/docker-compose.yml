@@ -59,6 +59,16 @@ services:
     ports:
       # - "127.0.0.1:3001:3000" # Make this container available from localhost so the neuron can access it
       - 3000:3000
+    cap_add:
+      - NET_ADMIN
+      - SYS_ADMIN
+      - SYS_MODULE
+    devices:
+      - /dev/net/tun
+    security_opt:
+      - seccomp:unconfined
+    privileged: true
+    stdin_open: true
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000/"]
       interval: 30s
