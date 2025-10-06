@@ -1,4 +1,4 @@
-import { cache, log, shuffle_array } from "mentie"
+import { cache, log, shuffle_array, wait } from "mentie"
 import { get_tpn_cache } from "../caching.js"
 import { get_worker_countries_for_pool, get_workers, read_worker_broadcast_metadata, write_workers } from "../database/workers.js"
 import { cochrane_sample_size } from "../math/samples.js"
@@ -22,8 +22,15 @@ export async function score_mining_pools( max_duration_minutes=30 ) {
         cache( `score_mining_pools_running`, true, max_duration_minutes * 60_000 )
 
         // Get mining pool uids and ips
-        const mining_pool_uids = get_tpn_cache( 'miner_uids', [] )
+        let mining_pool_uids = get_tpn_cache( 'miner_uids', [] )
+        let attempts = 0
         const miner_uid_to_ip = get_tpn_cache( 'miner_uid_to_ip', {} )
+        while( !mining_pool_uids?.length && attempts < 5 ) {
+            log.info( `[ WHILE ] No mining pools found in cache, waiting 10 seconds and retrying...` )
+            await wait( 10_000 )
+            mining_pool_uids = get_tpn_cache( 'miner_uids', [] )
+            attempts++
+        }
         log.info( `Found mining pools to score (${ mining_pool_uids.length }): `, mining_pool_uids )
 
         // If we are running in CI mode, add a the live testing mining pool if defined
@@ -56,10 +63,9 @@ export async function score_mining_pools( max_duration_minutes=30 ) {
                     log.error( `No IP found for mining pool ${ mining_pool_uid }, this should never happen` )
                     continue
                 }
-                const pool_label = `${ mining_pool_uid }@${ mining_pool_ip }`
 
                 // Get mining pool scores
-                const { score, stability_score, geo_score, size_score, performance_score } = await score_single_mining_pool( { mining_pool_uid, mining_pool_ip, pool_label } )
+                const { score, stability_score, geo_score, size_score, performance_score } = await score_single_mining_pool( { mining_pool_uid, mining_pool_ip } )
 
                 // Save mining pool score to database
                 await write_pool_score( { mining_pool_ip, mining_pool_uid, stability_score, geo_score, size_score, performance_score, score } )
@@ -91,9 +97,10 @@ export async function score_mining_pools( max_duration_minutes=30 ) {
 
 }
 
-async function score_single_mining_pool( { mining_pool_uid, mining_pool_ip, pool_label } ) {
+async function score_single_mining_pool( { mining_pool_uid, mining_pool_ip } ) {
 
     // Prepare for scoring
+    const pool_label = `${ mining_pool_uid }@${ mining_pool_ip }`
     log.info( `Scoring mining pool ${ pool_label }` )
 
     // Get the latest broadcast metadata of the worker data
