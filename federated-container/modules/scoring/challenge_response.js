@@ -27,7 +27,7 @@ export async function generate_challenge( { tag }={} ) {
     log.info( `New challenge url generated: ${ challenge_url }` )
 
     // Log generation
-    log.info( `Generated new challenge/response pair:`, { challenge, solution, challenge_url, tag } )
+    log.chatter( `Generated new challenge/response pair:`, { challenge, solution, challenge_url, tag } )
 
     return { challenge, solution, challenge_url }
 

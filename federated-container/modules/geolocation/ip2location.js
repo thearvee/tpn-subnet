@@ -101,12 +101,12 @@ async function download_url_to_file( url, path ) {
 
     // If the zip is not outdated but does exits, extract only
     if( !zip_outdated && zip_file_exists ) {
-        log.info( `The zip file ${ zip_path } is not outdated, extracting the file` )
+        log.chatter( `The zip file ${ zip_path } is not outdated, extracting the file` )
         return unzip_bin( zip_path, database_file_location )
     }
 
     // Download the file
-    log.info( `Downloading the file ${ path } from ${ url }` )
+    log.chatter( `Downloading the file ${ path } from ${ url }` )
     return new Promise( ( resolve, reject ) => {
 
         // In CI mode do not download
@@ -119,12 +119,12 @@ async function download_url_to_file( url, path ) {
         const download = https.get( url, response => {
 
             // Log response status
-            log.info( `Response status: ${ response.statusCode }, content type: ${ response.headers[ 'content-type' ] }` )
+            log.chatter( `Response status: ${ response.statusCode }, content type: ${ response.headers[ 'content-type' ] }` )
 
             // Check if the response is a redirect
             if( response.statusCode >= 300 && response.statusCode < 400 ) {
                 const redirect_url = new URL( response.headers.location )
-                log.info( `Redirecting to ${ redirect_url }` )
+                log.chatter( `Redirecting to ${ redirect_url }` )
 
                 // Recursively download the redirect
                 return download_url_to_file( redirect_url, path ).then( resolve ).catch( reject )
@@ -138,9 +138,9 @@ async function download_url_to_file( url, path ) {
             }
 
             // If the response is non binary, and we already have a zipfile, unzip it
-            log.info( `Zip file exists: ${ zip_file_exists }` )
+            log.chatter( `Zip file exists: ${ zip_file_exists }` )
             if( non_binary_response && zip_file_exists ) {
-                log.info( `The response is not a binary file, but we already have a zip file to extract` )
+                log.chatter( `The response is not a binary file, but we already have a zip file to extract` )
                 return unzip_bin( zip_path, database_file_location ).then( resolve ).catch( reject )
             }
             if( non_binary_response && !zip_file_exists ) {
@@ -149,12 +149,12 @@ async function download_url_to_file( url, path ) {
             }
             
             // Create file stream
-            log.info( `Creating the file stream ${ zip_path }` )
+            log.chatter( `Creating the file stream ${ zip_path }` )
             
             // Create the folder recursively if needed
             const folder = path.split( '/' ).slice( 0, -1 ).join( '/' )
             if( !fs.existsSync( folder ) ) {
-                log.info( `Creating the folder ${ folder }` )
+                log.chatter( `Creating the folder ${ folder }` )
                 fs.mkdirSync( folder, { recursive: true } )
             }
 
@@ -167,7 +167,7 @@ async function download_url_to_file( url, path ) {
             // On file finish, close and resolve
             file.on( 'finish', () => {
                 file.close()
-                log.info( `Downloaded the file ${ path }` )
+                log.chatter( `Downloaded the file ${ path }` )
 
                 // Unzip the file
                 unzip_bin( zip_path, database_file_location ).then( resolve ).catch( reject )
@@ -219,11 +219,11 @@ export async function update_ip2location_bin() {
 export async function is_data_center( ip_address ) {
 
     // Check for cached value
-    log.info( `Checking for cached value for IP address ${ ip_address }` )
+    log.chatter( `Checking for cached value for IP address ${ ip_address }` )
     const cache_key = `is_dc_${ ip_address }`
     let cached_value = cache( cache_key )
     if( typeof cached_value == 'boolean' ) {
-        log.info( `Returning cached value for IP address ${ ip_address }` )
+        log.chatter( `Returning cached value for IP address ${ ip_address }` )
         return cached_value
     }
 
@@ -236,7 +236,7 @@ export async function is_data_center( ip_address ) {
     // Check database file metadata
     const { mtimeMs } = fs.statSync( database_file_location )
     const database_age_ms = Date.now() - mtimeMs
-    log.info( `Database file age: ${ database_age_ms } ms` )
+    log.chatter( `Database file age: ${ database_age_ms } ms` )
 
     // Get connection type
     ip2location.open( database_file_location )
@@ -248,7 +248,7 @@ export async function is_data_center( ip_address ) {
     log.info( `Retrieved connection type for IP address ${ ip_address } hos ted by ${ automated_service_name }: ${ is_datacenter }` )
     
     cached_value = cache( cache_key, is_datacenter, 5 * 60_000 )
-    log.info( `Returning connection type for IP address ${ ip_address }: `, cached_value )
+    log.chatter( `Returning connection type for IP address ${ ip_address }: `, cached_value )
     return cached_value
 
 }

@@ -59,7 +59,7 @@ export async function write_workers( { workers, mining_pool_uid='internal', is_m
         // Writing workers to db
         const worker_write_result = await pool.query( query )
         const broadcast_metadata = is_miner_broadcast ? await write_worker_broadcast_metadata( { mining_pool_uid, workers: valid_workers } ) : null
-        log.info( `Wrote ${ worker_write_result.rowCount } workers to database${ is_miner_broadcast ? ' through miner broadcast ' : ''  }for mining pool ${ mining_pool_uid } with metadata: `, broadcast_metadata )
+        log.info( `Wrote ${ worker_write_result.rowCount } workers to database${ is_miner_broadcast ? ' through miner broadcast ' : ''  }for mining pool ${ mining_pool_uid } ${ broadcast_metadata ? 'with broadcast metadata: ' : '' }`, broadcast_metadata ? broadcast_metadata : '' )
         
         // Mark workers not in this broadcast as stale
         if( is_miner_broadcast ) await mark_workers_stale( { mining_pool_uid, active_workers: valid_workers } )

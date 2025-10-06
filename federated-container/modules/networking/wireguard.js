@@ -116,7 +116,7 @@ export async function clean_up_tpn_interfaces( { interfaces, ip_addresses, dryru
     // Get all interfaces
     if( !interfaces && !ip_addresses ) {
         log.info( `No interfaces provided, getting all interfaces` )
-        const { stdout } = await run( `ip link show`, { silent: false } )
+        const { stdout } = await run( `ip link show` )
         interfaces = stdout?.split( '\n' ).filter( line => line.includes( 'tpn' ) ).map( line => line.split( ':' )[ 1 ].trim() )   
         log.chatter( `Found TPN interfaces:`, interfaces )
     }
