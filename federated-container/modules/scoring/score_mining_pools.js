@@ -71,7 +71,8 @@ export async function score_mining_pools( max_duration_minutes=30 ) {
                 // Formulate pool label
                 const mining_pool_ip = miner_uid_to_ip[ mining_pool_uid ]
                 if( !mining_pool_ip ) {
-                    log.error( `No IP found for mining pool ${ mining_pool_uid }, this should never happen` )
+                    log.info( `No IP found for mining pool ${ mining_pool_uid }, this should never happen` )
+                    results[ mining_pool_uid ] = { mining_pool_ip, note: 'No IP found' }
                     continue
                 }
 
@@ -83,12 +84,11 @@ export async function score_mining_pools( max_duration_minutes=30 ) {
 
                 // Write results
                 results[ mining_pool_uid ] = { mining_pool_ip, score, stability_score, geo_score, size_score, performance_score }
+                log.info( `Completed scoring for mining pool ${ mining_pool_uid } (${ score })` )
 
 
             } catch ( e ) {
                 log.error( `Error scoring mining pool ${ mining_pool_uid }:`, e )
-            } finally {
-                log.info( `Completed scoring for mining pool ${ mining_pool_uid }` )
             }
 
         }
@@ -145,6 +145,7 @@ async function score_single_mining_pool( { mining_pool_uid, mining_pool_ip } ) {
     // Score the selected workers
     const { successes, failures, workers_with_status } = await validate_and_annotate_workers( { workers_with_configs: selected_workers } )
     log.info( `Scored workers for mining pool ${ pool_label }, successes: ${ successes?.length }, failures: ${ failures?.length }. Status annotated: ${ workers_with_status?.length }` )
+    log.chatter( `Failure exerpt: `, failures?.slice( 0, 3 ) )
 
     // Save updated worker data to database
     await write_workers( { workers: workers_with_status, mining_pool_uid, mining_pool_ip } )
@@ -160,7 +161,7 @@ async function score_single_mining_pool( { mining_pool_uid, mining_pool_ip } ) {
     const size_score = last_known_worker_pool_size * stability_fraction
 
     // Calculate performance score
-    const mean_test_length_s = successes.reduce( ( acc, { test_duration_s } ) => acc + test_duration_s, 0 ) / successes.length
+    const mean_test_length_s = successes.reduce( ( acc, { test_duration_s=Infinity } ) => acc + test_duration_s, 0 ) / successes.length
     log.info( `Mean test length ${ mean_test_length_s } based on ${ successes.length } tests` )
     const s_considered_good = 3
     const performance_score = Math.min( 100 / ( mean_test_length_s / s_considered_good ), 100 )
@@ -173,7 +174,7 @@ async function score_single_mining_pool( { mining_pool_uid, mining_pool_ip } ) {
     log.info( `Geo completeness for mining pool ${ pool_label }: ${ countries_in_pool.length } unique countries out of ${ total_countries }, geo_score: ${ geo_score }` )
 
     // Calculate the composite score
-    log.info( `Scoring inputs: `, { size_score, stability_score, stability_fraction, performance_score, performance_fraction, geo_score, geo_completeness_fraction } )
+    log.info( `Scoring inputs for ${ pool_label }: `, { size_score, stability_score, stability_fraction, performance_score, performance_fraction, geo_score, geo_completeness_fraction } )
     const score = size_score * performance_fraction * geo_completeness_fraction * stability_fraction
     log.info( `Final score for mining pool ${ pool_label }: ${ score }` )
 

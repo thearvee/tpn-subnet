@@ -163,6 +163,7 @@ export async function validate_and_annotate_workers( { workers_with_configs=[] }
         } finally {
             test_result.test_duration_s = ( Date.now() - start ) / 1_000
         }
+        log.chatter( `Worker ${ worker.ip } test result:`, test_result )
 
         return test_result
     
