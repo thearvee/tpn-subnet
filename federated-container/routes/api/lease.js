@@ -21,12 +21,14 @@ router.get( '/lease/new', async ( req, res ) => {
 
         // Caller validation based on run mode
         const { mode, worker_mode, miner_mode, validator_mode } = run_mode()
-        const is_validator = await is_validator_request( req )
-        if( miner_mode && !is_validator ) throw new Error( `Miners only accept lease requests from validators, which you are not` )
+        if( miner_mode ) {
+            const is_validator = await is_validator_request( req )
+            if( !is_validator ) throw new Error( `Miners only accept lease requests from validators, which you are not` )
+        }
 
         // Worker access controls
         if( worker_mode && !CI_MOCK_WORKER_RESPONSES ) {
-            log.info( `Checking if caller is mining pool ${ MINING_POOL_URL }` )
+            log.info( `Checking if caller is mining pool: ${ MINING_POOL_URL }` )
             const { hostname } = new URL( MINING_POOL_URL )
             let { unspoofable_ip } = ip_from_req( req )
             const { ip: mining_pool_ip } = await resolve_domain_to_ip( { domain: hostname } )
@@ -71,7 +73,7 @@ router.get( '/lease/new', async ( req, res ) => {
         if( blacklist?.length && blacklist.some( ip => !is_ipv4( ip ) ) ) throw new Error( `Invalid ip addresses in blacklist` )
 
         // Get relevant config based on run mode
-        log.info( `Getting config as ${ mode } with params:`, config_meta )
+        log.chatter( `Getting config as ${ mode } with params:`, config_meta )
         let config = null
         if( validator_mode ) config = await get_worker_config_as_validator( config_meta )
         if( miner_mode ) config = await get_worker_config_as_miner( config_meta )

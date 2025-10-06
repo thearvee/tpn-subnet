@@ -34,8 +34,8 @@ export const get_validators = async ( { ip_only=false, overrides_only=false, ski
 
     // Give the protocol broadcast a moment to populate cache on cold starts
     while( CI_MODE !== 'true' && !validators?.length && attempts < 5 ) {
-        log.info( `[ WHILE ] No validators found in cache, waiting 5 seconds and retrying...` )
-        await wait( 5_000 )
+        log.info( `[ WHILE ] No validators found in cache, waiting 20 seconds and retrying...` )
+        await wait( 20_000 )
         validators = get_tpn_cache( 'last_known_validators', [] )
         attempts++
     }
@@ -48,7 +48,7 @@ export const get_validators = async ( { ip_only=false, overrides_only=false, ski
 
     // Return fallback validators if no validators found in cache
     if( !validators?.length ) {
-        log.error( `No validators found in cache` )
+        log.error( `No validators found in cache, are you very sure the neuron is running?` )
         validators = [ ...validators_ip_fallback ]
     }
 
