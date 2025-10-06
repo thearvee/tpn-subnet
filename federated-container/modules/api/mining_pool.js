@@ -111,7 +111,7 @@ export async function register_mining_pool_workers_with_validators() {
         const validator_broadcast = await fetch( `http://${ ip }:3000/`, { signal } ).then( res => res.json() )
 
         // Formulate registration request
-        ;( { signal } = abort_controller( { timeout_ms: 30_000 } ) )
+        const { signal: _signal } = abort_controller( { timeout_ms: 30_000 } )
         const body = JSON.stringify( { workers } )
         const protocol = validator_broadcast.SERVER_PUBLIC_PROTOCOL || 'http'
         const host = validator_broadcast.SERVER_PUBLIC_HOST || ip
@@ -124,7 +124,7 @@ export async function register_mining_pool_workers_with_validators() {
                 'Content-Type': 'application/json'
             },
             body,
-            signal
+            signal: _signal
         } ).then( res => res.json() )
 
     } ) )
@@ -134,7 +134,8 @@ export async function register_mining_pool_workers_with_validators() {
         else acc[ 1 ].push( result.reason )
         return acc
     }, [ [], [] ] )
-    log.info( `Registered workers with validators: ${ successes.length }, failed: ${ failures.length }`, successes, failures )
+    log.info( `Registered ${ workers.length } workers with validators, successful: ${ successes.length }, failed: ${ failures.length }` )
+    log.chatter( `Failed registrations: `, failures )
 
     return { successes, failures }
 

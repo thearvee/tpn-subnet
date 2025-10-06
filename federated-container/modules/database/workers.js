@@ -202,7 +202,7 @@ export async function read_worker_broadcast_metadata( { mining_pool_uid, limit }
     // Execute the query
     try {
         const result = await pool.query( query, [ ...values ] )
-        log.info( `Read worker broadcast metadata from database for mining pool ${ mining_pool_uid }: `, result.rows[0] )
+        log.chatter( `Read worker broadcast metadata from database for mining pool ${ mining_pool_uid }: `, result.rows[0] )
         return result.rows
     } catch ( e ) {
         throw new Error( `Error reading worker broadcast metadata from database: ${ e.message }` )
@@ -291,7 +291,7 @@ export async function get_workers( { ip, mining_pool_uid, mining_pool_url, count
 
     // Execute the query
     try {
-        log.info( query, [ ...values ] )
+        log.chatter( query, [ ...values ] )
         const result = await pool.query( query, [ ...values ] )
         log.info( `Retrieved workers from database for mining pool ${ mining_pool_uid }:`, result.rows )
         return { success: !!result.rowCount, workers: result.rows || [] }

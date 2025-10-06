@@ -110,7 +110,7 @@ export const close_pool = async () => _pool?.end?.().catch( e => log.error( 'Err
  * @throws {Error} If there is an error formatting the query
 */
 export const format = ( query, values ) => {
-    log.info( `Formatting query:`, query, `with ${ values.length } values` )
+    log.chatter( `Formatting query:`, query, `with ${ values.length } values` )
     try {
         const formatted = _format( query, values )
         return formatted

@@ -48,7 +48,7 @@ export async function set_timestamp( { label, timestamp } ) {
         DO UPDATE SET timestamp = $4, updated = $5`,
         [ label, timestamp, Date.now(), timestamp, Date.now() ]
     )
-    log.info( 'Timestamp set:', { label, timestamp } )
+    log.chatter( 'Timestamp set:', { label, timestamp } )
 
     return { label, timestamp }
 }

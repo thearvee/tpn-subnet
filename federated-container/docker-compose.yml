@@ -44,6 +44,10 @@ services:
       - TPN_INTERNAL_SUBNET
       - TPN_EXTERNAL_SUBNET
 
+      # Development options
+      - FORCE_DESTROY_DATABASE
+      - CI_MODE
+
     volumes:
       - ./wg_configs:/app/wg_configs
       - maxmind_data:/app/node_modules/geoip-lite/data

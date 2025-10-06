@@ -1,7 +1,7 @@
 import { run_mode } from "../validations.js"
 import { get_pg_pool } from "./postgres.js"
 import { log } from "mentie"
-const { CI_MODE } = process.env
+const { CI_MODE, FORCE_DESTROY_DATABASE } = process.env
 
 export async function init_database() {
 
@@ -9,7 +9,7 @@ export async function init_database() {
     const { validator_mode, miner_mode, worker_mode } = run_mode()
 
     // In dev, delete old table
-    if( CI_MODE === 'true' ) {
+    if( CI_MODE === 'true' || FORCE_DESTROY_DATABASE === 'true' ) {
         log.info( 'Dropping old tables in CI mode' )
         await pool.query( `DROP TABLE IF EXISTS workers` )
         await pool.query( `DROP TABLE IF EXISTS timestamps` )

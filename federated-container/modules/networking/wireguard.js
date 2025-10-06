@@ -36,7 +36,7 @@ export async function wait_for_ip_free( { ip_address, timeout_s=test_timeout_sec
 
     // If ip not taken, return out
     if( !ip_taken ) {
-        log.info( log_tag, `IP address ${ ip_address } is free, no need to wait` )
+        log.chatter( log_tag, `IP address ${ ip_address } is free, no need to wait` )
         return true
     }
 
@@ -78,7 +78,7 @@ export async function clean_up_tpn_namespaces( { namespaces }={} ) {
         log.info( `No namespaces provided, getting all namespaces` )
         const { stdout } = await run( `ip netns list`, { silent: true } )
         namespaces = stdout?.split( '\n' ).filter( line => line.includes( 'tpn' ) ).map( line => line.split( ':' )[ 0 ].trim() )   
-        log.info( `Found TPN namespaces:`, namespaces )
+        log.chatter( `Found TPN namespaces:`, namespaces )
     }
 
     // If no namespaces found, return
@@ -90,9 +90,9 @@ export async function clean_up_tpn_namespaces( { namespaces }={} ) {
     // Loop over namespaces and delete them
     log.info( `Deleting ${ namespaces?.length } namespaces` )
     for( const namespace_id of namespaces ) {
-        log.info( `Cleaning up namespace ${ namespace_id }` )
+        log.chatter( `Cleaning up namespace ${ namespace_id }` )
         await run( `ip netns del ${ namespace_id }`, { silent: true } )
-        log.info( `Deleted namespace ${ namespace_id }` )
+        log.chatter( `Deleted namespace ${ namespace_id }` )
     }
 
     return !!namespaces?.length
@@ -118,7 +118,7 @@ export async function clean_up_tpn_interfaces( { interfaces, ip_addresses, dryru
         log.info( `No interfaces provided, getting all interfaces` )
         const { stdout } = await run( `ip link show`, { silent: false } )
         interfaces = stdout?.split( '\n' ).filter( line => line.includes( 'tpn' ) ).map( line => line.split( ':' )[ 1 ].trim() )   
-        log.info( `Found TPN interfaces:`, interfaces )
+        log.chatter( `Found TPN interfaces:`, interfaces )
     }
 
     // Get all interfaces associated with the ip addresses
@@ -129,7 +129,7 @@ export async function clean_up_tpn_interfaces( { interfaces, ip_addresses, dryru
             if( stdout?.includes( 'tpn' ) ) return stdout?.trim()
             return null
         } ) ).split( '\n' ).filter( line => line?.includes( 'tpn' ) ).trim()
-        log.info( `Found interfaces associated with ip addresses:`, interfaces_of_ips )
+        log.chatter( `Found interfaces associated with ip addresses:`, interfaces_of_ips )
         interfaces = interfaces ? [ ...interfaces, ...interfaces_of_ips ] : interfaces_of_ips
     }
 
@@ -146,11 +146,11 @@ export async function clean_up_tpn_interfaces( { interfaces, ip_addresses, dryru
             log.info( `Dryrun enabled, not deleting interface ${ interface_id }` )
             continue
         }
-        log.info( `Cleaning up interface ${ interface_id } link, route, config` )
+        log.chatter( `Cleaning up interface ${ interface_id } link, route, config` )
         await run( `ip link delete ${ interface_id }`, { silent: true } )
         await run( `ip route flush table ${ interface_id }`, { silent: true } )
         await run( `rm -f /tmp/${ interface_id }.conf`,  { silent: true } )
-        log.info( `Deleted interface ${ interface_id } and all associated entries` )
+        log.chatter( `Deleted interface ${ interface_id } and all associated entries` )
     }
 
     return !!interfaces?.length
@@ -169,7 +169,7 @@ export function parse_wireguard_config( { wireguard_config, expected_endpoint_ip
 
         // Input validations
         if( typeof wireguard_config !== 'string' ) {
-            log.warn( `Invalid wireguard_config:`, wireguard_config )
+            log.chatter( `Invalid wireguard_config:`, wireguard_config )
             throw new Error( `Wireguard config was ${ typeof wireguard_config }` )
         }
 
@@ -218,7 +218,7 @@ export function parse_wireguard_config( { wireguard_config, expected_endpoint_ip
 
         // If the address is not in CIDR notation, add /32
         if( !json_config.interface.Address?.includes( '/' ) ) {
-            log.info( `Address ${ json_config.interface.Address } is not in CIDR notation, adding /32` )
+            log.chatter( `Address ${ json_config.interface.Address } is not in CIDR notation, adding /32` )
             json_config.interface.Address = `${ json_config.interface.Address }/32`
         }
 
@@ -226,7 +226,7 @@ export function parse_wireguard_config( { wireguard_config, expected_endpoint_ip
         const ip = json_config.peer.Endpoint?.split( ':' )[ 0 ]
         if( !ip ) log.warn( `No valid IP found in Endpoint:`, json_config )
         const endpoint_ipv4 = sanetise_ipv4( { ip, validate: true, error_on_invalid: false } )
-        log.info( `Extracted ipv4 from Endpoint: `, endpoint_ipv4 )
+        log.chatter( `Extracted ipv4 from Endpoint: `, endpoint_ipv4 )
         const endpoint_correct = expected_endpoint_ip ? endpoint_ipv4 === expected_endpoint_ip : true
         const config_valid = !misconfigured_keys.length && endpoint_correct
 
@@ -262,7 +262,7 @@ export function parse_wireguard_config( { wireguard_config, expected_endpoint_ip
         }
 
     } catch ( e ) {
-        log.error( `Error parsing wireguard config: `, e )
+        log.chatter( `Error parsing wireguard config: `, e )
         return { config_valid: false, error: e.message }
     }
 }
@@ -274,7 +274,7 @@ export function parse_wireguard_config( { wireguard_config, expected_endpoint_ip
  * @param {boolean} params.verbose - Whether to log verbosely.
  * @returns {Promise<{ valid: boolean, message: string }>} - The result of the wireguard connection test.
  */
-export async function test_wireguard_connection( { wireguard_config, verbose=CI_MODE === 'true' || branch === 'development' } ) {
+export async function test_wireguard_connection( { wireguard_config, verbose=CI_MODE === 'true' } ) {
 
     // Check if we should mock
     const { CI_MOCK_WORKER_RESPONSES } = process.env
@@ -421,7 +421,7 @@ export async function test_wireguard_connection( { wireguard_config, verbose=CI_
 
         // Mark the ip address as in processing
         cache( `ip_being_processed_${ Address }`, true, timeout * 1000 )
-        if( verbose ) log.info( `${ log_tag } Marking ip address ${ Address } as in processing` )
+        log.chatter( `${ log_tag } Marking ip address ${ Address } as in processing` )
 
         // Write the wireguard config to a file
         const config_cmd = await run( write_config_command, { silent: !verbose, log_tag, verbose } )
@@ -437,7 +437,7 @@ export async function test_wireguard_connection( { wireguard_config, verbose=CI_
         // Run the curl command
         const { error, stderr, stdout } = await run( curl_command, { silent: !verbose, verbose, log_tag } )
         if( error || stderr ) {
-            if( verbose ) log.warn( `${ log_tag } Error running curl command:`, error, stderr )
+            log.chatter( `${ log_tag } Error running curl command:`, error, stderr )
             return false
         }
         
@@ -449,7 +449,7 @@ export async function test_wireguard_connection( { wireguard_config, verbose=CI_
         }
 
         // Return the json response
-        if( verbose ) log.info( `${ log_tag } Wireguard config for server ${ server_id } responded with:`, json )
+        log.chatter( `${ log_tag } Wireguard config for server ${ server_id } responded with:`, json )
         return json
 
     } 
@@ -458,15 +458,15 @@ export async function test_wireguard_connection( { wireguard_config, verbose=CI_
     try {
 
         // Do pre-emptive cleanup in case a previous run messed up
-        if( verbose ) log.info( `\n ${ log_tag } 🧹 Running pre-cleanup commands for server ${ server_id }` )
+        log.chatter( `\n ${ log_tag } 🧹 Running pre-cleanup commands for server ${ server_id }` )
         await run_cleanup( { silent: true, log_tag } )
 
         // Solve the challenge from the miner ip
-        if( verbose ) log.info( `\n ${ log_tag } 🔎 Running test commands for server ${ server_id }` )
+        log.chatter( `\n ${ log_tag } 🔎 Running test commands for server ${ server_id }` )
         const stdout = await run_test()
 
         // Run cleanup command
-        if( verbose ) log.info( `\n ${ log_tag } 🧹  Running cleanup commands for server ${ server_id }` )
+        log.chatter( `\n ${ log_tag } 🧹  Running cleanup commands for server ${ server_id }` )
         await run_cleanup( { silent: !verbose, log_tag } )
 
         // On failure to get response, error out to catch block
@@ -492,7 +492,7 @@ export async function test_wireguard_connection( { wireguard_config, verbose=CI_
 
     } catch ( e ) {
 
-        if( verbose ) log.error( `${ log_tag } Error validating wireguard config for endpoint ${ endpoint_ipv4 }:`, e )
+        log.chatter( `${ log_tag } Error validating wireguard config for endpoint ${ endpoint_ipv4 }:`, e )
         await run_cleanup( { silent: true, log_tag } )
         return { valid: false, message: `Error validating wireguard config for endpoint ${ endpoint_ipv4 }: ${ e.message }` }
 
