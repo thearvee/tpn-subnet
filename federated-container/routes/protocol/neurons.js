@@ -22,7 +22,8 @@ router.post( "/broadcast/neurons", async ( req, res ) => {
 
         // Validate that all properties are present
         let valid_entries = neurons.filter( entry => require_props( entry, [ 'uid', 'ip', 'validator_trust', 'trust', 'alpha_stake', 'stake_weight', 'block', 'hotkey', 'coldkey' ], false ) )
-        log.info( `Valid neuron entries: ${ valid_entries.length } of ${ neurons.length }, sample: `, valid_entries.slice( 0, 5 ) )
+        log.info( `Valid neuron entries: ${ valid_entries.length } of ${ neurons.length } ` )
+        log.chatter( valid_entries )
 
         // Sanetise the entry data
         valid_entries = valid_entries.map( entry => {

@@ -24,11 +24,22 @@ export async function score_mining_pools( max_duration_minutes=30 ) {
         // Get mining pool uids and ips
         let mining_pool_uids = get_tpn_cache( 'miner_uids', [] )
         let attempts = 0
-        const miner_uid_to_ip = get_tpn_cache( 'miner_uid_to_ip', {} )
+
+        // Wait for uids
         while( !mining_pool_uids?.length && attempts < 5 ) {
             log.info( `[ WHILE ] No mining pools found in cache, waiting 10 seconds and retrying...` )
             await wait( 10_000 )
             mining_pool_uids = get_tpn_cache( 'miner_uids', [] )
+            attempts++
+        }
+        
+        // Wait for ip data
+        attempts = 0
+        let miner_uid_to_ip = get_tpn_cache( 'miner_uid_to_ip', {} )
+        while( !Object.keys( miner_uid_to_ip || {} )?.length && attempts < 5 ) {
+            log.info( `[ WHILE ] No mining pool IPs found in cache, waiting 10 seconds and retrying...` )
+            await wait( 10_000 )
+            miner_uid_to_ip = get_tpn_cache( 'miner_uid_to_ip', {} )
             attempts++
         }
         log.info( `Found mining pools to score (${ mining_pool_uids.length }): `, mining_pool_uids )
