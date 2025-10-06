@@ -23,7 +23,7 @@ router.post( "/broadcast/neurons", async ( req, res ) => {
         // Validate that all properties are present
         let valid_entries = neurons.filter( entry => require_props( entry, [ 'uid', 'ip', 'validator_trust', 'trust', 'alpha_stake', 'stake_weight', 'block', 'hotkey', 'coldkey' ], false ) )
         log.info( `Valid neuron entries: ${ valid_entries.length } of ${ neurons.length } ` )
-        log.chatter( valid_entries )
+        log.debug( valid_entries )
 
         // Sanetise the entry data
         valid_entries = valid_entries.map( entry => {
@@ -81,13 +81,13 @@ router.post( "/broadcast/neurons", async ( req, res ) => {
         // ///////////////////////////
         // 🤖 Cache validators to memory
         // ///////////////////////////
-        log.chatter( `Caching validator ip data: `, validators )
+        log.debug( `Caching validator ip data: `, validators )
         set_tpn_cache( { key: `last_known_validators`, value: validators } )
 
         // ///////////////////////////
         // ⚒️ Cache miners to memory
         // ///////////////////////////
-        log.chatter( `Caching ${ miners.length } miner ip data` )
+        log.debug( `Caching ${ miners.length } miner ip data` )
         set_tpn_cache( { key: `last_known_miners`, value: miners } )
         const ips = miners.map( miner => miner.ip )
         const ip_to_uid = valid_entries.reduce( ( acc, { ip, uid } ) => ( { ...acc, [ip]: uid } ), {} )

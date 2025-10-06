@@ -76,7 +76,7 @@ router.get( '/lease/new', async ( req, res ) => {
         if( blacklist?.length && blacklist.some( ip => !is_ipv4( ip ) ) ) throw new Error( `Invalid ip addresses in blacklist` )
 
         // Get relevant config based on run mode
-        log.chatter( `Getting config as ${ mode } with params:`, config_meta )
+        log.debug( `Getting config as ${ mode } with params:`, config_meta )
         let config = null
         if( validator_mode ) config = await get_worker_config_as_validator( config_meta )
         if( miner_mode ) config = await get_worker_config_as_miner( config_meta )

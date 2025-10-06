@@ -46,6 +46,7 @@ export async function get_wireguard_config_directly_from_worker( { worker, max_r
         const { fetch_options } = abort_controller( { timeout_ms } )
         log.info( `Attempt ${ attempts }/${ max_retries } to get ${ query }` )
         config = await fetch( query, fetch_options ).then( res => format === 'json' ? res.json() : res.text() )
+        log.info( `Received config from worker ${ ip }` )
     
     }
 

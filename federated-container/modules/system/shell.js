@@ -33,12 +33,12 @@ export async function run( command, { silent=true, verbose=false, log_tag=`[ ${ 
             
             // If verbose, log all
             if( verbose ) log.info( log_tag, { command, error, stdout, stderr } )
-            else log.chatter( log_tag, { command, error, stdout, stderr } )
+            else log.debug( log_tag, { command, error, stdout, stderr } )
 
             // Log the output
-            if( !verbose && stdout ) log.chatter( log_tag, `stdout:`, stdout.trim?.() || stdout )
-            if( !verbose && stderr ) log.chatter( log_tag, `stderr:`, stderr.trim?.() || stderr )
-            if( !verbose && error && !stderr ) log.chatter( log_tag, `Error running ${ command }:`, error )
+            if( !verbose && stdout ) log.debug( log_tag, `stdout:`, stdout.trim?.() || stdout )
+            if( !verbose && stderr ) log.debug( log_tag, `stderr:`, stderr.trim?.() || stderr )
+            if( !verbose && error && !stderr ) log.debug( log_tag, `Error running ${ command }:`, error )
 
 
             // Resolve with data

@@ -76,7 +76,7 @@ export async function read_mining_pool_metadata( { mining_pool_uid, mining_pool_
             log.warn( `No mining pool metadata found for ${ mining_pool_uid }@${ mining_pool_ip }` )
             return { success: false, message: `No mining pool metadata found` }
         }
-        log.chatter( `Read mining pool metadata for ${ mining_pool_uid }@${ mining_pool_ip }` )
+        log.debug( `Read mining pool metadata for ${ mining_pool_uid }@${ mining_pool_ip }` )
         return { success: true, ...result.rows[0] }
     } catch ( e ) {
         log.error( `Error reading mining pool metadata: ${ e.message }` )
@@ -120,7 +120,7 @@ export async function get_pool_scores() {
 
     try {
         const result = await pool.query( query )
-        log.chatter( `Retrieved ${ result.rows.length } pool scores` )
+        log.debug( `Retrieved ${ result.rows.length } pool scores` )
         return { success: true, scores: result.rows }
     } catch ( e ) {
         log.error( `Error retrieving pool scores: ${ e.message }` )

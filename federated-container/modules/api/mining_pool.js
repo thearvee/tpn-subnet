@@ -137,7 +137,7 @@ export async function register_mining_pool_workers_with_validators() {
         return acc
     }, [ [], [] ] )
     log.info( `Registered ${ workers.length } workers with validators, successful: ${ successes.length }, failed: ${ failures.length }` )
-    log.chatter( `Failed registrations: `, failures )
+    log.debug( `Failed registrations: `, failures )
 
     return { successes, failures }
 

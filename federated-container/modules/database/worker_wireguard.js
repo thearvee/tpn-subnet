@@ -11,11 +11,11 @@ async function cleanup_expired_wireguard_configs() {
     // Find all expired rows
     log.info( 'Checking for expired rows' )
     const expired_rows = await pool.query( `SELECT id FROM worker_wireguard_configs WHERE expires_at < $1`, [ Date.now() ] )
-    log.chatter( `Expired rows: ${ expired_rows.rows.map( row => row.id ).join( ', ' ) }` ) 
+    log.debug( `Expired rows: ${ expired_rows.rows.map( row => row.id ).join( ', ' ) }` ) 
     // Delete all expired rows and their associated configs
     const expired_ids = expired_rows.rows.map( row => row.id )
     const { WIREGUARD_PEER_COUNT=250 } = process.env
-    log.chatter( `Expired ids: ${ expired_ids.length } of ${ WIREGUARD_PEER_COUNT }` )
+    log.debug( `Expired ids: ${ expired_ids.length } of ${ WIREGUARD_PEER_COUNT }` )
     if( expired_ids.length > 0 ) {
 
         log.info( `${ expired_ids.length } WireGuard configs have expired, deleting them and restarting server` )
@@ -25,7 +25,7 @@ async function cleanup_expired_wireguard_configs() {
 
         // Check if there are open leases remaining
         const open_leases = await check_open_leases()
-        log.chatter( `Open leases after cleanup: ${ open_leases.length }` )
+        log.debug( `Open leases after cleanup: ${ open_leases.length }` )
         if( !open_leases.length ) await restart_wg_container()
         else log.info( `Not restarting wg container as there are still ${ open_leases.length } open leases` )
 
@@ -59,16 +59,16 @@ export async function register_wireguard_lease( { start_id=1, end_id=WIREGUARD_P
         // Mitigate race contitions
         let working = cache( `register_wireguard_lease_working` )
         while( working ) {
-            log.chatter( `Waiting for register_wireguard_lease to finish`, working )
+            log.debug( `Waiting for register_wireguard_lease to finish`, working )
             await wait( 1000 )
             working = cache( `register_wireguard_lease_working` )
-            log.chatter( `Working: ${ working }` )
+            log.debug( `Working: ${ working }` )
         }
-        log.chatter( `Starting register_wireguard_lease` )
+        log.debug( `Starting register_wireguard_lease` )
         cache( `register_wireguard_lease_working`, true, 10_000 )
 
         // Check if there is an id that does not yet exist between the start and end id
-        log.chatter( `Checking for available id between ${ start_id } and ${ end_id }` )
+        log.debug( `Checking for available id between ${ start_id } and ${ end_id }` )
         let id = start_id
         let cleaned_up = false
         while( id <= end_id ) {
@@ -111,7 +111,7 @@ export async function register_wireguard_lease( { start_id=1, end_id=WIREGUARD_P
     `, [ next_available_id, expires_at ] )
 
         // Clear the working cache
-        log.chatter( `Finished register_wireguard_lease` )
+        log.debug( `Finished register_wireguard_lease` )
         cache( `register_wireguard_lease_working`, false )
 
         // Wait for wireguard server to be ready for this config
@@ -140,7 +140,7 @@ export async function check_open_leases() {
         // Find all open leases
         log.info( 'Checking for open leases' )
         const open_leases = await pool.query( `SELECT id, expires_at FROM worker_wireguard_configs WHERE expires_at > $1 ORDER BY expires_at ASC`, [ Date.now() ] )
-        log.chatter( `Open leases: ${ open_leases.rows.length }, latest expires at ${ new Date( open_leases.rows[0]?.expires_at ).toISOString() }` )
+        log.debug( `Open leases: ${ open_leases.rows.length }, latest expires at ${ new Date( open_leases.rows[0]?.expires_at ).toISOString() }` )
         return open_leases.rows
 
     } catch ( e ) {

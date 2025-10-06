@@ -1,5 +1,5 @@
 // Dependencies
-import { cache, log, wait } from "mentie"
+import { cache, log, log_environment, wait } from "mentie"
 
 // Get relevant environment data
 import { get_git_branch_and_hash, check_system_warnings, run } from './modules/system/shell.js'
@@ -24,6 +24,7 @@ log.info( `🚀  ${ last_start } - Starting TPN in ${ mode } mode. Version ${ ve
 if( branch == 'development' ) {
     log.warn( `💥 IMPORTANT: you are in the development branch, THIS IS NOT SAFE FOR PRODUCTION` )
     log.info( `Environment: ${ JSON.stringify( process.env, null, 2 ) }` )
+    log_environment( log.info )
 }
 
 // Check system resources

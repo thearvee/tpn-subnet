@@ -147,7 +147,7 @@ async function score_single_mining_pool( { mining_pool_uid, mining_pool_ip } ) {
     // Score the selected workers
     const { successes, failures, workers_with_status } = await validate_and_annotate_workers( { workers_with_configs: selected_workers } )
     log.info( `Scored workers for mining pool ${ pool_label }, successes: ${ successes?.length }, failures: ${ failures?.length }. Status annotated: ${ workers_with_status?.length }` )
-    log.chatter( `Failure exerpt: `, failures?.slice( 0, 3 ) )
+    log.debug( `Failure exerpt: `, failures?.slice( 0, 3 ) )
 
     // Save updated worker data to database
     await write_workers( { workers: workers_with_status, mining_pool_uid, mining_pool_ip } )
