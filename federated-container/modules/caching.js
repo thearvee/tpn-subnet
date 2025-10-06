@@ -6,7 +6,7 @@ const { CI_MODE } = process.env
 // Formulate disk path
 const __dirname = url.fileURLToPath( new URL( '.', import.meta.url ) )
 const cache_dir = `${ __dirname }/../cache`
-const cache_persistence_path = `${ cache_dir }/.tpn_cache.json`
+const cache_persistence_path = `${ cache_dir }/.tpn_cache.json`.replaceAll( '//', '/' )
 
 // Valid TPN cache keys
 export const tpn_cache_keys = [

@@ -7,7 +7,7 @@ import { run_mode } from "./modules/validations.js"
 import { readFile } from 'fs/promises'
 const { version } = JSON.parse( await readFile( new URL( './package.json', import.meta.url ) ) )
 const { branch, hash } = await get_git_branch_and_hash()
-const { CI_MODE, SERVER_PUBLIC_PORT=3000, CI_MOCK_MINING_POOL_RESPONSES } = process.env
+const { CI_MODE, SERVER_PUBLIC_PORT=3000, CI_MOCK_MINING_POOL_RESPONSES, SCORE_ON_START } = process.env
 const { DAEMON_INTERVAL_SECONDS=CI_MODE === 'true' ? 60 : 300 } = process.env
 const { mode, worker_mode, validator_mode, miner_mode } = run_mode()
 const last_start = cache( 'last_start', new Date().toISOString() )
@@ -170,17 +170,18 @@ if( miner_mode ) {
     intervals.push( setInterval( register_mining_pool_with_validators, DAEMON_INTERVAL_SECONDS * 1_000 ) )
     intervals.push( setInterval( score_all_known_workers, DAEMON_INTERVAL_SECONDS * 1_000 ) )
     intervals.push( setInterval( register_mining_pool_workers_with_validators, DAEMON_INTERVAL_SECONDS * 1_000 ) )
+
+    // Register with validator
+    let success = false
+    while( ! success ) {
+        const { successes } = await register_mining_pool_with_validators()
+        success = !!successes?.length
+        await wait( 5_000 )
+    }
     
+
     log.info( `🏴‍☠️  Scoring all known workers every ${ DAEMON_INTERVAL_SECONDS } seconds` )
     if( CI_MODE === 'true' ) {
-
-        // Register with validator
-        let success = false
-        while( ! success ) {
-            const { successes } = await register_mining_pool_with_validators()
-            success = !!successes?.length
-            await wait( 5_000 )
-        }
         
         // One-time scoring for CI testing
         await wait( 30_000 )
@@ -199,6 +200,7 @@ if( validator_mode ) {
         await wait( 60_000 )
         await score_mining_pools()
     }
+    if( SCORE_ON_START === 'true' ) await score_mining_pools()
 }
 
 // CI mode auto update codebase
