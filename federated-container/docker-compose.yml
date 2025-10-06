@@ -47,6 +47,7 @@ services:
       # Development options
       - FORCE_DESTROY_DATABASE
       - CI_MODE
+      - SCORE_ON_START
 
     volumes:
       - ./wg_configs:/app/wg_configs
