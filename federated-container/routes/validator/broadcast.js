@@ -42,6 +42,9 @@ router.post( '/workers', async ( req, res ) => {
             ip = sanetise_ipv4( { ip, validate: true } )
             acc.push( { ...worker, ip, country_code } )
 
+            // Force override the minining pool uid to the one we know to be real
+            worker.mining_pool_uid = mining_pool_uid
+
             return acc
 
         }, [] )

@@ -24,7 +24,7 @@ export async function score_mining_pools( max_duration_minutes=30 ) {
         // Get mining pool uids and ips
         const mining_pool_uids = get_tpn_cache( 'miner_uids', [] )
         const miner_uid_to_ip = get_tpn_cache( 'miner_uid_to_ip', {} )
-        log.info( `Found mining ${ mining_pool_uids.length } pools to score: `, mining_pool_uids )
+        log.info( `Found mining pools to score (${ mining_pool_uids.length }): `, mining_pool_uids )
 
         // If we are running in CI mode, add a the live testing mining pool if defined
         if( CI_MODE === 'true' ) {
@@ -46,9 +46,9 @@ export async function score_mining_pools( max_duration_minutes=30 ) {
         const results = {}
         for( const mining_pool_uid of mining_pool_uids ) {
 
-            log.info( `Starting scoring for mining pool ${ mining_pool_uid }` )
-
             try {
+
+                log.info( `Starting scoring for mining pool ${ mining_pool_uid }` )
 
                 // Formulate pool label
                 const mining_pool_ip = miner_uid_to_ip[ mining_pool_uid ]
@@ -70,6 +70,8 @@ export async function score_mining_pools( max_duration_minutes=30 ) {
 
             } catch ( e ) {
                 log.error( `Error scoring mining pool ${ mining_pool_uid }:`, e )
+            } finally {
+                log.info( `Completed scoring for mining pool ${ mining_pool_uid }` )
             }
 
         }

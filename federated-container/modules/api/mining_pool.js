@@ -118,7 +118,7 @@ export async function register_mining_pool_workers_with_validators() {
         const port = validator_broadcast.SERVER_PUBLIC_PORT || 3000
         const url = `${ protocol }://${ host }:${ port }/validator/broadcast/workers`
         log.info( `Registering at ${ url } with ${ workers.length } workers.`, CI_MODE === 'true' ? body : '' )
-        return fetch( url, {
+        const registration = await fetch( url, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -126,6 +126,8 @@ export async function register_mining_pool_workers_with_validators() {
             body,
             signal: _signal
         } ).then( res => res.json() )
+        log.info( `Registered ${ workers.length } workers with validator at ${ url }` )
+        return registration
 
     } ) )
 

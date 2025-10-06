@@ -80,16 +80,16 @@ router.post( "/broadcast/neurons", async ( req, res ) => {
         // ///////////////////////////
         // 🤖 Cache validators to memory
         // ///////////////////////////
-        log.info( `Caching validator ip data: `, validators )
+        log.chatter( `Caching validator ip data: `, validators )
         set_tpn_cache( { key: `last_known_validators`, value: validators } )
 
         // ///////////////////////////
         // ⚒️ Cache miners to memory
         // ///////////////////////////
-        log.info( `Caching ${ miners.length } miner ip data` )
+        log.chatter( `Caching ${ miners.length } miner ip data` )
         set_tpn_cache( { key: `last_known_miners`, value: miners } )
         const ips = miners.map( miner => miner.ip )
-        const ip_to_uid = valid_entries.map( ( { ip, uid } ) => ( { [ip]: uid } ) )
+        const ip_to_uid = valid_entries.reduce( ( acc, { ip, uid } ) => ( { ...acc, [ip]: uid } ), {} )
         const { ip_to_country, country_count, country_annotated_ips } = await map_ips_to_geodata( { ips, ip_to_uid, cache_prefix: 'miner_' } )
 
         // Map uid to ip
