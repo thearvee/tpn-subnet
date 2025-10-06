@@ -98,7 +98,7 @@ export function get_miner_by_ip( ip ) {
  * @param {string} params.mining_pool_ip - IP address of the mining pool
  * @returns {Promise<Object>} - Promise resolving to the worker config
  */
-export async function get_worker_config_through_mining_pool( { worker_ip, mining_pool_uid, mining_pool_ip, format='text', lease_seconds } ) {
+export async function get_worker_config_through_mining_pool( { worker_ip, mining_pool_uid, mining_pool_ip, format='text', lease_seconds=120 } ) {
 
     try {
 

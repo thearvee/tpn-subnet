@@ -137,7 +137,7 @@ async function score_single_mining_pool( { mining_pool_uid, mining_pool_ip } ) {
 
     // Annotate the selected workers with a wireguard config for testing in paralell
     await Promise.allSettled( selected_workers.map( async ( worker, index ) => {
-        const { error, json_config, text_config } = await get_worker_config_through_mining_pool( { worker_ip: worker.ip, mining_pool_uid, mining_pool_ip } )
+        const { error, json_config, text_config } = await get_worker_config_through_mining_pool( { worker_ip: worker.ip, mining_pool_uid, mining_pool_ip, lease_seconds: 120 } )
         if( text_config ) selected_workers[ index ].wireguard_config = text_config
         if( error ) log.info( `Error fetching worker config for ${ worker.ip }: ${ error }` )
     } ) )
