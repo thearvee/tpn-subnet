@@ -11,8 +11,7 @@ async function cleanup_expired_wireguard_configs() {
     // Find all expired rows
     log.info( 'Checking for expired rows' )
     const expired_rows = await pool.query( `SELECT id FROM worker_wireguard_configs WHERE expires_at < $1`, [ Date.now() ] )
-    log.chatter( `Expired rows: ${ expired_rows.rows.map( row => row.id ).join( ', ' ) }` )
-    
+    log.chatter( `Expired rows: ${ expired_rows.rows.map( row => row.id ).join( ', ' ) }` ) 
     // Delete all expired rows and their associated configs
     const expired_ids = expired_rows.rows.map( row => row.id )
     const { WIREGUARD_PEER_COUNT=250 } = process.env
@@ -23,7 +22,12 @@ async function cleanup_expired_wireguard_configs() {
 
         // Delete and restart the wireguard server
         await delete_wireguard_configs( expired_ids )
-        await restart_wg_container()
+
+        // Check if there are open leases remaining
+        const open_leases = await check_open_leases()
+        log.chatter( `Open leases after cleanup: ${ open_leases.length }` )
+        if( !open_leases.length ) await restart_wg_container()
+        else log.info( `Not restarting wg container as there are still ${ open_leases.length } open leases` )
 
         // Delete the expired rows from the database
         await pool.query( `DELETE FROM worker_wireguard_configs WHERE id = ANY( $1::int[] )`, [ expired_ids ] )
@@ -118,6 +122,32 @@ export async function register_wireguard_lease( { start_id=1, end_id=WIREGUARD_P
         
     } finally {
         cache( `register_wireguard_lease_working`, false )
+    }
+
+}
+
+/**
+ * Checks for open WireGuard leases in the database.
+ * @returns {Promise<Array>} A promise that resolves to an array of open lease objects.
+ */
+export async function check_open_leases() {
+
+    try {
+
+        // Get pool
+        const pool = await get_pg_pool()
+
+        // Find all open leases
+        log.info( 'Checking for open leases' )
+        const open_leases = await pool.query( `SELECT id, expires_at FROM worker_wireguard_configs WHERE expires_at > $1 ORDER BY expires_at ASC`, [ Date.now() ] )
+        log.chatter( `Open leases: ${ open_leases.rows.length }, latest expires at ${ new Date( open_leases.rows[0]?.expires_at ).toISOString() }` )
+        return open_leases.rows
+
+    } catch ( e ) {
+
+        log.error( `Error in check_open_leases:`, e )
+        return []
+        
     }
 
 }

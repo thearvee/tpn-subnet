@@ -77,7 +77,7 @@ export async function is_validator_request( request ) {
 
     // Get the ip of the originating request
     const { unspoofable_ip, spoofable_ip } = ip_from_req( request )
-    log.info( `Request ip: ${ unspoofable_ip } (spoofable: ${ spoofable_ip } )` )
+    log.chatter( `Request ip: ${ unspoofable_ip } (spoofable: ${ spoofable_ip } )` )
 
     // Check if input is ipv4
     if( !is_ipv4( unspoofable_ip ) ) {
@@ -100,6 +100,6 @@ export async function is_validator_request( request ) {
 
 
     // If no validator found, return false
-    return {}
+    return false
 
 }

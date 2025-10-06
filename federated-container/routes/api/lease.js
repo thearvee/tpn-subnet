@@ -23,7 +23,10 @@ router.get( '/lease/new', async ( req, res ) => {
         const { mode, worker_mode, miner_mode, validator_mode } = run_mode()
         if( miner_mode ) {
             const is_validator = await is_validator_request( req )
-            if( !is_validator ) throw new Error( `Miners only accept lease requests from validators, which you are not` )
+            if( !is_validator ) {
+                const { unspoofable_ip } = ip_from_req( req )
+                throw new Error( `Miners only accept lease requests from validators, which you (${ unspoofable_ip }) are not` )
+            }
         }
 
         // Worker access controls
@@ -90,8 +93,8 @@ router.get( '/lease/new', async ( req, res ) => {
         const retryable_handler = await make_retryable( handle_route, { retry_times, cooldown_in_s } )
         const response_data = await retryable_handler()
         return format == 'text' ? res.send( response_data ) : res.json( response_data )
-    } catch ( error ) {
-        if( CI_MODE ) log.info( `Error handling new lease route: `, error )
-        return res.status( 500 ).json( { error: `Error handling new lease route: ${ error.message }` } )
+    } catch ( e ) {
+        log.info( `Error handling new lease route: ${ e.message }` )
+        return res.status( 500 ).json( { error: `Error handling new lease route: ${ e.message }` } )
     }
 } )
