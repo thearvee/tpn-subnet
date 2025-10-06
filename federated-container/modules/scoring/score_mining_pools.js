@@ -64,6 +64,10 @@ export async function score_mining_pools( max_duration_minutes=30 ) {
         const results = {}
         for( const mining_pool_uid of mining_pool_uids ) {
 
+            // For logging convenience, add a small delay so they don't get shuffled
+            await wait( 2_000 )
+
+            // Score the mining pool
             try {
 
                 log.info( `Starting scoring for mining pool ${ mining_pool_uid }` )
@@ -88,7 +92,7 @@ export async function score_mining_pools( max_duration_minutes=30 ) {
 
 
             } catch ( e ) {
-                log.error( `Error scoring mining pool ${ mining_pool_uid }:`, e )
+                log.error( `Error scoring mining pool ${ mining_pool_uid }:`, e.message )
             }
 
         }
