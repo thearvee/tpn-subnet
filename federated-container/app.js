@@ -182,17 +182,16 @@ if( miner_mode ) {
     
 
     log.info( `🏴‍☠️  Scoring all known workers every ${ DAEMON_INTERVAL_SECONDS } seconds` )
-    if( CI_MODE === 'true' ) {
         
-        // One-time scoring for CI testing
-        await wait( 30_000 )
-        await score_all_known_workers()
+    // One-time scoring at boot
+    await wait( 30_000 )
+    await score_all_known_workers()
 
-        // Broadcast worker data to validators
-        await register_mining_pool_workers_with_validators()
+    // Broadcast worker data to validators
+    await register_mining_pool_workers_with_validators()
 
-    }
 }
+
 if( validator_mode ) {
     const { score_mining_pools } = await import( './modules/scoring/score_mining_pools.js' )
     intervals.push( setInterval( score_mining_pools, DAEMON_INTERVAL_SECONDS * 1_000 ) )

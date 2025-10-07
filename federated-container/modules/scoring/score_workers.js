@@ -170,7 +170,7 @@ export async function validate_and_annotate_workers( { workers_with_configs=[] }
     } )
     
     // Wait for all workers to be scored
-    const workers_with_status = await Promise.allSettled( scoring_queue )
+    let workers_with_status = await Promise.allSettled( scoring_queue )
     const [ successes, failures ] = workers_with_status.reduce( ( acc, worker ) => {
     
         // If the status was fulfilled and the result is success == true, it counts as a win, otherwise it is a fail;
@@ -182,6 +182,9 @@ export async function validate_and_annotate_workers( { workers_with_configs=[] }
     
         return acc
     }, [ [], [ ...invalid_workers ] ] )
+
+    // Isolate the allSettled values for the workers with status
+    workers_with_status = workers_with_status.map( worker => worker?.value || {} )
 
     return { successes, failures, workers_with_status }
 
