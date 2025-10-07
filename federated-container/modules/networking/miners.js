@@ -1,8 +1,7 @@
-import { abort_controller, is_ipv4, log, make_retryable, wait } from "mentie"
+import { abort_controller, is_ipv4, log, wait } from "mentie"
 import { ip_from_req } from "./network.js"
 import { get_tpn_cache } from "../caching.js"
 import { read_mining_pool_metadata } from "../database/mining_pools.js"
-import { parse_wireguard_config } from "./wireguard.js"
 
 const { CI_MODE, CI_MINER_IP_OVERRIDES } = process.env
 
@@ -93,45 +92,45 @@ export function get_miner_by_ip( ip ) {
 /**
  * Validator function to get worker config through mining pool
  * @param {Object} params
- * @param {string} params.worker_ip - IP address of the worker
+ * @param {Object} params.worker - The worker object
+ * @param {number} [params.max_retries=1] - The maximum number of retry attempts
+ * @param {number} [params.timeout_ms=5_000] - The request timeout in milliseconds
+ * @param {string} [params.format='text'] - The response format, either 'text' or 'json'
+ * @param {number} [params.lease_seconds=120] - The lease duration in seconds
  * @param {string} params.mining_pool_uid - UID of the mining pool
  * @param {string} params.mining_pool_ip - IP address of the mining pool
- * @returns {Promise<Object>} - Promise resolving to the worker config
+ * @returns {Promise<Object|String>} - Promise resolving to the worker config
  */
-export async function get_worker_config_through_mining_pool( { worker_ip, mining_pool_uid, mining_pool_ip, format='text', lease_seconds=120 } ) {
+export async function get_worker_config_through_mining_pool( { worker, max_retries=1, timeout_ms=5_000,mining_pool_uid, mining_pool_ip, format='text', lease_seconds=120 } ) {
 
-    try {
+    // Get mining pool data
+    const { protocol, url, port } = await read_mining_pool_metadata( { mining_pool_ip, mining_pool_uid } )
+    if( !url?.includes( port ) || !url?.includes( protocol ) ) log.warn( `Mining pool URL ${ url } does not include port ${ port } or protocol ${ protocol }, this suggests misconfiguration of the miner` )
+    const endpoint = `${ url }/api/lease/new`
+    const query = `?lease_seconds=${ lease_seconds }&format=${ format }&whitelist=${ worker.ip }`
 
-        // Get mining pool data
-        const { protocol, url, port } = await read_mining_pool_metadata( { mining_pool_ip, mining_pool_uid } )
-        if( !url?.includes( port ) || !url?.includes( protocol ) ) log.warn( `Mining pool URL ${ url } does not include port ${ port } or protocol ${ protocol }, this suggests misconfiguration of the miner` )
-        const endpoint = `${ url }/api/lease/new`
-        const query = `?lease_seconds=${ lease_seconds }&format=${ format }&whitelist=${ worker_ip }`
-
-        // Mock response if needed
-        const { CI_MOCK_MINING_POOL_RESPONSES } = process.env
-        if( CI_MOCK_MINING_POOL_RESPONSES === 'true' ) {
-            log.info( `CI_MOCK_MINING_POOL_RESPONSES is enabled, returning mock response for ${ endpoint }/${ query }` )
-            return { json_config: { endpoint_ipv4: 'mock.mock.mock.mock' }, text_config: "" }
-        }
-
-        // Make retryable and cancellable request to mining pool for worker ip
-        const timeout_ms = 10_000
-        const { fetch_options } = abort_controller( { timeout_ms } )
-        log.info( `Fetching worker config through mining pool at ${ endpoint }${ query }` )
-        const fetch_function = async () => fetch( `${ endpoint }${ query }`, fetch_options ).then( res => res.text() )
-        const retryable_fetch = await make_retryable( fetch_function, { retry_times: 2, cooldown_in_s: 2 } )
-        const worker_config = await retryable_fetch()
-
-        // Validate that the wireguard config is correct
-        const { config_valid, json_config, text_config } = parse_wireguard_config( { wireguard_config: worker_config, expected_endpoint_ip: worker_ip } )
-        if( !config_valid ) throw new Error( `Invalid wireguard config for ${ worker_ip }` )
-
-        return format === 'json' ? json_config : text_config
-
-    } catch ( e ) {
-        log.info( `Error getting worker config for ${ worker_ip } through mining pool ${ mining_pool_ip }:`, e )
-        return { error: e.message }
+    // Mock response if needed
+    const { CI_MOCK_MINING_POOL_RESPONSES } = process.env
+    if( CI_MOCK_MINING_POOL_RESPONSES === 'true' ) {
+        log.info( `CI_MOCK_MINING_POOL_RESPONSES is enabled, returning mock response for ${ endpoint }/${ query }` )
+        return format === 'json' ? { json_config: { endpoint_ipv4: 'mock.mock.mock.mock' }, text_config: "" } : "Mock WireGuard config"
     }
+
+    // Get config through mining pool
+    let config = null
+    let attempts = 0
+    while( !config && attempts < max_retries ) {
+
+        // Fetch config
+        attempts++
+        const { fetch_options } = abort_controller( { timeout_ms } )
+        log.info( `Attempt ${ attempts }/${ max_retries } to get worker config through mining pool at ${ endpoint }${ query }` )
+        config = await fetch( `${ endpoint }${ query }`, fetch_options ).then( res => format === 'json' ? res.json() : res.text() )
+        log.info( `Received config from mining pool ${ mining_pool_uid } for worker ${ worker.uid }` )
+
+    }
+
+    return config
+
 
 }
