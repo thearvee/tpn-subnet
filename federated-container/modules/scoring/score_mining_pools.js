@@ -56,13 +56,36 @@ export async function score_mining_pools( max_duration_minutes=30 ) {
 
         }
 
+        // Before scoring, filter out pools without metadata or workers
+        const valid_mining_pool_uids = []
+        for( const mining_pool_uid of mining_pool_uids ) {
+            const mining_pool_ip = miner_uid_to_ip[ mining_pool_uid ]
+            if( !mining_pool_ip ) {
+                log.info( `No IP found for mining pool ${ mining_pool_uid }, skipping` )
+                continue
+            }
+            const [ { updated }={} ]= await read_worker_broadcast_metadata( { mining_pool_uid, mining_pool_ip, limit: 1 } )
+            if( !updated ) {
+                log.info( `No worker broadcast metadata found for mining pool ${ mining_pool_uid }@${ mining_pool_ip }, skipping` )
+                continue
+            }
+            const { success: workers_success, workers=[] } = await get_workers( { mining_pool_uid, limit: 1 } )
+            if( !workers_success || !workers?.length ) {
+                log.info( `No workers found for mining pool ${ mining_pool_uid }@${ mining_pool_ip }, skipping` )
+                continue
+            }
+            valid_mining_pool_uids.push( mining_pool_uid )
+        }
+        log.info( `Filtered to ${ valid_mining_pool_uids.length } mining pools with workers and metadata` )
+
         // Fisher-Yates shuffle the miner uid array
-        shuffle_array( mining_pool_uids )
-        log.info( `Shuffled ${ mining_pool_uids.length } mining pools: `, mining_pool_uids )
+        shuffle_array( valid_mining_pool_uids )
+        log.info( `Shuffled ${ valid_mining_pool_uids.length } mining pools: `, valid_mining_pool_uids )
+
 
         // For each mining pool, run test
         const results = {}
-        for( const mining_pool_uid of mining_pool_uids ) {
+        for( const mining_pool_uid of valid_mining_pool_uids ) {
 
             // Score the mining pool
             try {

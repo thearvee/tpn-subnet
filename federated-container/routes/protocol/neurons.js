@@ -23,7 +23,7 @@ router.post( "/broadcast/neurons", async ( req, res ) => {
         // Validate that all properties are present
         let valid_entries = neurons.filter( entry => require_props( entry, [ 'uid', 'ip', 'validator_trust', 'trust', 'alpha_stake', 'stake_weight', 'block', 'hotkey', 'coldkey' ], false ) )
         log.info( `Valid neuron entries: ${ valid_entries.length } of ${ neurons.length } ` )
-        log.debug( valid_entries )
+        log.insane( valid_entries )
 
         // Sanetise the entry data
         valid_entries = valid_entries.map( entry => {
@@ -81,7 +81,7 @@ router.post( "/broadcast/neurons", async ( req, res ) => {
         // ///////////////////////////
         // 🤖 Cache validators to memory
         // ///////////////////////////
-        log.debug( `Caching validator ip data: `, validators )
+        log.insane( `Caching validator ip data: `, validators )
         set_tpn_cache( { key: `last_known_validators`, value: validators } )
 
         // ///////////////////////////

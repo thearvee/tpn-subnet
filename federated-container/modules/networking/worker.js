@@ -35,7 +35,7 @@ export async function get_wireguard_config_directly_from_worker( { worker, max_r
     const { ip, public_port=3000 } = worker
     const { CI_MOCK_WORKER_RESPONSES } = process.env
     const query = `http://${ ip }:${ public_port }/api/lease/new?lease_seconds=${ lease_seconds }&format=${ format }`
-
+    log.info( `Fetching WireGuard config directly from worker at ${ query }` )
 
     // Get config from workers
     let config = null
