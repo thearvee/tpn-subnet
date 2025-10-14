@@ -1,6 +1,6 @@
 # TPN - Tao Private Network
 
-The TPN subnet coordinares miners that offer VPN connections in a wide variety of geographic locations.
+The TPN subnet coordinates miners that offer VPN connections in a wide variety of geographic locations.
 
 In the TPN subnet, there are three kinds of nodes:
 
