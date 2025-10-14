@@ -96,7 +96,7 @@ else
 fi
 
 # Generate docker command base
-DOCKER_CMD=(TPN_IMAGE_TAG="$TPN_IMAGE_TAG" docker compose -f "$TPN_DIR/federated-container/docker-compose.yml")
+DOCKER_CMD=(docker compose -f "$TPN_DIR/federated-container/docker-compose.yml")
 
 # If run mode is worker, add --profile worker
 if [ "$RUN_MODE" = "worker" ]; then
