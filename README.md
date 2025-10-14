@@ -142,6 +142,17 @@ cd tpn-subnet
 docker compose -f federated-container/docker-compose.yml --profile worker up -d
 ```
 
+To update your worker, run:
+
+```bash
+# Run the update script, this assumes the tpn repository is located at ~/tpn-subnet
+bash ~/tpn-subnet/scripts/update_node.sh
+```
+
+> [!CAUTION]
+> The update script can be customised, for details run `bash ~/tpn-subnet/scripts/update_node.sh --help`
+
+
 ## Running a mining pool
 
 The miner consists out of two components:
@@ -195,11 +206,11 @@ The miner automatically updates some components periodically, but not all. You s
 
 ```bash
 # Run the update script, this assumes the tpn repository is located at ~/tpn-subnet
-bash scripts/update_miner.sh
+bash ~/tpn-subnet/scripts/update_node.sh
 ```
 
 > [!CAUTION]
-> The update script can be customised, for details run `bash scripts/update_miner.sh --help`
+> The update script can be customised, for details run `bash ~/tpn-subnet/scripts/update_node.sh --help`
 
 ## Running a validator
 
@@ -295,8 +306,8 @@ The validator automatically updates some components periodically, but not all. Y
 
 ```bash
 # Run the update script, this assumes the tpn repository is located at ~/tpn-subnet
-bash scripts/update_validator.sh
+bash ~/tpn-subnet/scripts/update_node.sh
 ```
 
 > [!CAUTION]
-> The update script can be customised, for details run `bash scripts/update_validator.sh --help`
+> The update script can be customised, for details run `bash ~/tpn-subnet/scripts/update_node.sh --help`
