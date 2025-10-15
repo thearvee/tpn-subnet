@@ -5,7 +5,7 @@ import { get_tpn_cache } from "../../modules/caching.js"
 import { country_name_from_code } from "../../modules/geolocation/helpers.js"
 import { run_mode } from "../../modules/validations.js"
 import { get_worker_performance, get_workers } from "../../modules/database/workers.js"
-import { generate } from 'csv'
+import { writeToString } from "@fast-csv/format"
 
 export const router = Router()
 
@@ -103,7 +103,7 @@ router.get( '/worker_performance', async ( req, res ) => {
         } ) )
 
         // Collate data into scores
-        const scored_workers = workers.reduce( ( acc, { ip, status } ) => {
+        workers = workers.reduce( ( acc, { ip, status } ) => {
 
             // Increment status scores
             const history = acc[ ip ] || { up: 0, down: 0, unknown: 0, uptime: 0 }
@@ -118,19 +118,22 @@ router.get( '/worker_performance', async ( req, res ) => {
 
         }, {} )
 
+        // Turn into array sorted by uptime
+        workers = Object.entries( workers ).map( ( [ ip, data ] ) => ( { ip, ...data } ) ).sort( ( a, b ) => b.uptime - a.uptime )
+
         // Cache response for 5 minutes
-        cache( `worker_performance_${ from }_${ to }_${ format }`, scored_workers, 5 * 60_000 )
+        cache( `worker_performance_${ from }_${ to }_${ format }`, workers, 5 * 60_000 )
 
         // Return in the requested format
         if( format === 'json' ) {
-            return res.json( scored_workers )
+            return res.json( workers )
         } else if( format === 'csv' ) {
-            const csv = generate( scored_workers, { header: true } )
+            const csv = await writeToString( workers, { header: true } )
             return res.type( 'text/csv' ).send( csv )
         }
 
         // Fall back to json
-        return res.json( { success, workers } )
+        return res.json( workers )
 
     } catch ( error ) {
         return res.status( 500 ).json( { error: `Error handling performance route: ${ error.message }` } )

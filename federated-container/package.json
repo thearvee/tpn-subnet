@@ -1,6 +1,6 @@
 {
   "name": "tpn-node",
-  "version": "0.0.42",
+  "version": "0.0.43",
   "description": "TPN Node docker container code, used for validators, miners, and workers",
   "main": "app.js",
   "type": "module",
@@ -24,7 +24,7 @@
     "test:watch": "node --test --watch test/*.test.js"
   },
   "dependencies": {
-    "csv": "^6.4.1",
+    "@fast-csv/format": "^5.0.5",
     "express": "^5.1.0",
     "geoip-lite": "^1.4.10",
     "ip2location-nodejs": "^9.7.0",
