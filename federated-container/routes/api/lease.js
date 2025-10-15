@@ -51,8 +51,11 @@ router.get( [ '/config/new', '/lease/new' ], async ( req, res ) => {
         // BACKWARDS COMPATIBILITY
         // Phase out by december 2025
         // /////////////////////////////*/
-        if( req.query?.least_minutes ) req.query.lease_seconds = Number( req.query.least_minutes ) * 60
-
+        if( req.query?.lease_minutes ) {
+            log.info( `Deprecation warning: lease_minutes is deprecated, use lease_seconds instead` )
+            req.query.lease_seconds = Number( req.query.lease_minutes ) * 60
+        }
+        
         // Prepare validation props based on run mode
         const mandatory_props = [ 'lease_seconds', 'format' ]
         const optional_props = [ 'geo', 'whitelist', 'blacklist', 'priority' ]
