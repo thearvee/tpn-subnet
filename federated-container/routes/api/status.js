@@ -28,8 +28,14 @@ router.get( '/worker_performance', async ( req, res ) => {
 
     try {
 
+        // Default values
+        const default_history_days = 7
+        const _from = Date.now() - default_history_days * 24 * 60 * 60_000
+        const _to = Date.now()
+        const _format = 'json'
+
         // Get request params
-        let { from, to, format='json', api_key } = req.query || {}
+        let { from=_from, to=_to, format=_format, api_key } = req.query || {}
         log.debug( `Worker performance request from ${ from } to ${ to } in format ${ format } with api_key ${ api_key ? 'provided' : 'not provided' }` )
 
         // Check request validity
