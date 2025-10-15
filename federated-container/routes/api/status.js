@@ -50,9 +50,17 @@ router.get( '/worker_performance', async ( req, res ) => {
         }
 
         // If the from and to values are timestamps, keep them, if strings, parse to timestamps
-        if( from && isNaN( Number( from ) ) ) from = Date.parse( from )
-        if( to && isNaN( Number( to ) ) ) to = Date.parse( to )
-        
+        if( from && isNaN( Number( from ) ) ) {
+            const parsed_from = Date.parse( from )
+            log.debug( `Parsed 'from' date string ${ from } to timestamp ${ parsed_from }` )
+            from = parsed_from
+        }
+        if( to && isNaN( Number( to ) ) ) {
+            const parsed_to = Date.parse( to )
+            log.debug( `Parsed 'to' date string ${ to } to timestamp ${ parsed_to }` )
+            to = parsed_to
+        }
+
         // If parsing failed, return with invalid date error
         if( from && isNaN( from ) ) return res.status( 400 ).json( { error: `Invalid 'from' date` } )
         if( to && isNaN( to ) ) return res.status( 400 ).json( { error: `Invalid 'to' date` } )
