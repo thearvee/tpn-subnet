@@ -199,3 +199,5 @@ if [ "$RUN_MODE" != "worker" ]; then
 else
     echo "pm2 not relevant in worker mode, skipping pm2 restart."
 fi
+
+echo -e "\n✅ Update completed successfully"

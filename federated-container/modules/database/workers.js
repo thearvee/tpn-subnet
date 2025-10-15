@@ -29,9 +29,12 @@ export async function write_workers( { workers, mining_pool_uid='internal', is_m
     if( valid_workers.length === 0 ) return { success: true, count: 0 }
 
     // Prepare the query with pg-format
-    const values = valid_workers.map( ( { ip, country_code, mining_pool_url, public_port=3000, status='unknown' } ) => [
+    const values = valid_workers.map( ( { ip, country_code, mining_pool_url, public_url, payment_address_evm, payment_address_bittensor, public_port=3000, status='unknown' } ) => [
         ip,
         public_port,
+        public_url,
+        payment_address_evm,
+        payment_address_bittensor,
         country_code,
         mining_pool_url,
         mining_pool_uid,
@@ -39,11 +42,14 @@ export async function write_workers( { workers, mining_pool_uid='internal', is_m
         Date.now()
     ] )
     const query = format( `
-        INSERT INTO workers (ip, public_port, country_code, mining_pool_url, mining_pool_uid, status, updated_at)
+        INSERT INTO workers (ip, public_port, public_url, payment_address_evm, payment_address_bittensor, country_code, mining_pool_url, mining_pool_uid, status, updated_at)
         VALUES %L
         ON CONFLICT (mining_pool_uid, mining_pool_url, ip) DO UPDATE SET
             ip = EXCLUDED.ip,
             public_port = EXCLUDED.public_port,
+            public_url = EXCLUDED.public_url,
+            payment_address_evm = EXCLUDED.payment_address_evm,
+            payment_address_bittensor = EXCLUDED.payment_address_bittensor,
             country_code = EXCLUDED.country_code,
             mining_pool_url = EXCLUDED.mining_pool_url,
             mining_pool_uid = EXCLUDED.mining_pool_uid,
@@ -68,6 +74,85 @@ export async function write_workers( { workers, mining_pool_uid='internal', is_m
     } catch ( e ) {
         throw new Error( `Error writing workers to database: ${ e.message }` )
     }
+}
+
+/**
+ * 
+ * @param {Object} params 
+ * @param {Array<{ip: string, status: string }>} params.workers - array with worker data
+ * @returns {Promise<{ success: boolean, count: number }>} - Result object with success status and number of entries written
+ * @throws {Error} - If there is an error writing to the database
+ */
+export async function write_worker_performance( { workers }  ) {
+
+    // Get the postgres pool
+    const pool = await get_pg_pool()
+
+    // Validate input
+    const [ valid_workers, invalid_workers ] = workers.reduce( ( acc, worker ) => {
+        if( is_valid_worker( worker ) ) acc[0].push( worker )
+        else acc[1].push( worker )
+        return acc
+    }, [ [], [] ] )
+    if( invalid_workers.length > 0 ) log.warn( `Invalid worker entries found:`, invalid_workers )
+    if( valid_workers.length === 0 ) return { success: true, count: 0 }
+
+    // Prepare the query with pg-format
+
+    // Write a new entry with the current ip, status, and timestamp
+    const values = valid_workers.map( ( { ip, status='unknown', public_port } ) => [ ip, status, `http://${ ip }:${ public_port }`, Date.now() ] )
+    const query = format( `
+        INSERT INTO worker_performance (ip, status, public_url, updated_at)
+        VALUES %L
+    `, values )
+        
+    if( CI_MODE === 'true' ) log.info( `Valid worker example:`, valid_workers[0] )
+
+    // Execute the query
+    try {
+        
+        // Writing workers to db
+        const worker_write_result = await pool.query( query )
+        log.info( `Wrote ${ worker_write_result.rowCount } worker performance entries to database` )
+        
+        return { success: true, count: worker_write_result.rowCount }
+    } catch ( e ) {
+        throw new Error( `Error writing worker performance to database: ${ e.message }` )
+    }
+
+}
+
+/**  
+ * Fetches the worker performance entries from the database within the specified time range.
+ * @param {Object} params - Query parameters.
+ * @param {number} params.before - Upper time boundary (timestamp in milliseconds). Defaults to current time.
+ * @param {number} params.after - Lower time boundary (timestamp in milliseconds). Defaults to 0 (epoch).
+ * @returns {Promise<{ success: boolean, workers: Array }>} - Result object with success status and array of worker performance entries.
+ * @throws {Error} - If there is an error retrieving the data from the database.
+ */
+export async function get_worker_performance( { before=Date.now(), after=0 } ) {
+
+    // Get the postgres pool
+    const pool = await get_pg_pool()
+
+    // Prepare the query
+    const query = `
+        SELECT *
+        FROM worker_performance
+        WHERE updated_at <= $1 AND updated_at >= $2
+        ORDER BY updated_at DESC
+    `
+    const values = [ before, after ]
+
+    // Execute the query
+    try {
+        const result = await pool.query( query, values )
+        log.info( `Retrieved ${ result.rowCount } worker performance entries from database` )
+        return { success: !!result.rowCount, workers: result.rows || [] }
+    } catch ( e ) {
+        throw new Error( `Error retrieving worker performance from database: ${ e.message }` )
+    }
+
 }
 
 /**

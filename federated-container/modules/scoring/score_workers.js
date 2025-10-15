@@ -2,7 +2,7 @@ import { cache, log } from "mentie"
 import { parse_wireguard_config, test_wireguard_connection } from "../networking/wireguard.js"
 import { default_mining_pool, is_valid_worker } from "../validations.js"
 import { ip_geodata } from "../geolocation/helpers.js"
-import { get_workers, write_workers } from "../database/workers.js"
+import { get_workers, write_workers, write_worker_performance } from "../database/workers.js"
 import { get_wireguard_config_directly_from_worker } from "../networking/worker.js"
 import { map_ips_to_geodata } from "../geolocation/ip_mapping.js"
 const { CI_MODE, CI_MOCK_WORKER_RESPONSES } = process.env
@@ -47,6 +47,11 @@ export async function score_all_known_workers( max_duration_minutes=15 ) {
 
         // Save annotated workers to database
         await write_workers( { workers: annotated_workers, mining_pool_uid: 'internal' } )
+
+        // Write worker scores to database 
+        await write_worker_performance( { workers: annotated_workers } )
+
+        log.info( `Scored all known workers, ${ successes.length } successes, ${ failures.length } failures` )
 
     } catch ( e ) {
         log.error( `Error scoring all known workers:`, e )

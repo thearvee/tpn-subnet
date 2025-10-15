@@ -19,7 +19,7 @@ router.post( '/worker', async ( req, res ) => {
     try {
         
         // Get workerdata from request from the request
-        const { wireguard_config, mining_pool_url } = req.body || {}
+        const { wireguard_config, mining_pool_url, public_url, payment_address_evm, payment_address_bittensor } = req.body || {}
         const { unspoofable_ip } = ip_from_req( req )
         
         // Validate inputs
@@ -27,7 +27,7 @@ router.post( '/worker', async ( req, res ) => {
 
         // Get worker data
         const { country_code, datacenter } = await ip_geodata( unspoofable_ip )
-        let worker = { ip: unspoofable_ip, country_code, datacenter, status: 'tbd', mining_pool_url }
+        let worker = { ip: unspoofable_ip, country_code, datacenter, status: 'tbd', mining_pool_url, public_url, payment_address_evm, payment_address_bittensor }
         log.info( `Received worker registration from ${ unspoofable_ip }:`, worker )
         worker = annotate_worker_with_defaults( worker )
         worker.wireguard_config = wireguard_config

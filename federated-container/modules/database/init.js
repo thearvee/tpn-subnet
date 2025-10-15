@@ -12,6 +12,7 @@ export async function init_database() {
     if( CI_MODE === 'true' || FORCE_DESTROY_DATABASE === 'true' ) {
         log.info( 'Dropping old tables in CI mode' )
         await pool.query( `DROP TABLE IF EXISTS workers` )
+        await pool.query( `DROP TABLE IF EXISTS worker_performance` )
         await pool.query( `DROP TABLE IF EXISTS timestamps` )
         await pool.query( `DROP TABLE IF EXISTS worker_broadcast_metadata` )
         await pool.query( `DROP TABLE IF EXISTS mining_pool_metadata_broadcast` )
@@ -32,6 +33,9 @@ export async function init_database() {
             CREATE TABLE IF NOT EXISTS workers (
                 PRIMARY KEY (mining_pool_uid, mining_pool_url, ip),
                 ip TEXT,
+                public_url TEXT,
+                payment_address_evm TEXT,
+                payment_address_bittensor TEXT,
                 public_port TEXT NOT NULL,
                 country_code TEXT NOT NULL,
                 mining_pool_url TEXT NOT NULL,
@@ -41,6 +45,19 @@ export async function init_database() {
             )
         ` )
         log.info( `✅ Workers table initialized` )
+    }
+
+    // Create the WORKER_PERFORMANCE table if it doesn't exist
+    if( miner_mode || validator_mode ) {
+        await pool.query( `
+            CREATE TABLE IF NOT EXISTS worker_performance (
+                ip TEXT NOT NULL,
+                status TEXT NOT NULL,
+                public_url TEXT NOT NULL,
+                updated_at BIGINT NOT NULL
+            )
+        ` )
+        log.info( `✅ Worker performance table initialized` )
     }
 
     // Create WORKER_BROADCAST_METADATA table if it does not exist yet
