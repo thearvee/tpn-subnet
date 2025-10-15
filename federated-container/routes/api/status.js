@@ -63,6 +63,7 @@ router.get( '/worker_performance', async ( req, res ) => {
 
         // Get request params
         let { from, to, format='json', api_key } = req.query || {}
+        log.debug( `Worker performance request from ${ from } to ${ to } in format ${ format } with api_key ${ api_key ? 'provided' : 'not provided' }` )
 
         // Check request validity
         const { miner_mode } = run_mode()
@@ -103,12 +104,14 @@ router.get( '/worker_performance', async ( req, res ) => {
         } ) )
 
         // Collate data into scores
+        const metadata = { from, to, from_human: from ? new Date( from ).toISOString() : 'N/A', to_human: to ? new Date( to ).toISOString() : 'N/A', total_workers: workers.length }
+        const defaults = { payment_address_evm: '', payment_address_bittensor: '' }
         workers = workers.reduce( ( acc, { ip, status } ) => {
 
             // Increment status scores
             const history = acc[ ip ] || { up: 0, down: 0, unknown: 0, uptime: 0 }
-            acc[ ip ] = { ...history, [ status ]: history[ status ] + 1 }
-            
+            acc[ ip ] = { ...defaults, ...history, ...metadata, [ status ]: history[ status ] + 1 }
+
             // Increment total uptime
             const { up, down, unknown } = acc[ ip ]
             const uptime = Math.round(  up / ( up + down + unknown )  * 10000 ) / 100
@@ -128,7 +131,7 @@ router.get( '/worker_performance', async ( req, res ) => {
         if( format === 'json' ) {
             return res.json( workers )
         } else if( format === 'csv' ) {
-            const csv = await writeToString( workers, { header: true } )
+            const csv = await writeToString( workers, { headers: true } )
             return res.type( 'text/csv' ).send( csv )
         }
 
