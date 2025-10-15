@@ -62,8 +62,8 @@ router.get( '/worker_performance', async ( req, res ) => {
         }
 
         // If parsing failed, return with invalid date error
-        if( from && isNaN( from ) ) return res.status( 400 ).json( { error: `Invalid 'from' date` } )
-        if( to && isNaN( to ) ) return res.status( 400 ).json( { error: `Invalid 'to' date` } )
+        if( isNaN( from ) ) return res.status( 400 ).json( { error: `Invalid 'from' date` } )
+        if( isNaN( to ) ) return res.status( 400 ).json( { error: `Invalid 'to' date` } )
 
         // Get the relevant worker data
         let { success, workers } = await get_worker_performance( { from, to } )
