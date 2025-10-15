@@ -72,7 +72,7 @@ sudo apt install -y nodejs npm python3 python3-venv python3-pip
 npm install -g pm2
 
 # Install the required python dependencies
-cd tpn-subnet
+cd ~/tpn-subnet
 python3 -m venv venv
 source venv/bin/activate
 pip3 install -r requirements.txt
@@ -189,9 +189,10 @@ docker compose -f federated-container/docker-compose.yml up -d
 To start the miner neuron:
 
 ```bash
-# NOTE: this assumes you are in the tpn-subnet director
-export PYTHONPATH=. && pm2 start "python3 neurons/miner.py \
-    --netuid 65 \ # 65 for mainnet, 279 for testnet
+# NOTE: this assumes you are in the tpn-subnet directory
+# Use netuid 65 for mainnet, 279 for testnet
+export PYTHONPATH=. && pm2 start "python3 ~/tpn-subnet/neurons/miner.py \
+    --netuid 65 \
     --subtensor.network finney \ # Finney means mainnet, test means testnet
     --wallet.name tpn_coldkey \
     --wallet.hotkey tpn_hotkey \
@@ -211,6 +212,34 @@ bash ~/tpn-subnet/scripts/update_node.sh
 
 > [!CAUTION]
 > The update script can be customised, for details run `bash ~/tpn-subnet/scripts/update_node.sh --help`
+
+### Paying your workers
+
+How mining pools pay workers is up to them. We encourage innovation and experimentation. All workers have a configured EVM wallet address and/or Bittensor address on which they request payment. As a mining pool you can periodically call the worker performance endpoint on your machine to do the payments according to your protocols.
+
+To get the worker performance and payment addresses:
+
+- Set a `ADMIN_API_KEY` in your `.env`
+- Call your pool machine with that API key and requested format like so:
+  ```bash
+  ADMIN_API_KEY=
+  SERVER_PUBLIC_PROTOCOL=http
+  SERVER_PUBLIC_HOST=your_public_ip_here
+  SERVER_PUBLIC_PORT=3000
+  # Change the parameters from, to, and format to your desired values
+  curl "$SERVER_PUBLIC_PROTOCOL://$SERVER_PUBLIC_HOST:$SERVER_PUBLIC_PORT/api/worker_performance?api_key=$ADMIN_API_KEY&from=yyyy-mm-dd&to=yyyy-mm-dd&format=csv|json"
+  ```
+
+As a mining pool you communicate how you pay workers by setting these variables in your `.env`:
+
+- `MINING_POOL_REWARDS`: a string with a description. For example "I will split rewards monthly and manually transfer the amount of subnet alpha to workers in this pool"
+- `MINING_POOL_WEBSITE_URL`: a url where you can have detailed documentation about how you run your pool and reward your workers
+
+Here are some examples of how a minint pool could operate:
+
+- You do not pay workers, meaning you will probably run all your workers yourself since nobody has an incentive to join your pool
+- You pay workers in subnet alpha on a periodic basis. If you are very sophisticated you could write a script that does so daily or even hourly.
+- You pay workers in stablecoins on their EVM address and you keep the subnet alpha
 
 ## Running a validator
 
@@ -289,8 +318,9 @@ To start the validator neuron:
 
 ```bash
 # NOTE: this assumes you are in the tpn-subnet director
-export PYTHONPATH=. && pm2 start "python3 neurons/validator.py \
-    --netuid 65 \ # 65 for mainnet, 279 for testnet
+# Use netuid 65 for mainnet, 279 for testnet
+export PYTHONPATH=. && pm2 start "python3 ~/tpn-subnet/neurons/validator.py \
+    --netuid 65 \
     --subtensor.network finney \ # Finney means mainnet, test means testnet
     --wallet.name tpn_coldkey \
     --wallet.hotkey tpn_hotkey \

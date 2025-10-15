@@ -32,7 +32,7 @@ export async function register_with_mining_pool() {
     try { 
 
         // Get worker configs
-        const public_url = base_url()
+        const public_url = base_url
         const { PAYMENT_ADDRESS_EVM, PAYMENT_ADDRESS_BITTENSOR } = process.env
 
         // Get required registration info

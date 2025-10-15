@@ -86,7 +86,8 @@ export async function register_mining_pool_with_validators() {
         else acc[ 1 ].push( result.reason )
         return acc
     }, [ [], [] ] )
-    log.info( `Registered mining pool with validators: ${ successes.length }, failed: ${ failures.length }` )
+    log.info( `Registered mining pool successfully with ${ successes.length } validators, failed: ${ failures.length }` )
+    log.debug( `Failed registrations: `, failures )
 
     return { successes, failures }
 
