@@ -48,3 +48,72 @@ describe( 'GET /api/lease/new (worker mode)', () => {
     } )
 
 } )
+
+describe( 'GET /api/lease/countries (worker mode)', () => {
+
+    test( 'returns countries in JSON format with country codes by default', async () => {
+        const { response, data } = await json.get( `${ BASE_URL }/api/lease/countries` )
+        
+        assert.strictEqual( response.status, 200 )
+        assert.ok( Array.isArray( data ) )
+        // Should return array of country codes (2-letter strings)
+        if( data.length > 0 ) {
+            assert.ok( data.every( code => typeof code === 'string' && code.length === 2 ) )
+        }
+    } )
+
+    test( 'returns countries in JSON format with country names when type=name', async () => {
+        const { response, data } = await json.get( `${ BASE_URL }/api/lease/countries?type=name` )
+        
+        assert.strictEqual( response.status, 200 )
+        assert.ok( Array.isArray( data ) )
+        // Should return array of country names (longer strings)
+        if( data.length > 0 ) {
+            assert.ok( data.every( name => typeof name === 'string' && name.length > 2 ) )
+        }
+    } )
+
+    test( 'returns countries in text format when format=text', async () => {
+        const response = await fetch( `${ BASE_URL }/api/lease/countries?format=text` )
+        const text = await response.text()
+        
+        assert.strictEqual( response.status, 200 )
+        assert.ok( typeof text === 'string' )
+        // Text format should be newline-separated country codes
+    } )
+
+    test( 'returns countries in text format with names when format=text&type=name', async () => {
+        const response = await fetch( `${ BASE_URL }/api/lease/countries?format=text&type=name` )
+        const text = await response.text()
+        
+        assert.strictEqual( response.status, 200 )
+        assert.ok( typeof text === 'string' )
+        // Text format should be newline-separated country names
+    } )
+
+    test( 'returns 500 when format is invalid', async () => {
+        const { response, data } = await json.get( `${ BASE_URL }/api/lease/countries?format=xml` )
+        
+        assert.strictEqual( response.status, 500 )
+        assert.ok( data && typeof data === 'object' )
+        assert.ok( typeof data.error === 'string' && data.error.includes( 'Invalid format' ) )
+    } )
+
+    test( 'returns 500 when type is invalid', async () => {
+        const { response, data } = await json.get( `${ BASE_URL }/api/lease/countries?type=invalid` )
+        
+        assert.strictEqual( response.status, 500 )
+        assert.ok( data && typeof data === 'object' )
+        assert.ok( typeof data.error === 'string' && data.error.includes( 'Invalid type' ) )
+    } )
+
+    test( 'supports both /api/lease/countries and /api/config/countries endpoints', async () => {
+        const { response: response1, data: data1 } = await json.get( `${ BASE_URL }/api/lease/countries` )
+        const { response: response2, data: data2 } = await json.get( `${ BASE_URL }/api/config/countries` )
+        
+        assert.strictEqual( response1.status, 200 )
+        assert.strictEqual( response2.status, 200 )
+        assert.deepStrictEqual( data1, data2 ) // Both endpoints should return the same data
+    } )
+
+} )

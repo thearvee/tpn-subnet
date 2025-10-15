@@ -9,11 +9,12 @@ import { get_worker_config_as_worker } from "../../modules/api/worker.js"
 import { is_validator_request } from "../../modules/networking/validators.js"
 import { ip_from_req, resolve_domain_to_ip } from "../../modules/networking/network.js"
 import { MINING_POOL_URL } from "../../modules/networking/worker.js"
-const { CI_MODE, CI_MOCK_WORKER_RESPONSES } = process.env
+import { country_name_from_code } from "../../modules/geolocation/helpers.js"
+const { CI_MOCK_WORKER_RESPONSES } = process.env
 
 export const router = Router()
 
-router.get( '/lease/new', async ( req, res ) => {
+router.get( [ '/config/new', '/lease/new' ], async ( req, res ) => {
 
     const { format='json' } = req.query || {}
 
@@ -45,6 +46,12 @@ router.get( '/lease/new', async ( req, res ) => {
         // 📋 Future: Validator access controls
         // if( validator_mode && !payment )
 
+
+        /* ///////////////////////////////
+        // BACKWARDS COMPATIBILITY
+        // Phase out by december 2025
+        // /////////////////////////////*/
+        if( req.query?.least_minutes ) req.query.lease_seconds = Number( req.query.least_minutes ) * 60
 
         // Prepare validation props based on run mode
         const mandatory_props = [ 'lease_seconds', 'format' ]
@@ -96,5 +103,38 @@ router.get( '/lease/new', async ( req, res ) => {
     } catch ( e ) {
         log.info( `Error handling new lease route: ${ e.message }` )
         return res.status( 500 ).json( { error: `Error handling new lease route: ${ e.message }` } )
+    }
+} )
+
+
+router.get( [ '/config/countries', '/lease/countries' ], async ( req, res ) => {
+
+    const { format='json', type='code' } = req.query || {}
+
+    const handle_route = async () => {
+
+
+        // Validate inputs
+        if( ![ 'json', 'text' ].includes( format ) ) throw new Error( `Invalid format: ${ format }` )
+        if( ![ 'code', 'name' ].includes( type ) ) throw new Error( `Invalid type: ${ type }` )
+
+        const worker_country_count = get_tpn_cache( 'worker_country_count', {} )
+        const country_codes = Object.keys( worker_country_count )
+        const country_names = country_codes.map( country_name_from_code )
+
+        if( format == 'json' && type == 'code' ) return country_codes
+        if( format == 'json' && type == 'name' ) return country_names
+        if( format == 'text' && type == 'code' ) return country_codes.join( '\n' )
+        if( format == 'text' && type == 'name' ) return country_names.join( '\n' )
+
+    }
+
+    try {
+        const retryable_handler = await make_retryable( handle_route, { retry_times, cooldown_in_s } )
+        const response_data = await retryable_handler()
+        if( format == 'text' ) return res.send( response_data )
+        return res.json( response_data )
+    } catch ( error ) {
+        return res.status( 500 ).json( { error: `Error handling stats route: ${ error.message }` } )
     }
 } )
