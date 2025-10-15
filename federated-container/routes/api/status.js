@@ -29,10 +29,14 @@ router.get( '/worker_performance', async ( req, res ) => {
     try {
 
         // Default values
-        const default_history_days = 7
-        const _from = Date.now() - default_history_days * 24 * 60 * 60_000
+        const { history_days=7 } = req.query || {}
+        const _from = Date.now() - history_days * 24 * 60 * 60_000
         const _to = Date.now()
         const _format = 'json'
+
+        // Conflicting params
+        if( req.query?.from && req.query?.history_days ) throw new Error( `Cannot specify both 'from' and 'history_days'` )
+        if( req.query?.to && req.query?.history_days ) throw new Error( `Cannot specify both 'to' and 'history_days'` )
 
         // Get request params
         let { from=_from, to=_to, format=_format, api_key } = req.query || {}

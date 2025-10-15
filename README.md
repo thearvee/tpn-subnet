@@ -221,14 +221,17 @@ To get the worker performance and payment addresses:
 
 - Set a `ADMIN_API_KEY` in your `.env`
 - Call your pool machine with that API key and requested format like so:
-  ```bash
-  ADMIN_API_KEY=
-  SERVER_PUBLIC_PROTOCOL=http
-  SERVER_PUBLIC_HOST=your_public_ip_here
-  SERVER_PUBLIC_PORT=3000
-  # Change the parameters from, to, and format to your desired values
-  curl "$SERVER_PUBLIC_PROTOCOL://$SERVER_PUBLIC_HOST:$SERVER_PUBLIC_PORT/api/worker_performance?api_key=$ADMIN_API_KEY&from=yyyy-mm-dd&to=yyyy-mm-dd&format=csv|json"
-  ```
+
+```bash
+ADMIN_API_KEY=
+SERVER_PUBLIC_PROTOCOL=http
+SERVER_PUBLIC_HOST=your_public_ip_here
+SERVER_PUBLIC_PORT=3000
+# Change the parameters history_days, from, to, and format to your desired values
+# Note that you can set wither history_days, or to/from, but not both at the same time
+# Format may be set to json or csv
+curl "$SERVER_PUBLIC_PROTOCOL://$SERVER_PUBLIC_HOST:$SERVER_PUBLIC_PORT/api/worker_performance?api_key=$ADMIN_API_KEY&from=yyyy-mm-dd&to=yyyy-mm-dd&format=csv"
+```
 
 As a mining pool you communicate how you pay workers by setting these variables in your `.env`:
 
