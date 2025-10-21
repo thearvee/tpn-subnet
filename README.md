@@ -1,29 +1,27 @@
 # TPN - Tao Private Network
 
-The TPN subnet coordinares miners that offer VPN connections in a wide variety of geographic locations.
+The TPN subnet coordinates miners that offer VPN connections in a wide variety of geographic locations.
 
-In the TPN subnet, there are two kinds of nodes:
+In the TPN subnet, there are three kinds of nodes:
 
-- **Miners**: These nodes offer VPN connections to users and are rewarded for their service
+- **Workers**: These are easy to run nodes that provide VPN connections and get rewarded by mining pools
+- **Miners**: These nodes offer the VPN connections that workers provide and are given subnet emissions, they are responsible for distributing those rewards to workers however they see fit
 - **Validators**: These nodes validate the work of miners and act as an interface to end users
 
-If you want to contribute to the TPN subnet, the easiers way to do so it to run a miner. This page will explain how to run a miner and a validator. Keep in mind that you should:
+If you want to contribute to the TPN subnet, the easiers way to do so it to run a worker. This requires only a server and no bittensor activity at all. This page will explain how to run a worker, a miner, or a validator. Keep in mind that you should:
 
-- Decide if you want to run a miner or a validator
-- Make sure you have the necessary hardware for the miner or validator
-- Running a miner is easier than running a validator
+- Decide if you want to run a worker, miner, or a validator
+- Make sure you have the necessary hardware for the worker, miner, or validator
+- Running a worker is easiest, running a mining pool is harder, and running a validator is hardest
 
 **CURRENT SUBNET STATUS**
-
-The TPN is currently in beta mode, VPN scaffolding is present and consumer endpoints will be released soon.
-
 
 > [!CAUTION]
 > This documentation is a work in public alpha. Expect things to break. Specifically the validator instructions are currently unstable due to development pace.
 
 ## Preparing your machine
 
-Before starting your miner and/or validator, please prepare your machine by setting up the required enrivonment.
+Before starting your server, please prepare your machine by setting up the required enrivonment.
 
 ### 1: Installing dependencies
 
@@ -31,25 +29,22 @@ Requirements:
 
 - Linux OS (Ubuntu LTS recommended)
 - 2 CPU cores
-- 2GB RAM
-- 50GB disk space
+- 1-2GB RAM for a worker, 4-8GB RAM for a mining pool, 8-16GB RAM for a validator
+- 10-20 GB disk space for a worker, 50GB disk space for a mining pool or validator
 - Publically accessible IP address
 
-The miner and validator share the same dependencies. No matter which you choose to run, please install the dependencies by executing the following commands:
+All servers share some of the same dependencies. No matter which you choose to run, please install the dependencies by executing the following commands:
 
 ```bash
 # Install the required system dependencies
 sudo apt update
-sudo apt install -y git python3 python3-venv python3-pip
+sudo apt install -y git
 sudo apt upgrade -y # OPTIONAL, this updated system packages
 
 # Install docker
 curl -fsSL https://get.docker.com -o get-docker.sh
 sudo sh get-docker.sh
 
-# Install node and pm2
-sudo apt install -y nodejs npm
-npm install -g pm2
 
 # Install wireguard and wireguard-tools, these are commonly preinstalled on Ubuntu
 sudo apt install -y wireguard wireguard-tools
@@ -57,15 +52,7 @@ sudo modprobe wireguard
 
 # Clone the TPN repository, it contains all the required code
 cd ~
-git clone https://github.com/beyond-stake/tpn-subnet.git
-
-# Install the required python dependencies
-cd tpn-subnet
-python3 -m venv venv
-source venv/bin/activate
-pip3 install -r requirements.txt
-export PYTHONPATH=.
-
+git clone https://github.com/taofu-labs/tpn-subnet.git
 # Add the current user to docker for rootless docker running
 if [ -z "$USER" ]; then
     USER=$(whoami)
@@ -77,7 +64,22 @@ newgrp docker << EOF
 EOF
 ```
 
-### 2: Configure keys
+For miners and validators (NOT workers), you also need to install python and Bittensor components:
+
+```bash
+# Install python, node and pm2
+sudo apt install -y nodejs npm python3 python3-venv python3-pip
+npm install -g pm2
+
+# Install the required python dependencies
+cd ~/tpn-subnet
+python3 -m venv venv
+source venv/bin/activate
+pip3 install -r requirements.txt
+export PYTHONPATH=.
+```
+
+### 2: Configure keys (mining pool/validator only)
 
 The next step is to configure the Bittensor keys for your miner and/or validator. Note that these keys are stored in the `~/.bittensor` directory. You have 2 options:
 
@@ -91,7 +93,7 @@ If you have existing keys that you are deploying, copy them in the following str
 ├── tpn_coldkey # This directory name is how btcli knows the name of your coldkey
 │   ├── coldkeypub.txt # This file contains your public coldkey, NOT THE PRIVATE KEY, the miner machine does not need the private key
 |   └── hotkeys # This directory contains the private keys of your hotkeys
-|       ├── hotkey # This file contains the private key of your hotkey in json format
+|       ├── tpn_hotkey # This file contains the private key of your hotkey in json format
 ```
 
 If you want to generate new keys, execute the following commands:
@@ -103,40 +105,94 @@ btcli w new_hotkey --wallet.name tpn_hotkey
 
 Note that the above will generate a private key for your coldkey as well. This is a key with security implications and should be stored securely. Ideally you delete it from your miner server after backing it up safely.
 
-## Running a miner
+### 3: Configure your environment
 
-Note that your rewards depend on the uniqueness of the location of your miner. Once you have chosen a location, either as a hosted VPS or as physical hardware, you can start the miner.
+You need so set some settings so make sure your server operates how you want. This influences things like on what address you get paid and so forth.
 
-The consists out of two components:
+```bash
+cd tpn-subnet/federated-container
+# Select the appropriate template
+cp .env.{worker,miner,validator}.example .env
+# Edit .env with your specific configuration
+nano .env
+```
+
+Take note of the mandatory and optional sections. For miners and validators, you need to get these two external API keys:
+
+- Make an account at https://lite.ip2location.com/. Set it as the `IP2LOCATION_DOWNLOAD_TOKEN` environment variable in the docker compose file. Add this in the specified location in the `.env` file you copied above.
+- Make an account at https://www.maxmind.com and generate a license key in account settings. Add this in the specified location in the `.env` file you copied above.
+
+## Running a worker
+
+A worker is just a docker image with some settings.
+
+> [!NOTE]
+> Before doing this, set up your .env file correctly. See the section "3: Configure your environment"
+
+
+To start the worker run:
+
+```bash
+# These lines are optional but recommended, they tell the docker container how much memory it can safely use on your system
+QUARTER_OF_FREE_RAM=$(($(free -m | awk 'NR==2{print $2}') * 3 / 4))
+export CONTAINER_MAX_PROCESS_RAM_MB="$QUARTER_OF_FREE_RAM"
+
+# NOTE: this assumes you are in the tpn-subnet directory
+cd tpn-subnet
+docker compose -f federated-container/docker-compose.yml --profile worker up -d
+```
+
+To update your worker, run:
+
+```bash
+# Run the update script, this assumes the tpn repository is located at ~/tpn-subnet
+bash ~/tpn-subnet/scripts/update_node.sh
+```
+
+> [!CAUTION]
+> The update script can be customised, for details run `bash ~/tpn-subnet/scripts/update_node.sh --help`
+
+
+## Running a mining pool
+
+The miner consists out of two components:
 
 1. A miner docker container that is managed through `docker`
 2. A miner neuron that is managed through `pm2`
 
-To start the docker container, there are 2 steps. Creating a `.env` file and starting the container.
+To start the miner docker container, three things must be done: setting up an env and starting docker. Docker will know to run as a mining pool due to your `.env` settings. 
 
-Create a `.env` file in the `node-stack/miner` directory with the following content:
+
+> [!NOTE]
+> Before doing this, set up your .env file correctly. See the section "3: Configure your environment"
 
 ```bash
-POSTGRES_PASSWORD=xxxx # REQUIRED, may be any valid string, choose something random
-LOGLEVEL=info # optional, this controls the log level, valid values are: info, warn, error
-POSTGRES_HOST=postgres # optional, only use if you have a remote database (not recommended)
-POSTGRES_PORT=5432 # optional, this changes the postgres port (not recommended)
-WIREGUARD_PEER_COUNT=250 # optional, this changes the amount of connections the miner offers, must be between 15 and 250
+# Copy the example .env
+cd tpn-subnet
+cp federated-container/.env.worker federated-container/.env
+
+# Edit the values in there
+nano .env
 ```
 
-Then start the miner docker container:
+Then start docker compose like so:
 
 ```bash
+# These lines are optional but recommended, they tell the docker container how much memory it can safely use on your system
+QUARTER_OF_FREE_RAM=$(($(free -m | awk 'NR==2{print $2}') * 3 / 4))
+export CONTAINER_MAX_PROCESS_RAM_MB="$QUARTER_OF_FREE_RAM"
+
 # NOTE: this assumes you are in the tpn-subnet directory
-docker compose -f node-stack/miner/miner.docker-compose.yml up -d
+docker compose -f federated-container/docker-compose.yml up -d
 ```
 
 To start the miner neuron:
 
 ```bash
-# NOTE: this assumes you are in the tpn-subnet director
-export PYTHONPATH=. && pm2 start "python3 neurons/miner.py \
-    --netuid 65 \ # 65 for mainnet, 279 for testnet
+# NOTE: this assumes you are in the tpn-subnet directory
+# Use netuid 65 for mainnet, 279 for testnet
+export PYTHONPATH=. && pm2 start "python3 ~/tpn-subnet/neurons/miner.py \
+    --netuid 65 \
     --subtensor.network finney \ # Finney means mainnet, test means testnet
     --wallet.name tpn_coldkey \
     --wallet.hotkey tpn_hotkey \
@@ -151,11 +207,42 @@ The miner automatically updates some components periodically, but not all. You s
 
 ```bash
 # Run the update script, this assumes the tpn repository is located at ~/tpn-subnet
-bash scripts/update_miner.sh
+bash ~/tpn-subnet/scripts/update_node.sh
 ```
 
 > [!CAUTION]
-> The update script can be customised, for details run `bash scripts/update_miner.sh --help`
+> The update script can be customised, for details run `bash ~/tpn-subnet/scripts/update_node.sh --help`
+
+### Paying your workers
+
+How mining pools pay workers is up to them. We encourage innovation and experimentation. All workers have a configured EVM wallet address and/or Bittensor address on which they request payment. As a mining pool you can periodically call the worker performance endpoint on your machine to do the payments according to your protocols.
+
+To get the worker performance and payment addresses:
+
+- Set a `ADMIN_API_KEY` in your `.env`
+- Call your pool machine with that API key and requested format like so:
+
+```bash
+ADMIN_API_KEY=
+SERVER_PUBLIC_PROTOCOL=http
+SERVER_PUBLIC_HOST=your_public_ip_here
+SERVER_PUBLIC_PORT=3000
+# Change the parameters history_days, from, to, and format to your desired values
+# Note that you can set wither history_days, or to/from, but not both at the same time
+# Format may be set to json or csv
+curl "$SERVER_PUBLIC_PROTOCOL://$SERVER_PUBLIC_HOST:$SERVER_PUBLIC_PORT/api/worker_performance?api_key=$ADMIN_API_KEY&from=yyyy-mm-dd&to=yyyy-mm-dd&format=csv"
+```
+
+As a mining pool you communicate how you pay workers by setting these variables in your `.env`:
+
+- `MINING_POOL_REWARDS`: a string with a description. For example "I will split rewards monthly and manually transfer the amount of subnet alpha to workers in this pool"
+- `MINING_POOL_WEBSITE_URL`: a url where you can have detailed documentation about how you run your pool and reward your workers
+
+Here are some examples of how a minint pool could operate:
+
+- You do not pay workers, meaning you will probably run all your workers yourself since nobody has an incentive to join your pool
+- You pay workers in subnet alpha on a periodic basis. If you are very sophisticated you could write a script that does so daily or even hourly.
+- You pay workers in stablecoins on their EVM address and you keep the subnet alpha
 
 ## Running a validator
 
@@ -207,30 +294,6 @@ fi
 eval $export_line
 ```
 
-The validator needs to be configured with some settings and third party API keys. These values are stored in `node-stack/validator/.env`. Populate that file like so:
-
-```bash
-# This controls the verbosity of the logs. Possible values are: info, warn, error
-LOGLEVEL=info # Optional
-
-# A free license key, obtained by creating an account and API key at http://maxmind.com/en/accounts/
-MAXMIND_LICENSE_KEY=xxxx
-
-# This is the public URL where the validator can be reached.
-PUBLIC_VALIDATOR_URL=http://1.2.3.4
-
-# This is 3000 by default, you should only change it if your device is behind a firewall or reverse proxy.
-# Miners MUST be able to call your validator at this port. If they cannot, your validator is NOT valid. Test this by running `curl $PUBLIC_VALIDATOR_URL:$PUBLIC_PORT`
-PUBLIC_PORT=3000
-
-# The free ip2location lite API key, obtained by creating an account at https://lite.ip2location.com/login
-IP2LOCATION_DOWNLOAD_TOKEN=xxxx
-POSTGRES_PASSWORD=xxxx # May be any valid string, choose something random, it does not matter what.
-
-# Configure the max RAM the validator may use, above 8GB is recommended
-VALIDATOR_MAX_PROCESS_RAM_MB=8192 # Find the max of your system by running: awk '/MemTotal/ { print int($2 / 1024) }' /proc/meminfo
-```
-
 ### Step 3: Start the validator
 
 The validator also consists out of two components:
@@ -238,19 +301,29 @@ The validator also consists out of two components:
 1. A validator docker container that is managed through `docker`
 2. A validator neuron that is managed through `pm2`
 
-To start the docker container:
+To start the docker container run the command below. Docker will know to run as a validator due to your `.env` settings.
+
+
+> [!NOTE]
+> Before doing this, set up your .env file correctly. See the section "3: Configure your environment"
+
 
 ```bash
+# These lines are optional but recommended, they tell the docker container how much memory it can safely use on your system
+QUARTER_OF_FREE_RAM=$(($(free -m | awk 'NR==2{print $2}') * 3 / 4))
+export CONTAINER_MAX_PROCESS_RAM_MB="$QUARTER_OF_FREE_RAM"
+
 # NOTE: this assumes you are in the tpn-subnet directory
-docker compose -f node-stack/validator/validator.docker-compose.yml up -d
+docker compose -f federated-container/docker-compose.yml up -d
 ```
 
 To start the validator neuron:
 
 ```bash
 # NOTE: this assumes you are in the tpn-subnet director
-export PYTHONPATH=. && pm2 start "python3 neurons/validator.py \
-    --netuid 65 \ # 65 for mainnet, 279 for testnet
+# Use netuid 65 for mainnet, 279 for testnet
+export PYTHONPATH=. && pm2 start "python3 ~/tpn-subnet/neurons/validator.py \
+    --netuid 65 \
     --subtensor.network finney \ # Finney means mainnet, test means testnet
     --wallet.name tpn_coldkey \
     --wallet.hotkey tpn_hotkey \
@@ -266,8 +339,8 @@ The validator automatically updates some components periodically, but not all. Y
 
 ```bash
 # Run the update script, this assumes the tpn repository is located at ~/tpn-subnet
-bash scripts/update_validator.sh
+bash ~/tpn-subnet/scripts/update_node.sh
 ```
 
 > [!CAUTION]
-> The update script can be customised, for details run `bash scripts/update_validator.sh --help`
+> The update script can be customised, for details run `bash ~/tpn-subnet/scripts/update_node.sh --help`

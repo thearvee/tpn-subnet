@@ -242,9 +242,10 @@ if __name__ == "__main__":
 
         async def periodic_broadcast():
             last_broadcast = None
-            while True:
+            broadcast_interval_minutes = 1
+            while True: 
                 check_if_miner_registered(miner)
-                if last_broadcast is None or time.time() - last_broadcast > 1800:
+                if last_broadcast is None or time.time() - last_broadcast > broadcast_interval_minutes * 60:
                     await miner.broadcast_neurons()
                     last_broadcast = time.time()
                 await asyncio.sleep(60)  # 60 seconds between broadcasts
