@@ -56,7 +56,6 @@ sudo apt upgrade -y # OPTIONAL, this updated system packages
 curl -fsSL https://get.docker.com -o get-docker.sh
 sudo sh get-docker.sh
 
-
 # Install wireguard and wireguard-tools, these are commonly preinstalled on Ubuntu
 sudo apt install -y wireguard wireguard-tools
 sudo modprobe wireguard
