@@ -69,12 +69,22 @@ For miners and validators (NOT workers), you also need to install python and Bit
 ```bash
 # Install python, node and pm2
 sudo apt install -y nodejs npm python3 python3-venv python3-pip
+mkdir -p ~/.npm-global
+npm config set prefix '~/.npm-global'
+RC_PATH="$HOME/.${SHELL##*/}rc"
+echo "Using rc path $RC_PATH"
+echo 'export PATH=~/.npm-global/bin:$PATH' >> "$RC_PATH"
+source "$RC_PATH"
 npm install -g pm2
 
 # Install the required python dependencies
 cd ~/tpn-subnet
 python3 -m venv venv
 source venv/bin/activate
+TPN_CACHE="$HOME/.tpn_cache"
+mkdir -p $TPN_CACHE
+export TMPDIR=$TPN_CACHE
+export WANDB_CACHE_DIR=$TPN_CACHE
 pip3 install -r requirements.txt
 export PYTHONPATH=.
 ```
