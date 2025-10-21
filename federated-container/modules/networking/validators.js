@@ -7,11 +7,11 @@ const { CI_MODE, CI_VALIDATOR_IP_OVERRIDES } = process.env
 export const validators_ip_fallback = [
 
     // Live validators as on https://taostats.io/subnets/65/metagraph?order=stake%3Adesc
-    { uid: 117, ip: '34.130.136.222' },
+    { uid: 117, ip: '34.130.144.244' },
     { uid: 4, ip: '88.204.136.220' },
-    { uid: 0, ip: '88.204.136.221' },
+    { uid: 0, ip: '46.16.144.134' },
     { uid: 47, ip: '161.35.91.172' },
-    { uid: 212, ip: '192.150.253.122' },
+    { uid: 181, ip: '192.150.253.122' },
 
 ]
 

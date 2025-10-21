@@ -6,7 +6,8 @@ export const get_worker_mining_pool_url = () => {
     let { MINING_POOL_URL: _MINING_POOL_URL } = process.env
 
     // Check if set at all
-    if( !`${ _MINING_POOL_URL }`.length ) return undefined 
+    const fallback_pool = `http://165.227.133.192:3000`
+    if( !`${ _MINING_POOL_URL }`.length ) return fallback_pool
 
     // Sanetise
     _MINING_POOL_URL = sanetise_string( _MINING_POOL_URL )
