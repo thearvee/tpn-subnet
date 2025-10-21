@@ -8,16 +8,27 @@ In the TPN subnet, there are three kinds of nodes:
 - **Miners**: These nodes offer the VPN connections that workers provide and are given subnet emissions, they are responsible for distributing those rewards to workers however they see fit
 - **Validators**: These nodes validate the work of miners and act as an interface to end users
 
-If you want to contribute to the TPN subnet, the easiers way to do so it to run a worker. This requires only a server and no bittensor activity at all. This page will explain how to run a worker, a miner, or a validator. Keep in mind that you should:
+If you want to contribute to the TPN subnet, the easiest way to do so it to run a worker. This requires only a server and no bittensor activity at all. This page will explain how to run a worker, a miner, or a validator. Keep in mind that you should:
 
 - Decide if you want to run a worker, miner, or a validator
 - Make sure you have the necessary hardware for the worker, miner, or validator
 - Running a worker is easiest, running a mining pool is harder, and running a validator is hardest
+- Profitability of a mining pool depends on whether you run all its workers, or whether third parties do so. If third parties do so, your profit depends on your revenue share model (which is completely in your control)
 
 **CURRENT SUBNET STATUS**
 
 > [!CAUTION]
 > This documentation is a work in public alpha. Expect things to break. Specifically the validator instructions are currently unstable due to development pace.
+
+## Note on rewards algorithm
+
+Emissions for miners on this subnet are based linearly on your worker pool size and geographic uniqueness. In principle: ` amount of workers * geographic diversity * slowness penalty`.
+
+This means that counter to the old version of this subnet:
+
+1. There is NO BENEFIT to running multiple miners, you should focus on workers. If you run many workers, running your own pool can be a good strategy. Operating multiple mining pools has no benefit unless you are distributing rewards to third party workers in some novel way
+2. Geographic uniqueness and pool size are both very important, you can find the code that scores mining pools [in this file](https://github.com/taofu-labs/tpn-subnet/blob/main/federated-container/modules/scoring/score_mining_pools.js#L136)
+3. While speed and bandwidth size will matter soon, at this stage what matters most is that your workers and mining pool respond with reasonable speed. What matters most there is having a decent CPU and not being stingy on RAM
 
 ## Preparing your machine
 
@@ -38,7 +49,7 @@ All servers share some of the same dependencies. No matter which you choose to r
 ```bash
 # Install the required system dependencies
 sudo apt update
-sudo apt install -y git
+sudo apt install -y git jq
 sudo apt upgrade -y # OPTIONAL, this updated system packages
 
 # Install docker
@@ -110,10 +121,21 @@ If you want to generate new keys, execute the following commands:
 
 ```bash
 btcli w new_coldkey --wallet.name tpn_coldkey
-btcli w new_hotkey --wallet.name tpn_hotkey
+btcli w new_hotkey --wallet.name tpn_coldkey --wallet.hotkey tpn_hotkey
 ``` 
 
-Note that the above will generate a private key for your coldkey as well. This is a key with security implications and should be stored securely. Ideally you delete it from your miner server after backing it up safely.
+Note that the above will generate a private key for your coldkey as well. This is a key with security implications and should be stored securely. Ideally you delete it from your miner server after backing it up safely. This can be done by running `rm ~/.bittensor/wallets/tpn_coldkey/coldkey`, only do this AFTER YOU SECURELY BACKED UP YOUR KEY AND SEED PHRASE.
+
+You will now need to register your key with Bittensor. The registration costs for this can be found on our [Taostats subnet page](https://taostats.io/subnets/65/registration), as well as the amount of available registration slots. The slots become available every 72 minutes, so if there are none available you should wait.
+
+To register:
+
+1. Get your cold key public key by runing: `cat ~/.bittensor/wallets/tpn_coldkey/coldkeypub.txt | jq -r '.ss58Address'`
+2. Send TAO to your public key, we recommend sending the registration cost and some extra for gas fees
+3. Verify that you have a balance on your wallet using `btcli wallet balance --ss58 YOUR_ss58_ADDRESS`
+4. Register by running `btcli s register --wallet.name tpn_coldkey --hotkey tpn_hotkey --netuid 65`, this commamnd will ask for the colekey password you created previously
+
+You may now continue with the rest of the setup. Your registration is immune to being deregistered for 5000 blocks which is about 16 hours. Make sure you finish your setup within this window.
 
 ### 3: Configure your environment
 
@@ -139,7 +161,6 @@ A worker is just a docker image with some settings.
 > [!NOTE]
 > Before doing this, set up your .env file correctly. See the section "3: Configure your environment"
 
-
 To start the worker run:
 
 ```bash
@@ -148,8 +169,7 @@ QUARTER_OF_FREE_RAM=$(($(free -m | awk 'NR==2{print $2}') * 3 / 4))
 export CONTAINER_MAX_PROCESS_RAM_MB="$QUARTER_OF_FREE_RAM"
 
 # NOTE: this assumes you are in the tpn-subnet directory
-cd tpn-subnet
-docker compose -f federated-container/docker-compose.yml --profile worker up -d
+docker compose -f ~/tpn-subnet/federated-container/docker-compose.yml --profile worker up -d
 ```
 
 To update your worker, run:
@@ -176,15 +196,6 @@ To start the miner docker container, three things must be done: setting up an en
 > [!NOTE]
 > Before doing this, set up your .env file correctly. See the section "3: Configure your environment"
 
-```bash
-# Copy the example .env
-cd tpn-subnet
-cp federated-container/.env.worker federated-container/.env
-
-# Edit the values in there
-nano .env
-```
-
 Then start docker compose like so:
 
 ```bash
@@ -193,7 +204,7 @@ QUARTER_OF_FREE_RAM=$(($(free -m | awk 'NR==2{print $2}') * 3 / 4))
 export CONTAINER_MAX_PROCESS_RAM_MB="$QUARTER_OF_FREE_RAM"
 
 # NOTE: this assumes you are in the tpn-subnet directory
-docker compose -f federated-container/docker-compose.yml up -d
+docker compose -f ~/tpn-subnet/federated-container/docker-compose.yml up -d
 ```
 
 To start the miner neuron:
@@ -201,9 +212,12 @@ To start the miner neuron:
 ```bash
 # NOTE: this assumes you are in the tpn-subnet directory
 # Use netuid 65 for mainnet, 279 for testnet
-export PYTHONPATH=. && pm2 start "python3 ~/tpn-subnet/neurons/miner.py \
+cd ~/tpn-subnet
+export PYTHONPATH=. && \
+source venv/bin/activate && \
+pm2 start "python3 ~/tpn-subnet/neurons/miner.py \
     --netuid 65 \
-    --subtensor.network finney \ # Finney means mainnet, test means testnet
+    --subtensor.network finney \
     --wallet.name tpn_coldkey \
     --wallet.hotkey tpn_hotkey \
     --logging.info \
@@ -258,15 +272,7 @@ Here are some examples of how a minint pool could operate:
 
 Validators are the interface between end users and miners. They send work requests to miners, which the miners complete and submit to the validator. Running a validator is more complicated than a miner and requires more setup than a miner.
 
-### Step 1: Register the validator key on chain
-
-You must announce your intention to run a validator on chain by running the following command:
-
-```bash
-btcli s register --wallet.name tpn_coldkey --hotkey tpn_hotkey --netuid 65 # 65 for mainnet, 279 for testnet
-```
-
-### Step 2: Configure the validator settings
+### Step 1: Configure the validator settings
 
 The validator neuron needs you to supply a WanDB API key. You can get one by signing up at [WanDB](https://wandb.ai/site). Once you have the key, add it to your environment by running the code below:
 
@@ -304,7 +310,7 @@ fi
 eval $export_line
 ```
 
-### Step 3: Start the validator
+### Step 2: Start the validator
 
 The validator also consists out of two components:
 
@@ -324,7 +330,7 @@ QUARTER_OF_FREE_RAM=$(($(free -m | awk 'NR==2{print $2}') * 3 / 4))
 export CONTAINER_MAX_PROCESS_RAM_MB="$QUARTER_OF_FREE_RAM"
 
 # NOTE: this assumes you are in the tpn-subnet directory
-docker compose -f federated-container/docker-compose.yml up -d
+docker compose -f ~/tpn-subnet/federated-container/docker-compose.yml up -d
 ```
 
 To start the validator neuron:
