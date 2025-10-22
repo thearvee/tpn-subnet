@@ -93,7 +93,10 @@ router.get( '/worker_performance', async ( req, res ) => {
         // Collate data into scores
         const metadata = { from, to, from_human: from ? new Date( from ).toISOString() : 'N/A', to_human: to ? new Date( to ).toISOString() : 'N/A', total_workers: workers.length }
         const defaults = { payment_address_evm: '', payment_address_bittensor: '' }
-        let totals = { count: 0, up: 0, down: 0, unknown: 0 }
+        const totals = workers.reduce( ( acc, { status } ) => {
+            acc[ status ] = ( acc[ status ] || 0 ) + 1
+            return acc
+        }, { up: 0, down: 0, unknown: 0 } )
         workers = workers.reduce( ( acc, { ip, status, ...worker } ) => {
 
             // Increment status scores
@@ -105,13 +108,12 @@ router.get( '/worker_performance', async ( req, res ) => {
             const uptime = Math.round(  up / ( up + down + unknown )  * 10000 ) / 100
             acc[ ip ].uptime = isNaN( uptime ) ? 0 : uptime
 
-            // Increment totals
-            totals[ status ] = ( totals[ status ] || 0 ) + 1
-            totals.count += 1
-
             return acc
 
         }, {} )
+
+        // Turn into array sorted by uptime
+        workers = Object.entries( workers ).map( ( [ ip, data ] ) => ( { ip, ...data } ) ).sort( ( a, b ) => b.uptime - a.uptime )
 
         // Annotate workers with payment_fraction
         workers = workers.map( worker => {
@@ -122,26 +124,39 @@ router.get( '/worker_performance', async ( req, res ) => {
         } )
         log.info( `Payment fraction annotations added, total payment fractions: ${ workers.reduce( ( acc, { payment_fraction } ) => acc + payment_fraction, 0 ) }` )
 
-        // Turn into array sorted by uptime
-        workers = Object.entries( workers ).map( ( [ ip, data ] ) => ( { ip, ...data } ) ).sort( ( a, b ) => b.uptime - a.uptime )
-
         // If group_by is not ip but wallet, map ip to wallet address
         let response_data = {}
         if( group_by == 'ip' ) response_data = workers
-        if( group_by == 'payment_address_evm' ) response_data = workers.reduce( ( acc, worker ) => {
-            const { payment_address_evm } = worker
-            if( !payment_address_evm ) return acc
-            const reward_fraction = acc[ payment_address_evm ] || 0
-            acc[ payment_address_evm ] = reward_fraction + worker.payment_fraction
-            return acc
-        }, {} )
-        if( group_by == 'payment_address_bittensor' ) response_data = workers.reduce( ( acc, worker ) => {
-            const { payment_address_bittensor } = worker
-            if( !payment_address_bittensor ) return acc
-            const reward_fraction = acc[ payment_address_bittensor ] || 0
-            acc[ payment_address_bittensor ] = reward_fraction + worker.payment_fraction
-            return acc
-        }, {} )
+        if( group_by == 'payment_address_evm' ) {
+
+            // Group by EVM address
+            const data_by_evm_address = workers.reduce( ( acc, worker ) => {
+                const { payment_address_evm } = worker
+                if( !payment_address_evm ) return acc
+                const reward_fraction = acc[ payment_address_evm ] || 0
+                acc[ payment_address_evm ] = reward_fraction + worker.payment_fraction
+                return acc
+            }, {} )
+
+            // Turn into array sorted by payment fraction
+            response_data = Object.entries( data_by_evm_address ).map( ( [ payment_address_evm, payment_fraction ] ) => ( { payment_address_evm, payment_fraction } ) ).sort( ( a, b ) => b.payment_fraction - a.payment_fraction )
+
+        }
+        if( group_by == 'payment_address_bittensor' ) {
+            
+            // Group by Bittensor address
+            const data_by_bittensor_address = workers.reduce( ( acc, worker ) => {
+                const { payment_address_bittensor } = worker
+                if( !payment_address_bittensor ) return acc
+                const reward_fraction = acc[ payment_address_bittensor ] || 0
+                acc[ payment_address_bittensor ] = reward_fraction + worker.payment_fraction
+                return acc
+            }, {} )
+
+            // Turn into array sorted by payment fraction
+            response_data = Object.entries( data_by_bittensor_address ).map( ( [ payment_address_bittensor, payment_fraction ] ) => ( { payment_address_bittensor, payment_fraction } ) ).sort( ( a, b ) => b.payment_fraction - a.payment_fraction )
+            
+        }
 
         // Cache response for 5 minutes
         cache( `worker_performance_${ group_by }_${ from }_${ to }_${ format }`, response_data, 5 * 60_000 )
