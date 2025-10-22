@@ -252,6 +252,7 @@ GROUP_BY='ip'
 # Change the parameters history_days, from, to, and format to your desired values
 # Note that you can set wither history_days, or to/from, but not both at the same time
 # Format may be set to json or csv
+# group_by may be set to ip, payment_address_bittensor, payment_address_evm
 curl "$SERVER_PUBLIC_PROTOCOL://$SERVER_PUBLIC_HOST:$SERVER_PUBLIC_PORT/api/worker_performance?api_key=$ADMIN_API_KEY&from=yyyy-mm-dd&to=yyyy-mm-dd&format=$FORMAT&group_by=$GROUP_BY"
 ```
 
