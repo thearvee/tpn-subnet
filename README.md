@@ -15,10 +15,21 @@ If you want to contribute to the TPN subnet, the easiest way to do so it to run 
 - Running a worker is easiest, running a mining pool is harder, and running a validator is hardest
 - Profitability of a mining pool depends on whether you run all its workers, or whether third parties do so. If third parties do so, your profit depends on your revenue share model (which is completely in your control)
 
-**CURRENT SUBNET STATUS**
+## Quickstart
 
-> [!CAUTION]
-> This documentation is a work in public alpha. Expect things to break. Specifically the validator instructions are currently unstable due to development pace.
+Getting started checklist:
+
+- [x] Decide if you want to run a worker, mining pool, or validator. 99% chance you should run a worker.
+- [x] Have a Debian/Ubuntu machine with 2 cores and 2GiB+ RAM ready
+- [x] Run the steps in the `Preparing your machine` section
+- [x] Run the steps in the `Running a worker/mining pool/validator` section
+- [x] If you will run a worker, you decided on a mining pool. You can find mining pools either on Taostats or if you want details on then, enter the TPN Discord channel in the [Bittensor Discord](https://discord.com/invite/bittensor)
+
+Are you a technically savvy person who wants to run a **worker** and already understands how the subnet works? You can simply run:
+
+```bash
+curl -s https://raw.githubusercontent.com/taofu-labs/tpn-subnet/refs/heads/main/scripts/install_worker.sh | bash
+```
 
 ## Note on rewards algorithm
 
@@ -120,7 +131,7 @@ Take note of the mandatory and optional sections. For miners and validators, you
 
 ### 3: Configure keys (mining pool/validator only)
 
-> [!CAUTION] Workers: ignore this entire section
+> [!CAUTION] Workers: ignore this section
 
 The next step is to configure the Bittensor keys for your miner and/or validator. Note that these keys are stored in the `~/.bittensor` directory. You have 2 options:
 
