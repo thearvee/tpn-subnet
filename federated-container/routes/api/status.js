@@ -1,5 +1,5 @@
 import { Router } from "express"
-import { cache, log } from "mentie"
+import { cache, log, round_number_to_decimals } from "mentie"
 import { get_tpn_cache } from "../../modules/caching.js"
 import { run_mode } from "../../modules/validations.js"
 import { get_worker_performance, get_workers } from "../../modules/database/workers.js"
@@ -33,13 +33,14 @@ router.get( '/worker_performance', async ( req, res ) => {
         const _from = Date.now() - history_days * 24 * 60 * 60_000
         const _to = Date.now()
         const _format = 'json'
+        const _group_by = 'ip'
 
         // Conflicting params
         if( req.query?.from && req.query?.history_days ) throw new Error( `Cannot specify both 'from' and 'history_days'` )
         if( req.query?.to && req.query?.history_days ) throw new Error( `Cannot specify both 'to' and 'history_days'` )
 
         // Get request params
-        let { from=_from, to=_to, format=_format, api_key } = req.query || {}
+        let { from=_from, to=_to, format=_format, api_key, group_by=_group_by } = req.query || {}
         log.debug( `Worker performance request from ${ from } to ${ to } in format ${ format } with api_key ${ api_key ? 'provided' : 'not provided' }` )
 
         // Check request validity
@@ -52,7 +53,7 @@ router.get( '/worker_performance', async ( req, res ) => {
         log.warn( `No ADMIN_API_KEY set in environment, this is a security risk and should be set in production` )
 
         // Check for response cache
-        const cached_response = cache( `worker_performance_${ from }_${ to }_${ format }` )
+        const cached_response = cache( `worker_performance_${ group_by }_${ from }_${ to }_${ format }` )
         if( cached_response ) {
             log.info( `Returning cached response for worker performance from ${ from } to ${ to } in format ${ format }` )
             if( format === 'json' ) return res.json( cached_response )
@@ -92,37 +93,69 @@ router.get( '/worker_performance', async ( req, res ) => {
         // Collate data into scores
         const metadata = { from, to, from_human: from ? new Date( from ).toISOString() : 'N/A', to_human: to ? new Date( to ).toISOString() : 'N/A', total_workers: workers.length }
         const defaults = { payment_address_evm: '', payment_address_bittensor: '' }
+        let totals = { count: 0, up: 0, down: 0, unknown: 0 }
         workers = workers.reduce( ( acc, { ip, status, ...worker } ) => {
 
             // Increment status scores
             const history = acc[ ip ] || { up: 0, down: 0, unknown: 0, uptime: 0 }
             acc[ ip ] = { ...defaults, ...history, ...metadata, ...worker, [ status ]: history[ status ] + 1 }
 
-            // Increment total uptime
+            // Increment worker uptime
             const { up, down, unknown } = acc[ ip ]
             const uptime = Math.round(  up / ( up + down + unknown )  * 10000 ) / 100
             acc[ ip ].uptime = isNaN( uptime ) ? 0 : uptime
+
+            // Increment totals
+            totals[ status ] = ( totals[ status ] || 0 ) + 1
+            totals.count += 1
 
             return acc
 
         }, {} )
 
+        // Annotate workers with payment_fraction
+        workers = workers.map( worker => {
+            // Of the uptime, how up was this worker
+            const uptime_fraction = worker.up / totals.up
+            const payment_fraction = round_number_to_decimals( isNaN( uptime_fraction ) ? 0 : uptime_fraction, 4 )
+            return { ...worker, payment_fraction }
+        } )
+        log.info( `Payment fraction annotations added, total payment fractions: ${ workers.reduce( ( acc, { payment_fraction } ) => acc + payment_fraction, 0 ) }` )
+
         // Turn into array sorted by uptime
         workers = Object.entries( workers ).map( ( [ ip, data ] ) => ( { ip, ...data } ) ).sort( ( a, b ) => b.uptime - a.uptime )
 
+        // If group_by is not ip but wallet, map ip to wallet address
+        let response_data = {}
+        if( group_by == 'ip' ) response_data = workers
+        if( group_by == 'payment_address_evm' ) response_data = workers.reduce( ( acc, worker ) => {
+            const { payment_address_evm } = worker
+            if( !payment_address_evm ) return acc
+            const reward_fraction = acc[ payment_address_evm ] || 0
+            acc[ payment_address_evm ] = reward_fraction + worker.payment_fraction
+            return acc
+        }, {} )
+        if( group_by == 'payment_address_bittensor' ) response_data = workers.reduce( ( acc, worker ) => {
+            const { payment_address_bittensor } = worker
+            if( !payment_address_bittensor ) return acc
+            const reward_fraction = acc[ payment_address_bittensor ] || 0
+            acc[ payment_address_bittensor ] = reward_fraction + worker.payment_fraction
+            return acc
+        }, {} )
+
         // Cache response for 5 minutes
-        cache( `worker_performance_${ from }_${ to }_${ format }`, workers, 5 * 60_000 )
+        cache( `worker_performance_${ group_by }_${ from }_${ to }_${ format }`, response_data, 5 * 60_000 )
 
         // Return in the requested format
         if( format === 'json' ) {
-            return res.json( workers )
+            return res.json( response_data )
         } else if( format === 'csv' ) {
-            const csv = await writeToString( workers, { headers: true } )
+            const csv = await writeToString( response_data, { headers: true } )
             return res.type( 'text/csv' ).send( csv )
         }
 
         // Fall back to json
-        return res.json( workers )
+        return res.json( response_data )
 
     } catch ( error ) {
         return res.status( 500 ).json( { error: `Error handling performance route: ${ error.message }` } )
