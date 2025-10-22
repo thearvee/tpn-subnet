@@ -83,9 +83,10 @@ router.get( '/worker_performance', async ( req, res ) => {
         workers = await Promise.all( workers.map( async worker => {
             const cached_metadata = cache( `worker_metadata_${ worker.ip }` )
             if( cached_metadata ) return { ...worker, ...cached_metadata }
-            const metadata = await get_workers( { ip: worker.ip } )
-            cache( `worker_metadata_${ worker.ip }`, metadata.workers?.[0], 10_000 )
-            return { ...worker, ...metadata }
+            const { success ,workers=[] } = await get_workers( { ip: worker.ip } )
+            if( !success || workers.length === 0 ) return worker
+            cache( `worker_metadata_${ worker.ip }`, workers?.[0], 10_000 )
+            return { ...worker, ...workers[0] }
         } ) )
 
         // Collate data into scores
