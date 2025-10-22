@@ -18,6 +18,11 @@ FORCE_RESTART=true
 stash_created=false
 stash_popped=false
 
+
+# RAM settings
+QUARTER_OF_FREE_RAM=$(($(free -m | awk 'NR==2{print $2}') * 3 / 4))
+export CONTAINER_MAX_PROCESS_RAM_MB=${CONTAINER_MAX_PROCESS_RAM_MB:-$QUARTER_OF_FREE_RAM}
+
 # Help message
 print_help() {
   echo "Usage: $0 [OPTIONS]"
