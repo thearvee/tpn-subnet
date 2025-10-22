@@ -74,7 +74,9 @@ newgrp docker << EOF
 EOF
 ```
 
-For miners and validators (NOT workers), you also need to install python and Bittensor components:
+For miners and validators, you also need to install python and Bittensor components:
+
+> [!CAUTION] Workers: ignore the setup steps below, you do NOT need them.
 
 ```bash
 # Install python, node and pm2
@@ -99,7 +101,26 @@ pip3 install -r requirements.txt
 export PYTHONPATH=.
 ```
 
-### 2: Configure keys (mining pool/validator only)
+### 2: Configure your environment
+
+You need so set some settings so make sure your server operates how you want. This influences things like on what address you get paid and so forth.
+
+```bash
+cd tpn-subnet/federated-container
+# Select the appropriate template
+cp .env.{worker,miner,validator}.example .env
+# Edit .env with your specific configuration
+nano .env
+```
+
+Take note of the mandatory and optional sections. For miners and validators, you need to get these two external API keys:
+
+- Make an account at https://lite.ip2location.com/. Set it as the `IP2LOCATION_DOWNLOAD_TOKEN` environment variable in the docker compose file. Add this in the specified location in the `.env` file you copied above.
+- Make an account at https://www.maxmind.com and generate a license key in account settings. Add this in the specified location in the `.env` file you copied above.
+
+### 3: Configure keys (mining pool/validator only)
+
+> [!CAUTION] Workers: ignore this entire section
 
 The next step is to configure the Bittensor keys for your miner and/or validator. Note that these keys are stored in the `~/.bittensor` directory. You have 2 options:
 
@@ -136,23 +157,6 @@ To register:
 
 You may now continue with the rest of the setup. Your registration is immune to being deregistered for 5000 blocks which is about 16 hours. Make sure you finish your setup within this window.
 
-### 3: Configure your environment
-
-You need so set some settings so make sure your server operates how you want. This influences things like on what address you get paid and so forth.
-
-```bash
-cd tpn-subnet/federated-container
-# Select the appropriate template
-cp .env.{worker,miner,validator}.example .env
-# Edit .env with your specific configuration
-nano .env
-```
-
-Take note of the mandatory and optional sections. For miners and validators, you need to get these two external API keys:
-
-- Make an account at https://lite.ip2location.com/. Set it as the `IP2LOCATION_DOWNLOAD_TOKEN` environment variable in the docker compose file. Add this in the specified location in the `.env` file you copied above.
-- Make an account at https://www.maxmind.com and generate a license key in account settings. Add this in the specified location in the `.env` file you copied above.
-
 ## Running a worker
 
 A worker is just a docker image with some settings.
@@ -163,24 +167,13 @@ A worker is just a docker image with some settings.
 To start the worker run:
 
 ```bash
-# These lines are optional but recommended, they tell the docker container how much memory it can safely use on your system
-QUARTER_OF_FREE_RAM=$(($(free -m | awk 'NR==2{print $2}') * 3 / 4))
-export CONTAINER_MAX_PROCESS_RAM_MB="$QUARTER_OF_FREE_RAM"
-
-# NOTE: this assumes you are in the tpn-subnet directory
-docker compose -f ~/tpn-subnet/federated-container/docker-compose.yml --profile worker up -d
-```
-
-To update your worker, run:
-
-```bash
-# Run the update script, this assumes the tpn repository is located at ~/tpn-subnet
 bash ~/tpn-subnet/scripts/update_node.sh
 ```
 
-> [!CAUTION]
-> The update script can be customised, for details run `bash ~/tpn-subnet/scripts/update_node.sh --help`
+To update your worker at any time, run that same command again.
 
+> [!NOTE]
+> The update script can be customised, for details run `bash ~/tpn-subnet/scripts/update_node.sh --help`
 
 ## Running a mining pool
 
@@ -194,17 +187,6 @@ To start the miner docker container, three things must be done: setting up an en
 
 > [!NOTE]
 > Before doing this, set up your .env file correctly. See the section "3: Configure your environment"
-
-Then start docker compose like so:
-
-```bash
-# These lines are optional but recommended, they tell the docker container how much memory it can safely use on your system
-QUARTER_OF_FREE_RAM=$(($(free -m | awk 'NR==2{print $2}') * 3 / 4))
-export CONTAINER_MAX_PROCESS_RAM_MB="$QUARTER_OF_FREE_RAM"
-
-# NOTE: this assumes you are in the tpn-subnet directory
-docker compose -f ~/tpn-subnet/federated-container/docker-compose.yml up -d
-```
 
 To start the miner neuron:
 
@@ -224,6 +206,12 @@ pm2 start "python3 ~/tpn-subnet/neurons/miner.py \
     --blacklist.force_validator_permit" --name tpn_miner
 ```
 
+Then start docker compose like so:
+
+```bash
+bash ~/tpn-subnet/scripts/update_node.sh
+```
+
 ### Updating your miner
 
 The miner automatically updates some components periodically, but not all. You should regularly run the following commands to keep your miner up to date:
@@ -233,7 +221,7 @@ The miner automatically updates some components periodically, but not all. You s
 bash ~/tpn-subnet/scripts/update_node.sh
 ```
 
-> [!CAUTION]
+> [!NOTE]
 > The update script can be customised, for details run `bash ~/tpn-subnet/scripts/update_node.sh --help`
 
 ### Paying your workers
@@ -313,24 +301,8 @@ eval $export_line
 
 The validator also consists out of two components:
 
+1. A validator neuron that is managed through `pm2`
 1. A validator docker container that is managed through `docker`
-2. A validator neuron that is managed through `pm2`
-
-To start the docker container run the command below. Docker will know to run as a validator due to your `.env` settings.
-
-
-> [!NOTE]
-> Before doing this, set up your .env file correctly. See the section "3: Configure your environment"
-
-
-```bash
-# These lines are optional but recommended, they tell the docker container how much memory it can safely use on your system
-QUARTER_OF_FREE_RAM=$(($(free -m | awk 'NR==2{print $2}') * 3 / 4))
-export CONTAINER_MAX_PROCESS_RAM_MB="$QUARTER_OF_FREE_RAM"
-
-# NOTE: this assumes you are in the tpn-subnet directory
-docker compose -f ~/tpn-subnet/federated-container/docker-compose.yml up -d
-```
 
 To start the validator neuron:
 
@@ -348,6 +320,17 @@ export PYTHONPATH=. && pm2 start "python3 ~/tpn-subnet/neurons/validator.py \
     --force_validator_permit" --name tpn_validator
 ```
 
+
+To start the docker container run the command below. Docker will know to run as a validator due to your `.env` settings.
+
+> [!NOTE]
+> Before doing this, set up your .env file correctly. See the section "3: Configure your environment"
+
+```bash
+bash ~/tpn-subnet/scripts/update_node.sh
+```
+
+
 ### Updating your validator
 
 The validator automatically updates some components periodically, but not all. You should regularly run the following commands to keep your validator up to date:
@@ -357,5 +340,5 @@ The validator automatically updates some components periodically, but not all. Y
 bash ~/tpn-subnet/scripts/update_node.sh
 ```
 
-> [!CAUTION]
+> [!NOTE]
 > The update script can be customised, for details run `bash ~/tpn-subnet/scripts/update_node.sh --help`

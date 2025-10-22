@@ -104,18 +104,18 @@ export async function register_wireguard_lease( { start_id=1, end_id=WIREGUARD_P
 
         // Insert the new row, make sure that existing rows are updated and not appended
         await pool.query( `
-        INSERT INTO worker_wireguard_configs ( id, expires_at, updated_at )
-        VALUES ( $1, $2, NOW() )
-        ON CONFLICT ( id ) DO UPDATE
-        SET expires_at = $2, updated_at = NOW()
-    `, [ next_available_id, expires_at ] )
+            INSERT INTO worker_wireguard_configs ( id, expires_at, updated_at )
+            VALUES ( $1, $2, NOW() )
+            ON CONFLICT ( id ) DO UPDATE
+            SET expires_at = $2, updated_at = NOW()
+        `, [ next_available_id, expires_at ] )
 
         // Clear the working cache
         log.debug( `Finished register_wireguard_lease` )
         cache( `register_wireguard_lease_working`, false )
 
         // Wait for wireguard server to be ready for this config
-        log.info( `Waiting for wireguard server to be ready for id ${ next_available_id }` )
+        log.info( `Waiting for wireguard server to be ready for id ${ next_available_id } (expires at ${ new Date( expires_at ).toISOString() })` )
         await wireguard_server_ready( 30_000, next_available_id )
 
         return next_available_id
@@ -140,7 +140,8 @@ export async function check_open_leases() {
         // Find all open leases
         log.info( 'Checking for open leases' )
         const open_leases = await pool.query( `SELECT id, expires_at FROM worker_wireguard_configs WHERE expires_at > $1 ORDER BY expires_at ASC`, [ Date.now() ] )
-        log.debug( `Open leases: ${ open_leases.rows.length }, latest expires at ${ new Date( open_leases.rows[0]?.expires_at ).toISOString() }` )
+        if( open_leases?.rows.length ) log.debug( `Open leases: ${ open_leases.rows.length }, latest expires at ${ new Date( open_leases?.rows[0]?.expires_at || 0 ).toISOString() }` )
+        else log.debug( `No open leases found` )
         return open_leases.rows
 
     } catch ( e ) {

@@ -91,11 +91,11 @@ router.get( '/worker_performance', async ( req, res ) => {
         // Collate data into scores
         const metadata = { from, to, from_human: from ? new Date( from ).toISOString() : 'N/A', to_human: to ? new Date( to ).toISOString() : 'N/A', total_workers: workers.length }
         const defaults = { payment_address_evm: '', payment_address_bittensor: '' }
-        workers = workers.reduce( ( acc, { ip, status } ) => {
+        workers = workers.reduce( ( acc, { ip, status, ...worker } ) => {
 
             // Increment status scores
             const history = acc[ ip ] || { up: 0, down: 0, unknown: 0, uptime: 0 }
-            acc[ ip ] = { ...defaults, ...history, ...metadata, [ status ]: history[ status ] + 1 }
+            acc[ ip ] = { ...defaults, ...history, ...metadata, ...worker, [ status ]: history[ status ] + 1 }
 
             // Increment total uptime
             const { up, down, unknown } = acc[ ip ]

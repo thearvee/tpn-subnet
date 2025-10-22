@@ -31,6 +31,9 @@ RUN git config --global --add safe.directory /app
 # Install netcat
 RUN apt update && apt install -y netcat-openbsd
 
+# Install docker cli
+RUN apt update && apt install -y docker.io
+
 # Copy package management files
 COPY package*.json ./
 
