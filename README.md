@@ -8,6 +8,8 @@ In the TPN subnet, there are three kinds of nodes:
 - **Miners**: These nodes offer the VPN connections that workers provide and are given subnet emissions, they are responsible for distributing those rewards to workers however they see fit. Profitability depends on how you decide to pay the workers that sign up to your pool
 - **Validators**: These nodes validate the work of miners and act as an interface to end users
 
+Want to know more? Please read the [FAQ](#faq).
+
 ## Quickstart
 
 Getting started checklist:
@@ -351,3 +353,23 @@ bash ~/tpn-subnet/scripts/update_node.sh
 
 > [!NOTE]
 > The update script can be customised, for details run `bash ~/tpn-subnet/scripts/update_node.sh --help`
+
+## FAQ
+
+### How will workers get paid?
+
+A worker specifies a mining pool when it gets set up. The mining pools get to decide how they pay their workers. If all mining pools used the same payment structures, there would be no need to have multiple mining pools after all.
+
+We encourage mining pools to offer innovative ways of paying workers. For example by streaming subnet alpha token emissions, or even sending stable coins on non-Bittensor networks.
+
+### How do I know what mining pools exist?
+
+There are two ways to find out what mining pools exist: either look at the miners on Taostats, or go into the TPN subnet channel in the Bittensor Discord.
+
+### How do mining pools make money?
+
+The mining pools receive TPN subnet emissions based on the workers they manage. How much money a mining pool makes depends on how much of those rewards they pass on to workers.
+
+### Does it make sense to run multiple mining pools?
+
+Only if you intend to attract workers with different offerings (like payment methods). There is no subnet-level advantage to running multiple mining pools.
