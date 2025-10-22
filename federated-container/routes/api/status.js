@@ -119,7 +119,7 @@ router.get( '/worker_performance', async ( req, res ) => {
         workers = workers.map( worker => {
             // Of the uptime, how up was this worker
             const uptime_fraction = worker.up / totals.up
-            const payment_fraction = round_number_to_decimals( isNaN( uptime_fraction ) ? 0 : uptime_fraction, 4 )
+            const payment_fraction = round_number_to_decimals( isNaN( uptime_fraction ) ? 0 : uptime_fraction, 4, 'down' )
             return { ...worker, payment_fraction }
         } )
         log.info( `Payment fraction annotations added, total payment fractions: ${ workers.reduce( ( acc, { payment_fraction } ) => acc + payment_fraction, 0 ) }` )
