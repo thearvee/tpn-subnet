@@ -122,7 +122,7 @@ export async function init_database() {
             CREATE TABLE IF NOT EXISTS worker_wireguard_configs (
                 id SERIAL PRIMARY KEY,
                 expires_at BIGINT NOT NULL,
-                updated_at TIMESTAMP NOT NULL
+                updated_at BIGINT NOT NULL
             )
         ` )
         log.info( `✅ Worker WireGuard configs table initialized` )
