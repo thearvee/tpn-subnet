@@ -18,7 +18,8 @@ Getting started checklist:
 - [ ] Run the steps in the `Running a worker/mining pool/validator` section
 - [ ] If you will run a worker, you decided on a mining pool. You can find mining pools either on Taostats or if you want details on then, enter the TPN Discord channel in the [Bittensor Discord](https://discord.com/invite/bittensor)
 
-> [!NOTE] Are you a technically savvy person who wants to run a **worker** and already understands how the subnet works? You can simply run the script below. When you run it it will ask for the input needed to set up a worker.
+> [!TIP] 
+> Are you a technically savvy person who wants to run a **worker** and already understands how the subnet works? You can simply run the script below. When you run it it will ask for the input needed to set up a worker.
 
 ```bash
 curl -s https://raw.githubusercontent.com/taofu-labs/tpn-subnet/refs/heads/main/scripts/install_worker.sh | bash
@@ -80,7 +81,8 @@ EOF
 
 For miners and validators, you also need to install python and Bittensor components:
 
-> [!CAUTION] Workers: ignore the setup steps below, you do NOT need them.
+> [!CAUTION]
+> Workers: ignore the setup steps below, you do NOT need them.
 
 ```bash
 # Install python, node and pm2
@@ -124,7 +126,8 @@ Take note of the mandatory and optional sections. For miners and validators, you
 
 ### 3: Configure keys (mining pool/validator only)
 
-> [!CAUTION] Workers: ignore this section
+> [!CAUTION]
+> Workers: ignore this section
 
 The next step is to configure the Bittensor keys for your miner and/or validator. Note that these keys are stored in the `~/.bittensor` directory. You have 2 options:
 
