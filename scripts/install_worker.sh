@@ -51,6 +51,13 @@ if [ -z "$SERVER_PUBLIC_HOST" ]; then
 fi
 echo "Detected public IP address: $SERVER_PUBLIC_HOST"
 
+# Wait for package lock
+while fuser /var/{lib/{dpkg,apt/lists},cache/apt/archives}/lock >/dev/null 2>&1; do
+	echo "Another package script is running, waiting for it to exit..."
+	sleep 10
+done
+
+
 # Install the required system dependencies
 sudo apt update
 sudo apt install -y git jq
