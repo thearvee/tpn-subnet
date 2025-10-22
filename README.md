@@ -4,28 +4,21 @@ The TPN subnet coordinates miners that offer VPN connections in a wide variety o
 
 In the TPN subnet, there are three kinds of nodes:
 
-- **Workers**: These are easy to run nodes that provide VPN connections and get rewarded by mining pools
-- **Miners**: These nodes offer the VPN connections that workers provide and are given subnet emissions, they are responsible for distributing those rewards to workers however they see fit
+- **Workers**: These are easy to run nodes that provide VPN connections and get rewarded by mining pools. They are simple to set up machines with no Bittensor neuron at all.
+- **Miners**: These nodes offer the VPN connections that workers provide and are given subnet emissions, they are responsible for distributing those rewards to workers however they see fit. Profitability depends on how you decide to pay the workers that sign up to your pool
 - **Validators**: These nodes validate the work of miners and act as an interface to end users
-
-If you want to contribute to the TPN subnet, the easiest way to do so it to run a worker. This requires only a server and no bittensor activity at all. This page will explain how to run a worker, a miner, or a validator. Keep in mind that you should:
-
-- Decide if you want to run a worker, miner, or a validator
-- Make sure you have the necessary hardware for the worker, miner, or validator
-- Running a worker is easiest, running a mining pool is harder, and running a validator is hardest
-- Profitability of a mining pool depends on whether you run all its workers, or whether third parties do so. If third parties do so, your profit depends on your revenue share model (which is completely in your control)
 
 ## Quickstart
 
 Getting started checklist:
 
-- [x] Decide if you want to run a worker, mining pool, or validator. 99% chance you should run a worker.
-- [x] Have a Debian/Ubuntu machine with 2 cores and 2GiB+ RAM ready
-- [x] Run the steps in the `Preparing your machine` section
-- [x] Run the steps in the `Running a worker/mining pool/validator` section
-- [x] If you will run a worker, you decided on a mining pool. You can find mining pools either on Taostats or if you want details on then, enter the TPN Discord channel in the [Bittensor Discord](https://discord.com/invite/bittensor)
+- [ ] Decide if you want to run a worker, mining pool, or validator. 99% chance you should run a worker.
+- [ ] Have a Debian/Ubuntu machine with 2 cores and 2GiB+ RAM ready
+- [ ] Run the steps in the `Preparing your machine` section
+- [ ] Run the steps in the `Running a worker/mining pool/validator` section
+- [ ] If you will run a worker, you decided on a mining pool. You can find mining pools either on Taostats or if you want details on then, enter the TPN Discord channel in the [Bittensor Discord](https://discord.com/invite/bittensor)
 
-Are you a technically savvy person who wants to run a **worker** and already understands how the subnet works? You can simply run:
+> [!NOTE] Are you a technically savvy person who wants to run a **worker** and already understands how the subnet works? You can simply run the script below. When you run it it will ask for the input needed to set up a worker.
 
 ```bash
 curl -s https://raw.githubusercontent.com/taofu-labs/tpn-subnet/refs/heads/main/scripts/install_worker.sh | bash
