@@ -176,7 +176,9 @@ if [ "$FORCE_RESTART" = "true" ]; then
 fi
 
 # Pull the latest docker images
-"${DOCKER_CMD[@]}" pull
+echo "Pulling latest docker images..."
+"${DOCKER_CMD[@]}" pull -q
+echo "Latest docker images pulled."
 
 # Restart the node docker container if needed
 if [ "$REPO_UP_TO_DATE" -eq 0 ]; then
