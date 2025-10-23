@@ -315,6 +315,9 @@ export async function get_workers( { ip, mining_pool_uid, mining_pool_url, count
     // If country_code is 'any' then remove it
     if( country_code === 'any' ) country_code = null
 
+    // Force country code to capitals
+    if( country_code ) country_code = `${ country_code }`.toUpperCase()
+
     // Status must be up, down, or unknown
     if( status && ![ 'up', 'down', 'unknown' ].includes( status ) ) {
         log.warn( `Invalid status filter provided: ${ status }, THIS SHOULD NEVER HAPPEN, defaulting to 'up'` )
