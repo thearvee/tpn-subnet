@@ -77,9 +77,11 @@ router.get( [ '/config/new', '/lease/new' ], async ( req, res ) => {
         const config_meta = { lease_seconds, format, geo, whitelist, blacklist, priority }
 
         // Validate inputs as specified in props
+        const geo_available = [ ...available_countries, 'ANY' ].includes( geo )
+        if( !geo_available ) log.debug( `No workers found for geo: ${ geo } in `, available_countries )
         if( !lease_seconds || isNaN( lease_seconds ) ) throw new Error( `Invalid lease_seconds: ${ lease_seconds }` )
         if( format?.length && ![ 'json', 'text' ].includes( format ) ) throw new Error( `Invalid format: ${ format }` )
-        if( geo?.length && ( !available_countries[ geo ]?.includes( geo ) && ![ 'ANY', 'UNDEFINED', 'null' ].includes( geo ) ) ) throw new Error( `No workers found for geo: ${ geo }` )
+        if( geo?.length && !geo_available ) throw new Error( `No workers found for geo: ${ geo }.` )
         if( whitelist?.length && whitelist.some( ip => !is_ipv4( ip ) ) ) throw new Error( `Invalid ip addresses in whitelist` )
         if( blacklist?.length && blacklist.some( ip => !is_ipv4( ip ) ) ) throw new Error( `Invalid ip addresses in blacklist` )
 
