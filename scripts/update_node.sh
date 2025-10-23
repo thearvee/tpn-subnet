@@ -92,6 +92,12 @@ fi
 # Set default pm2 process name if not provided
 PM2_PROCESS_NAME=${PM2_PROCESS_NAME:-tpn_$RUN_MODE}
 
+
+
+
+# Get pm2 binary, default to $HOME/.npm-global/bin/pm2
+PM2_BIN_PATH=$(command -v pm2 || echo "$HOME/.npm-global/bin/pm2")
+
 CURRENT_BRANCH=$(git -C "$TPN_DIR" rev-parse --abbrev-ref HEAD)
 # Set the image tag based on the branch
 if [ "$CURRENT_BRANCH" = "development" ]; then
@@ -199,7 +205,7 @@ fi
 if [ "$RUN_MODE" != "worker" ]; then
     if [ "$REPO_UP_TO_DATE" -eq 0 ]; then
         echo "Repository has changes, restarting pm2 process $PM2_PROCESS_NAME..."
-        pm2 restart "$PM2_PROCESS_NAME"
+        $PM2_BIN_PATH restart "$PM2_PROCESS_NAME"
     else
         echo "No changes in the repository, skipping pm2 restart."
     fi
