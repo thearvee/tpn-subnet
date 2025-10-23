@@ -1,5 +1,6 @@
 // Dependencies
 import { cache, log, log_environment, wait } from "mentie"
+import { restore_tpn_cache_from_disk } from "./modules/caching.js"
 
 // Get relevant environment data
 import { get_git_branch_and_hash, check_system_warnings, run } from './modules/system/shell.js'
@@ -33,6 +34,13 @@ await check_system_warnings()
 // Initialize database
 import { init_database } from './modules/database/init.js'
 await init_database()
+
+// Restore cache from disk
+try {
+    await restore_tpn_cache_from_disk()
+} catch ( e ) {
+    log.warn( `Error restoring cache from disk:`, e )
+}
 
 // Update geolocation databases on start and update geolocation before app starts
 if( validator_mode || miner_mode ) {
