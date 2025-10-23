@@ -2,7 +2,6 @@ import { Router } from "express"
 import { allow_props, is_ipv4, log, make_retryable, require_props, sanetise_ipv4, sanetise_string } from "mentie"
 import { cooldown_in_s, retry_times } from "../../modules/networking/routing.js"
 import { run_mode } from "../../modules/validations.js"
-import { get_tpn_cache } from "../../modules/caching.js"
 import { get_worker_config_as_miner } from "../../modules/api/mining_pool.js"
 import { get_worker_config_as_validator } from "../../modules/api/validator.js"
 import { get_worker_config_as_worker } from "../../modules/api/worker.js"
@@ -58,7 +57,6 @@ router.get( [ '/config/new', '/lease/new' ], async ( req, res ) => {
         require_props( req.query, mandatory_props, true )
         allow_props( req.query, [ ...mandatory_props, ...optional_props ], true )
         let { lease_seconds, lease_minutes, format, geo='any', whitelist, blacklist, priority=false } = req.query
-        const available_countries = await get_worker_countries_for_pool()
 
         // Backwards compatibility
         if( !lease_seconds && lease_minutes ) {
@@ -76,9 +74,15 @@ router.get( [ '/config/new', '/lease/new' ], async ( req, res ) => {
         priority = priority === 'true'
         const config_meta = { lease_seconds, format, geo, whitelist, blacklist, priority }
 
+        // Geo availability check in non-worker mode, workers do not need geo check as they are static and only called with 'any'
+        let geo_available = true
+        if( !worker_mode ) {
+            const available_countries = await get_worker_countries_for_pool()
+            geo_available = [ ...available_countries, 'ANY' ].includes( geo )
+            if( !geo_available ) log.debug( `No workers found for geo: ${ geo } in `, available_countries )
+        }
+
         // Validate inputs as specified in props
-        const geo_available = [ ...available_countries, 'ANY' ].includes( geo )
-        if( !geo_available ) log.debug( `No workers found for geo: ${ geo } in `, available_countries )
         if( !lease_seconds || isNaN( lease_seconds ) ) throw new Error( `Invalid lease_seconds: ${ lease_seconds }` )
         if( format?.length && ![ 'json', 'text' ].includes( format ) ) throw new Error( `Invalid format: ${ format }` )
         if( geo?.length && !geo_available ) throw new Error( `No workers found for geo: ${ geo }.` )
