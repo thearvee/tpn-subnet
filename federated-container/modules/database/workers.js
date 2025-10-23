@@ -199,7 +199,7 @@ export async function get_worker_countries_for_pool( { mining_pool_uid }={} ) {
     const pool = await get_pg_pool()
 
     // Formulate query
-    const wheres = [ 'status' ]
+    const wheres = [ 'status = $1' ]
     const values = [ 'up' ]
 
     if( mining_pool_uid ) {
@@ -212,7 +212,9 @@ export async function get_worker_countries_for_pool( { mining_pool_uid }={} ) {
         FROM workers
         ${ wheres.length > 0 ? `WHERE ${ wheres.join( ' AND ' ) }` : '' }
     `
+
     try {
+        log.debug( `Fetching worker countries for pool ${ mining_pool_uid || 'all pools' } with query: ${ query } and values: `, values )
         const result = await pool.query( query, values )
         return result.rows.map( row => row.country_code )
     } catch ( e ) {
