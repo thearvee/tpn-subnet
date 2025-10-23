@@ -69,7 +69,7 @@ router.get( [ '/config/new', '/lease/new' ], async ( req, res ) => {
         // Sanetise and parse inputs for each prop set
         lease_seconds = lease_seconds && parseInt( lease_seconds, 10 )
         format = format && sanetise_string( format )
-        geo = geo && sanetise_string( geo )
+        geo = geo && `${ sanetise_string( geo ) }`.toUpperCase()
         whitelist = whitelist && sanetise_string( whitelist ).split( ',' )
         blacklist = blacklist && sanetise_string( blacklist ).split( ',' )
         priority = priority === 'true'

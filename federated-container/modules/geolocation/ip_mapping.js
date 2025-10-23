@@ -18,7 +18,7 @@ export async function map_ips_to_geodata( { ips=[], ip_to_uid={}, cache_prefix, 
     log.info( `Sanitising ${ ips.length } IP addresses`, ips[0] )
     ips = ips.map( ip => sanetise_ipv4( { ip } ) ).filter( is_ipv4 )
     ips = [ ...new Set( ips ) ]
-    log.info( `Mapping ${ ips.length } unique ips to geodata` )
+    log.info( `Mapping ${ ips.length } unique ips to geodata with prefix ${ cache_prefix }` )
     if( cache_prefix ) cache_prefix = cache_prefix.replaceAll( '__', '_' )
 
     const country_annotated_ips = await Promise.all( ips.map( async ip_address => {

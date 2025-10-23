@@ -52,7 +52,7 @@ router.post( '/workers', async ( req, res ) => {
 
         // Save worker ips to cache
         const ips = workers.map( worker => worker.ip )
-        await map_ips_to_geodata( { ips, cache_prefix: `worker_` } )
+        await map_ips_to_geodata( { ips, cache_prefix: `worker_`, prefix_merge: true } )
 
         // Save workers to database
         const write_result = await write_workers( { workers, mining_pool_uid, is_miner_broadcast: true } )
