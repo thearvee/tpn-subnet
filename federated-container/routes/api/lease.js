@@ -69,7 +69,7 @@ router.get( [ '/config/new', '/lease/new' ], async ( req, res ) => {
         // Sanetise and parse inputs for each prop set
         lease_seconds = lease_seconds && parseInt( lease_seconds, 10 )
         format = format && sanetise_string( format )
-        geo = geo && sanetise_string( geo )
+        geo = geo && `${ sanetise_string( geo ) }`.toUpperCase()
         whitelist = whitelist && sanetise_string( whitelist ).split( ',' )
         blacklist = blacklist && sanetise_string( blacklist ).split( ',' )
         priority = priority === 'true'
@@ -78,7 +78,7 @@ router.get( [ '/config/new', '/lease/new' ], async ( req, res ) => {
         // Validate inputs as specified in props
         if( !lease_seconds || isNaN( lease_seconds ) ) throw new Error( `Invalid lease_seconds: ${ lease_seconds }` )
         if( format?.length && ![ 'json', 'text' ].includes( format ) ) throw new Error( `Invalid format: ${ format }` )
-        if( geo?.length && ( !workers_by_country[ geo ]?.length && ![ 'any', 'ANY', 'UNDEFINED', '' ].includes( geo ) ) ) throw new Error( `No workers found for geo: ${ geo }` )
+        if( geo?.length && ( !workers_by_country[ geo ]?.length && ![ 'ANY', 'UNDEFINED', 'null' ].includes( geo ) ) ) throw new Error( `No workers found for geo: ${ geo }` )
         if( whitelist?.length && whitelist.some( ip => !is_ipv4( ip ) ) ) throw new Error( `Invalid ip addresses in whitelist` )
         if( blacklist?.length && blacklist.some( ip => !is_ipv4( ip ) ) ) throw new Error( `Invalid ip addresses in blacklist` )
 
