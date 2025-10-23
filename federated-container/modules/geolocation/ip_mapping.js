@@ -88,6 +88,7 @@ export async function map_ips_to_geodata( { ips=[], ip_to_uid={}, cache_prefix, 
     }, {} )
 
     // Update cache to have this data
+    log.info( `Updating TPN cache with geolocation data for ${ ips.length } ips` )
     set_tpn_cache( { key: `ip_to_country`, value: ip_to_country, merge: true } )
     set_tpn_cache( { key: `country_code_to_ips`, value: country_code_to_ips, merge: true } )
     set_tpn_cache( { key: `country_code_to_name`, value: country_code_to_name, merge: true } )
@@ -97,6 +98,8 @@ export async function map_ips_to_geodata( { ips=[], ip_to_uid={}, cache_prefix, 
 
     // If cache prefix is set, add it to TPN cache or cache
     if( cache_prefix ) {
+
+        log.info( `Updating TPN cache with prefix ${ cache_prefix } for ${ ips.length } ips` )
 
         let key = `${ cache_prefix }_ip_to_country`
         if( tpn_cache_keys.includes( key ) ) set_tpn_cache( { key, value: ip_to_country, merge: prefix_merge } )

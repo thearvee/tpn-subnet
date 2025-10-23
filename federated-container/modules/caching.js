@@ -99,12 +99,10 @@ export function set_tpn_cache( { key, value, merge=false, expires_in_ms } ) {
     }
 
     // Set cache value
-    if( CI_MODE ) {
-        let type = typeof immutable_cache_value
-        if( Array.isArray( immutable_cache_value ) ) type = 'array'
-        const size = type == 'object' ? Object.keys( immutable_cache_value ).length : immutable_cache_value?.length
-        log.info( `Setting TPN cache key: ${ key }, ${ type } of ${ size } ${ type == 'object' ? 'keys' : 'size' }` )
-    }
+    let type = typeof immutable_cache_value
+    if( Array.isArray( immutable_cache_value ) ) type = 'array'
+    const size = type == 'object' ? Object.keys( immutable_cache_value ).length : immutable_cache_value?.length
+    log.info( `Setting TPN cache key: ${ key }, ${ type } of ${ size } ${ type == 'object' ? 'keys' : 'size' }` )
     return cache( key, immutable_cache_value, expires_in_ms )
 
 }
@@ -117,6 +115,7 @@ export function get_complete_tpn_cache() {
 
     // Get all cache values
     const cache_values = {}
+    log.info( `Retrieving complete TPN cache with keys:`, tpn_cache_keys )
     for( const key of tpn_cache_keys ) {
         cache_values[ key ] = get_tpn_cache( key )
     }
