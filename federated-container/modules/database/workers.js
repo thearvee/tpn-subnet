@@ -190,21 +190,30 @@ async function mark_workers_stale( { mining_pool_uid, active_workers=[] } ) {
 
 /**
  * Gets the number of unique country_code instances for workers where mining pool uid and ip are given
- * @param {Object<{ mining_pool_uid: string: string }>} params
+ * @param {Object<{ mining_pool_uid: string: string }>} params - optional
  * @returns {Promise<[string]>} Country codes for the workers of this pool
  */
-export async function get_worker_countries_for_pool( { mining_pool_uid } ) {
+export async function get_worker_countries_for_pool( { mining_pool_uid }={} ) {
 
     // Get the postgres pool
     const pool = await get_pg_pool()
 
+    // Formulate query
+    const wheres = [ 'status' ]
+    const values = [ 'up' ]
+
+    if( mining_pool_uid ) {
+        values.push( mining_pool_uid )
+        wheres.push( `mining_pool_uid = $${ values.length }` )
+    }
+
     const query = `
         SELECT DISTINCT country_code
         FROM workers
-        WHERE mining_pool_uid = $1 AND status = 'up'
+        ${ wheres.length > 0 ? `WHERE ${ wheres.join( ' AND ' ) }` : '' }
     `
     try {
-        const result = await pool.query( query, [ mining_pool_uid ] )
+        const result = await pool.query( query, values )
         return result.rows.map( row => row.country_code )
     } catch ( e ) {
         throw new Error( `Error fetching worker countries for pool ${ mining_pool_uid }: ${ e.message }` )

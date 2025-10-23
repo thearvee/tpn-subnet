@@ -10,6 +10,7 @@ import { is_validator_request } from "../../modules/networking/validators.js"
 import { ip_from_req, resolve_domain_to_ip } from "../../modules/networking/network.js"
 import { MINING_POOL_URL } from "../../modules/networking/worker.js"
 import { country_name_from_code } from "../../modules/geolocation/helpers.js"
+import { get_worker_countries_for_pool } from "../../modules/database/workers.js"
 const { CI_MOCK_WORKER_RESPONSES } = process.env
 
 export const router = Router()
@@ -57,7 +58,7 @@ router.get( [ '/config/new', '/lease/new' ], async ( req, res ) => {
         require_props( req.query, mandatory_props, true )
         allow_props( req.query, [ ...mandatory_props, ...optional_props ], true )
         let { lease_seconds, lease_minutes, format, geo='any', whitelist, blacklist, priority=false } = req.query
-        const workers_by_country = get_tpn_cache( 'worker_country_code_to_ips', {} )
+        const available_countries = await get_worker_countries_for_pool()
 
         // Backwards compatibility
         if( !lease_seconds && lease_minutes ) {
@@ -78,7 +79,7 @@ router.get( [ '/config/new', '/lease/new' ], async ( req, res ) => {
         // Validate inputs as specified in props
         if( !lease_seconds || isNaN( lease_seconds ) ) throw new Error( `Invalid lease_seconds: ${ lease_seconds }` )
         if( format?.length && ![ 'json', 'text' ].includes( format ) ) throw new Error( `Invalid format: ${ format }` )
-        if( geo?.length && ( !workers_by_country[ geo ]?.length && ![ 'ANY', 'UNDEFINED', 'null' ].includes( geo ) ) ) throw new Error( `No workers found for geo: ${ geo }` )
+        if( geo?.length && ( !available_countries[ geo ]?.includes( geo ) && ![ 'ANY', 'UNDEFINED', 'null' ].includes( geo ) ) ) throw new Error( `No workers found for geo: ${ geo }` )
         if( whitelist?.length && whitelist.some( ip => !is_ipv4( ip ) ) ) throw new Error( `Invalid ip addresses in whitelist` )
         if( blacklist?.length && blacklist.some( ip => !is_ipv4( ip ) ) ) throw new Error( `Invalid ip addresses in blacklist` )
 
@@ -118,8 +119,7 @@ router.get( [ '/config/countries', '/lease/countries' ], async ( req, res ) => {
         if( ![ 'json', 'text' ].includes( format ) ) throw new Error( `Invalid format: ${ format }` )
         if( ![ 'code', 'name' ].includes( type ) ) throw new Error( `Invalid type: ${ type }` )
 
-        const worker_country_count = get_tpn_cache( 'worker_country_count', {} )
-        const country_codes = Object.keys( worker_country_count )
+        const country_codes = await get_worker_countries_for_pool()
         const country_names = country_codes.map( country_name_from_code )
 
         if( format == 'json' && type == 'code' ) return country_codes
