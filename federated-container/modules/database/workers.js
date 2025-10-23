@@ -313,13 +313,13 @@ export async function get_workers( { ip, mining_pool_uid, mining_pool_url, count
     const pool = await get_pg_pool()
 
     // If country_code is 'any' then remove it
-    if( country_code === 'any' ) country_code = null
+    if( [ 'any', 'ANY', 'undefined', 'null', '' ].includes( country_code ) ) country_code = null
 
     // Force country code to capitals
     if( country_code ) country_code = `${ country_code }`.toUpperCase()
 
     // Status must be up, down, or unknown
-    if( status && ![ 'up', 'down', 'unknown' ].includes( status ) ) {
+    if( status && ![ 'up', 'down', 'unknown' ].includes( sanetise_string( status ) ) ) {
         log.warn( `Invalid status filter provided: ${ status }, THIS SHOULD NEVER HAPPEN, defaulting to 'up'` )
         status = 'up'
     }
