@@ -1,14 +1,45 @@
-import { cache, log } from "mentie"
+import { abort_controller, cache, log, sanetise_string } from "mentie"
 import { parse_wireguard_config, test_wireguard_connection } from "../networking/wireguard.js"
 import { default_mining_pool, is_valid_worker } from "../validations.js"
 import { ip_geodata } from "../geolocation/helpers.js"
 import { get_workers, write_workers, write_worker_performance } from "../database/workers.js"
 import { get_wireguard_config_directly_from_worker } from "../networking/worker.js"
 import { map_ips_to_geodata } from "../geolocation/ip_mapping.js"
+import { base_url } from "../networking/url.js"
 const { CI_MODE, CI_MOCK_WORKER_RESPONSES } = process.env
 
 /**
- * Miner function to test all knwn workers
+ * 
+ * @param {Object} params
+ * @param {Object} params.worker - worker object to test
+ * @returns {Promise<{ is_member: boolean } | { error: string }>} Result of membership verification
+ */
+async function verify_worker_membership( { worker } ) {
+
+    try {
+
+        // Query the worker for its mining pool membership
+        const { fetch_options } = abort_controller( { timeout_ms: 5_000 } )
+        const { version, MINING_POOL_URL } = await fetch( worker.public_url, fetch_options ).then( res => res.json() )
+        if( !MINING_POOL_URL ) throw new Error( `Worker did not return a mining pool URL` )
+        
+        // Check that the mining pool URL matches our base URL
+        const is_member = sanetise_string( MINING_POOL_URL ) === sanetise_string( base_url )
+
+        // If not member, log and return false
+        if( !is_member ) log.info( `Worker ${ worker.public_url } running v${ version } reports mining pool URL ${ MINING_POOL_URL } which does not match our base URL ${ base_url }` )
+
+        return { is_member }
+        
+    } catch ( e ) {
+        log.info( `Error verifying worker ${ worker.public_url } membership: ${ e.message }:`, e )
+        return { error: e.message }
+    }
+
+}
+
+/**
+ * Miner function to test all known workers
  */
 export async function score_all_known_workers( max_duration_minutes=15 ) {
 
@@ -25,12 +56,23 @@ export async function score_all_known_workers( max_duration_minutes=15 ) {
         if( !workers?.length ) return log.info( `No known workers to score` )
         if( CI_MODE === 'true' ) log.info( `Got ${ workers.length } workers to score, first: `, workers?.[0] )
 
+        // If workers are no longer members, and their membership used to be 'internal', mark them as 'external' now
+        await Promise.allSettled( workers.map( async ( worker, index ) => {
+            const { is_member } = await verify_worker_membership( { worker } )
+            if( is_member === false && worker.mining_pool_uid === 'internal' ) workers[ index ].mining_pool_uid = 'external'
+        } ) )
+
         // Get a config directly from each worker
         log.info( `Fetching wireguard config from ${ workers.length } workers...` )
         await Promise.allSettled( workers.map( async ( worker, index ) => {
+
+            // Skip non members
+            if( worker.mining_pool_uid !== 'internal' ) return log.info( `Skipping worker ${ worker.public_url } as it is not a member of this mining pool` )
+            
             const wireguard_config = await get_wireguard_config_directly_from_worker( { worker } )
             const { text_config, json_config } = parse_wireguard_config( { wireguard_config } )
             if( text_config ) workers[ index ].wireguard_config = text_config
+
         } ) )
 
         // Test all known workers

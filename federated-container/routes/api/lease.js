@@ -1,5 +1,5 @@
 import { Router } from "express"
-import { allow_props, is_ipv4, log, make_retryable, require_props, sanetise_ipv4, sanetise_string } from "mentie"
+import { allow_props, is_ipv4, log, make_retryable, sanetise_ipv4, sanetise_string } from "mentie"
 import { cooldown_in_s, retry_times } from "../../modules/networking/routing.js"
 import { run_mode } from "../../modules/validations.js"
 import { get_worker_config_as_miner } from "../../modules/api/mining_pool.js"
@@ -22,6 +22,7 @@ router.get( [ '/config/new', '/lease/new' ], async ( req, res ) => {
 
         // Caller validation based on run mode
         const { mode, worker_mode, miner_mode, validator_mode } = run_mode()
+        log.insane( `Handling new lease request as ${ mode }` )
         if( miner_mode ) {
             const is_validator = await is_validator_request( req )
             if( !is_validator ) {
@@ -47,16 +48,13 @@ router.get( [ '/config/new', '/lease/new' ], async ( req, res ) => {
         // if( validator_mode && !payment )
 
         // Prepare validation props based on run mode
-        const mandatory_props = [ 'lease_seconds', 'format' ]
-        const optional_props = [ 'geo', 'whitelist', 'blacklist', 'priority' ]
-        // if( worker_mode ) mandatory_props = worker_props
-        // if( validator_mode ) mandatory_props = val_props
-        // if( miner_mode ) mandatory_props = pool_props
+        const mandatory_props = [ 'lease_seconds' ]
+        const optional_props = [ 'geo', 'whitelist', 'blacklist', 'priority', 'format', 'lease_minutes' ]
 
         // Get all relevant data
-        require_props( req.query, mandatory_props, true )
+        log.insane( `Request query params:`, req.query )
         allow_props( req.query, [ ...mandatory_props, ...optional_props ], true )
-        let { lease_seconds, lease_minutes, format, geo='any', whitelist, blacklist, priority=false } = req.query
+        let { lease_seconds, lease_minutes, format='json', geo='any', whitelist, blacklist, priority=false } = req.query
 
         // Backwards compatibility
         if( !lease_seconds && lease_minutes ) {
