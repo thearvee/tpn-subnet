@@ -6,7 +6,7 @@ const { CI_MODE } = process.env
 /**
  * Write an array of worker objects to the WORKERS table, where the composite primary key is (mining_pool_uid, mining_pool_ip, ip), and the entry is updated if it already exists.
  * @param {Array<{ ip: string, country_code: string, status?: string }>} workers - Array of worker objects with properties: ip, country_code
- * @param {string} mining_pool_uid - Unique identifier of the mining pool submitting the workers
+ * @param {string} mining_pool_uid - Unique identifier of the mining pool submitting the workers, used only for metadata broadcast
  * @param {boolean} is_miner_broadcast - broadcasts update mining pool worker metadata based on the worker array, only set if worker array is full worker list from mining pool
  * @returns {Promise<{ success: boolean, count: number, broadcast_metadata?: Object }> } - Result object with success status and number of entries written
  * @throws {Error} - If there is an error writing to the database
