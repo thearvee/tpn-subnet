@@ -22,6 +22,7 @@ router.get( [ '/config/new', '/lease/new' ], async ( req, res ) => {
 
         // Caller validation based on run mode
         const { mode, worker_mode, miner_mode, validator_mode } = run_mode()
+        log.insane( `Handling new lease request as ${ mode }` )
         if( miner_mode ) {
             const is_validator = await is_validator_request( req )
             if( !is_validator ) {
@@ -51,6 +52,7 @@ router.get( [ '/config/new', '/lease/new' ], async ( req, res ) => {
         const optional_props = [ 'geo', 'whitelist', 'blacklist', 'priority', 'format', 'lease_minutes' ]
 
         // Get all relevant data
+        log.insane( `Request query params:`, req.query )
         allow_props( req.query, [ ...mandatory_props, ...optional_props ], true )
         let { lease_seconds, lease_minutes, format='json', geo='any', whitelist, blacklist, priority=false } = req.query
 
