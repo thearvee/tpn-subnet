@@ -52,12 +52,12 @@ router.get( [ '/config/new', '/lease/new' ], async ( req, res ) => {
         const optional_props = [ 'geo', 'whitelist', 'blacklist', 'priority', 'format', 'lease_minutes' ]
 
         // Get all relevant data
-        log.insane( `Request query params:`, req.query )
+        log.insane( `Request query params:`, Object.keys( req.query ), Object.values( req.query ), req.query )
         allow_props( req.query, [ ...mandatory_props, ...optional_props ], true )
         let { lease_seconds, lease_minutes, format='json', geo='any', whitelist, blacklist, priority=false } = req.query
 
         // Backwards compatibility
-        if( !lease_seconds && lease_minutes ) {
+        if( !`${ lease_seconds }`.length && `${ lease_minutes }`.length ) {
             const _lease_seconds = Number( lease_minutes ) * 60
             lease_seconds = _lease_seconds
             log.info( `Deprecation warning: lease_minutes is deprecated, use lease_seconds instead, converting ${ lease_minutes } minutes to ${ _lease_seconds } seconds` )
