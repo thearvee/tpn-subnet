@@ -1,11 +1,15 @@
 import express from 'express'
 import { log } from 'mentie'
 import { ip_from_req } from './network.js'
+import cors from 'cors'
 export const app = express()
 const { CI_MODE } = process.env
 
 // Add body parser for post requests
 app.use( express.json() )
+
+// Allow all cors
+app.use( cors() )
 
 // Handle bad json body formats
 app.use( ( err, req, res, next ) => {
