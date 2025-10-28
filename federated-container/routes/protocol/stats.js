@@ -1,7 +1,7 @@
 import { Router } from "express"
 import { get_complete_tpn_cache } from "../../modules/caching.js"
 import { get_pool_scores, read_mining_pool_metadata } from "../../modules/database/mining_pools.js"
-import { abort_controller } from "mentie"
+import { abort_controller, cache } from "mentie"
 import { get_worker_countries_for_pool } from "../../modules/database/workers.js"
 
 export const router = Router()
@@ -22,6 +22,10 @@ router.get( "/stats/pools", async ( req, res ) => {
 
     try {
 
+        // Check for caches value
+        const cached_pool_data = cache( 'protocol_stats_pools' )
+        if( cached_pool_data ) return res.json( cached_pool_data )
+
         // Get pool metadata
         const { pools: pools_metadata  } = await read_mining_pool_metadata( { limit: null } )
 
@@ -29,7 +33,7 @@ router.get( "/stats/pools", async ( req, res ) => {
         const { pools: mining_pool_scores } = await get_pool_scores()
 
         // Collate data by mining pool uid
-        const pools = await Promise.all( pools_metadata.map( async pool => {
+        const pools = await Promise.all( pools_metadata?.map( async pool => {
 
             // Get validator level data
             const { mining_pool_uid, url } = pool || {}
@@ -42,7 +46,7 @@ router.get( "/stats/pools", async ( req, res ) => {
             const { fetch_options } = abort_controller( { timeout_ms: 5_000 } )
             const { version, MINING_POOL_REWARDS, MINING_POOL_WEBSITE_URL } = await fetch( url, fetch_options ).then( res => res.json() ).catch( e => ( { error: e.message } ) )
 
-            return {
+            const data = {
                 mining_pool_uid,
                 url,
                 score,
@@ -55,6 +59,9 @@ router.get( "/stats/pools", async ( req, res ) => {
                 MINING_POOL_WEBSITE_URL,
                 countries
             }
+
+            // Cache result
+            return cache( `protocol_stats_pools`, data, 10_000 ) // 10 seconds
 
         }  ) )
 

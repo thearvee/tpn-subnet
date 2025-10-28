@@ -82,7 +82,7 @@ export async function read_mining_pool_metadata( { mining_pool_uid, mining_pool_
             return { success: false, message: `No mining pool metadata found` }
         }
         log.debug( `Read mining pool metadata for ${ mining_pool_uid }@${ mining_pool_ip }` )
-        return { success: true, ...limit > 1 ? { pools: result.rows } : result.rows[0] }
+        return { success: true, ...limit == 1 ? result.rows[0] : { pools: result.rows } }
     } catch ( e ) {
         log.error( `Error reading mining pool metadata: ${ e.message }` )
         throw new Error( `Error reading mining pool metadata: ${ e.message }` )
