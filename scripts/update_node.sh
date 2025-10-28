@@ -123,7 +123,7 @@ printf ' %q' "${DOCKER_CMD[@]}"
 printf '\n'
 
 # Define the command to ensure in crontab
-restart_command="0 * * * * $TPN_DIR/scripts/update_node.sh --force_restart=false"
+restart_command="0 * * * * bash $TPN_DIR/scripts/update_node.sh --force_restart=false"
 
 if [ "$ENABLE_AUTOUPDATE" = "true" ]; then
     # Dump crontab, fallback to empty if none exists
