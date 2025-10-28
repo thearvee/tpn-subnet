@@ -1,7 +1,7 @@
 import { Router } from "express"
 import { get_complete_tpn_cache } from "../../modules/caching.js"
 import { get_pool_scores, read_mining_pool_metadata } from "../../modules/database/mining_pools.js"
-import { abort_controller, cache } from "mentie"
+import { abort_controller, cache, log } from "mentie"
 import { get_worker_countries_for_pool } from "../../modules/database/workers.js"
 
 export const router = Router()
@@ -24,13 +24,20 @@ router.get( "/stats/pools", async ( req, res ) => {
 
         // Check for caches value
         const cached_pool_data = cache( 'protocol_stats_pools' )
-        if( cached_pool_data ) return res.json( cached_pool_data )
+        if( cached_pool_data ) {
+            log.info( `Returning cached protocol stats pools data` )
+            return res.json( cached_pool_data )
+        }
 
         // Get pool metadata
         const { pools: pools_metadata  } = await read_mining_pool_metadata( { limit: null } )
+        log.info( `Fetched metadata for ${ pools_metadata?.length || 0 } mining pools from database` )
+        log.debug( `Pools metadata example: `, pools_metadata[0] )
 
         // Get mining pool scores
-        const { pools: mining_pool_scores } = await get_pool_scores()
+        const { scores: mining_pool_scores } = await get_pool_scores()
+        log.info( `Fetched scores for ${ mining_pool_scores?.length || 0 } mining pools from database` )
+        log.debug( `Mining pool scores example: `, mining_pool_scores[0] )
 
         // Collate data by mining pool uid
         const pools = await Promise.all( pools_metadata?.map( async pool => {
