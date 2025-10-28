@@ -35,6 +35,10 @@ router.get( "/stats/pools", async ( req, res ) => {
         log.info( `Fetched metadata for ${ pools_metadata?.length || 0 } mining pools from database` )
         pools_metadata = pools_metadata.filter( ( { mining_pool_ip, mining_pool_uid }  ) => {
             const expected_ip = miner_uid_to_ip?.[ mining_pool_uid ]
+            if (expected_ip === undefined) {
+                log.debug(`Excluding mining pool ${mining_pool_uid} with IP ${mining_pool_ip}: not found in miner_uid_to_ip cache`)
+                return false
+            }
             return mining_pool_ip === expected_ip
         }  )
         log.info( `Filtered metadata to ${ pools_metadata?.length || 0 } mining pools` )
