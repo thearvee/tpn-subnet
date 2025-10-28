@@ -187,12 +187,15 @@ async function score_single_mining_pool( { mining_pool_uid, mining_pool_ip } ) {
 
     // Calculate performance score
     const no_response_penalty_s = 60
-    const mean_test_length_s = successes.reduce( ( acc, { ip, test_duration_s, error } ) => {
+    const mean_test_length_s = successes.reduce( ( acc, worker_test ) => {
+        let { ip, test_duration_s, error } = worker_test || {}
         if( !test_duration_s ) {
             log.warn( `No test duration for a successful worker ${ ip } in pool ${ pool_label }, err:`, error )
             test_duration_s = no_response_penalty_s
         }
-        return acc + test_duration_s
+        const incremented_acc = acc + test_duration_s
+        if( isNaN( incremented_acc ) ) log.warn( `NaN encountered when calculating mean test length for pool ${ pool_label }:`, { acc, test_duration_s, worker_test } )
+        return incremented_acc
     }, 0 ) / successes.length
     log.info( `Mean test length for ${ pool_label } ${ mean_test_length_s } based on ${ successes.length } tests` )
     const s_considered_good = 10

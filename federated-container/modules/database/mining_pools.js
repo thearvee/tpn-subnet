@@ -66,13 +66,13 @@ export async function read_mining_pool_metadata( { mining_pool_uid, mining_pool_
     }
 
     // Add limit to values
-    if( limit ) values.push( limit )
+    if( limit > 0 ) values.push( limit )
 
     // Create query
     const query = `
         SELECT * FROM mining_pool_metadata_broadcast
         ${ wheres.length > 0 ? `WHERE ${ wheres.join( ' AND ' ) }` : '' }
-        ${ limit > 1 ? `LIMIT $${ values.length }` : '' }
+        ${ limit > 0 ? `LIMIT $${ values.length }` : '' }
     `
 
     try {
@@ -84,7 +84,7 @@ export async function read_mining_pool_metadata( { mining_pool_uid, mining_pool_
         log.debug( `Read mining pool metadata for ${ mining_pool_uid }@${ mining_pool_ip }` )
         return { success: true, ...limit == 1 ? result.rows[0] : { pools: result.rows } }
     } catch ( e ) {
-        log.error( `Error reading mining pool metadata: ${ e.message }` )
+        log.error( `Error reading mining pool metadata: ${ e.message }`, { wheres, values } )
         throw new Error( `Error reading mining pool metadata: ${ e.message }` )
     }
 }
