@@ -1,5 +1,5 @@
 import { Router } from "express"
-import { get_complete_tpn_cache } from "../../modules/caching.js"
+import { get_complete_tpn_cache, get_tpn_cache } from "../../modules/caching.js"
 import { get_pool_scores, read_mining_pool_metadata } from "../../modules/database/mining_pools.js"
 import { abort_controller, cache, log } from "mentie"
 import { get_worker_countries_for_pool } from "../../modules/database/workers.js"
@@ -30,8 +30,14 @@ router.get( "/stats/pools", async ( req, res ) => {
         }
 
         // Get pool metadata
-        const { pools: pools_metadata  } = await read_mining_pool_metadata( { limit: null } )
+        const miner_uid_to_ip = get_tpn_cache( 'miner_uid_to_ip', {} )
+        let { pools: pools_metadata  } = await read_mining_pool_metadata( { limit: null } )
         log.info( `Fetched metadata for ${ pools_metadata?.length || 0 } mining pools from database` )
+        pools_metadata = pools_metadata.filter( ( { mining_pool_ip, mining_pool_uid }  ) => {
+            const expected_ip = miner_uid_to_ip?.[ mining_pool_uid ]
+            return mining_pool_ip === expected_ip
+        }  )
+        log.info( `Filtered metadata to ${ pools_metadata?.length || 0 } mining pools` )
         log.debug( `Pools metadata example: `, pools_metadata[0] )
 
         // Get mining pool scores
@@ -74,7 +80,7 @@ router.get( "/stats/pools", async ( req, res ) => {
 
         // Cache the full pools array
         cache( 'protocol_stats_pools', pools, 10_000 ) // 10 seconds
-        
+
         // Return pools data
         return res.json( pools )
 
