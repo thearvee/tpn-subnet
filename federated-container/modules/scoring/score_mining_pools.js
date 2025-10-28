@@ -186,9 +186,16 @@ async function score_single_mining_pool( { mining_pool_uid, mining_pool_ip } ) {
     const size_score = last_known_worker_pool_size * stability_fraction
 
     // Calculate performance score
-    const mean_test_length_s = successes.reduce( ( acc, { test_duration_s=Infinity } ) => acc + test_duration_s, 0 ) / successes.length
-    log.info( `Mean test length ${ mean_test_length_s } based on ${ successes.length } tests` )
-    const s_considered_good = 3
+    const no_response_penalty_s = 60
+    const mean_test_length_s = successes.reduce( ( acc, { ip, test_duration_s, error } ) => {
+        if( !test_duration_s ) {
+            log.warn( `No test duration for a successful worker ${ ip } in pool ${ pool_label }, err:`, error )
+            test_duration_s = no_response_penalty_s
+        }
+        return acc + test_duration_s
+    }, 0 ) / successes.length
+    log.info( `Mean test length for ${ pool_label } ${ mean_test_length_s } based on ${ successes.length } tests` )
+    const s_considered_good = 10
     const performance_score = Math.min( 100 / ( mean_test_length_s / s_considered_good ), 100 )
     const performance_fraction = performance_score / 100
 

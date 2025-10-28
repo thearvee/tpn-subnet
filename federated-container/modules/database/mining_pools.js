@@ -43,10 +43,12 @@ export async function write_mining_pool_metadata( { mining_pool_uid, mining_pool
  * @param {Object} params - Parameters for the metadata lookup.
  * @param {string} params.mining_pool_uid - Unique identifier of the mining pool.
  * @param {string} params.mining_pool_ip - IPv4/IPv6 address of the mining pool.
+ * @param {number} [params.limit=1] - Maximum number of records to retrieve.
  * @returns {Promise<{ success: boolean, data?: Record<string, any>, message?: string }>} 
+ * @returns {Promise<{data: Object}|{message: string}>} - Array of responses if limit > 1 or null, otherwise single response object.
  * @throws {Error} If the Postgres pool is unavailable or if the database query fails.
  */
-export async function read_mining_pool_metadata( { mining_pool_uid, mining_pool_ip } ) {
+export async function read_mining_pool_metadata( { mining_pool_uid, mining_pool_ip, limit=1 } ) {
 
     // Get the postgres pool
     const pool = await get_pg_pool()
@@ -63,11 +65,14 @@ export async function read_mining_pool_metadata( { mining_pool_uid, mining_pool_
         wheres.push( `mining_pool_ip = $${ values.length }` )
     }
 
+    // Add limit to values
+    if( limit ) values.push( limit )
+
     // Create query
     const query = `
         SELECT * FROM mining_pool_metadata_broadcast
         ${ wheres.length > 0 ? `WHERE ${ wheres.join( ' AND ' ) }` : '' }
-        LIMIT 1
+        ${ limit > 1 ? `LIMIT $${ values.length }` : '' }
     `
 
     try {
@@ -77,7 +82,7 @@ export async function read_mining_pool_metadata( { mining_pool_uid, mining_pool_
             return { success: false, message: `No mining pool metadata found` }
         }
         log.debug( `Read mining pool metadata for ${ mining_pool_uid }@${ mining_pool_ip }` )
-        return { success: true, ...result.rows[0] }
+        return { success: true, ...limit > 1 ? { pools: result.rows } : result.rows[0] }
     } catch ( e ) {
         log.error( `Error reading mining pool metadata: ${ e.message }` )
         throw new Error( `Error reading mining pool metadata: ${ e.message }` )
