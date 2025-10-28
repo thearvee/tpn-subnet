@@ -197,8 +197,11 @@ async function score_single_mining_pool( { mining_pool_uid, mining_pool_ip } ) {
         if( isNaN( incremented_acc ) ) log.warn( `NaN encountered when calculating mean test length for pool ${ pool_label }:`, { acc, test_duration_s, worker_test } )
         return incremented_acc
     }, 0 ) / successes.length
-    const median_test_length_s = successes.map( w => w.test_duration_s || no_response_penalty_s ).sort( ( a, b ) => a - b )[ Math.floor( successes.length / 2 ) ]
-    log.info( `Mean test length for ${ pool_label } ${ mean_test_length_s } based on ${ successes.length } tests` )
+
+    // Calculate median test length by grabbing the middle value if odd, or averaging the two
+    const middle_values = successes.map( w => w.test_duration_s || no_response_penalty_s ).sort( ( a, b ) => a - b ).slice( Math.floor( ( successes.length - 1 ) / 2 ), Math.ceil( ( successes.length + 1 ) / 2 ) )
+    let median_test_length_s = middle_values.reduce( ( acc, val ) => acc + val, 0 ) / middle_values.length
+    log.info( `Mean test length for ${ pool_label } ${ mean_test_length_s } based on ${ successes.length } tests and ${ middle_values.length } values` )
     log.info( `Median test length for ${ pool_label } ${ median_test_length_s } based on ${ successes.length } tests` )
     const s_considered_good = 5
     const performance_score = Math.min( 100 / ( median_test_length_s / s_considered_good ), 100 )

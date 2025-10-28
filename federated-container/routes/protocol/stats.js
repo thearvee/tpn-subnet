@@ -74,6 +74,7 @@ router.get( "/stats/pools", async ( req, res ) => {
 
         // Cache the full pools array
         cache( 'protocol_stats_pools', pools, 10_000 ) // 10 seconds
+        
         // Return pools data
         return res.json( pools )
 
