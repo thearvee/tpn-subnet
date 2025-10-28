@@ -203,7 +203,7 @@ async function score_single_mining_pool( { mining_pool_uid, mining_pool_ip } ) {
     let median_test_length_s = middle_values.reduce( ( acc, val ) => acc + val, 0 ) / middle_values.length
     log.info( `Mean test length for ${ pool_label } ${ mean_test_length_s } based on ${ successes.length } tests and ${ middle_values.length } values` )
     log.info( `Median test length for ${ pool_label } ${ median_test_length_s } based on ${ successes.length } tests` )
-    const s_considered_good = 5
+    const s_considered_good = 10
     const performance_score = Math.min( 100 / ( median_test_length_s / s_considered_good ), 100 )
     const performance_fraction = performance_score / 100
 
