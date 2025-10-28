@@ -43,10 +43,15 @@ export async function write_mining_pool_metadata( { mining_pool_uid, mining_pool
  * @param {Object} params - Parameters for the metadata lookup.
  * @param {string} params.mining_pool_uid - Unique identifier of the mining pool.
  * @param {string} params.mining_pool_ip - IPv4/IPv6 address of the mining pool.
- * @returns {Promise<{ success: boolean, data?: Record<string, any>, message?: string }>} 
+ * @param {number} [params.limit=1] - Maximum number of records to retrieve.
+ * @returns {Promise<
+ *   | { success: false, message: string }
+ *   | { success: true } & Record<string, any>
+ *   | { success: true, pools: Array<Record<string, any>> }
+ * >} Resolves to an object indicating success and either the mining pool metadata or an error message.
  * @throws {Error} If the Postgres pool is unavailable or if the database query fails.
  */
-export async function read_mining_pool_metadata( { mining_pool_uid, mining_pool_ip } ) {
+export async function read_mining_pool_metadata( { mining_pool_uid, mining_pool_ip, limit=1 } ) {
 
     // Get the postgres pool
     const pool = await get_pg_pool()
@@ -63,11 +68,14 @@ export async function read_mining_pool_metadata( { mining_pool_uid, mining_pool_
         wheres.push( `mining_pool_ip = $${ values.length }` )
     }
 
+    // Add limit to values
+    if( limit > 0 ) values.push( limit )
+
     // Create query
     const query = `
         SELECT * FROM mining_pool_metadata_broadcast
         ${ wheres.length > 0 ? `WHERE ${ wheres.join( ' AND ' ) }` : '' }
-        LIMIT 1
+        ${ limit > 0 ? `LIMIT $${ values.length }` : '' }
     `
 
     try {
@@ -77,9 +85,9 @@ export async function read_mining_pool_metadata( { mining_pool_uid, mining_pool_
             return { success: false, message: `No mining pool metadata found` }
         }
         log.debug( `Read mining pool metadata for ${ mining_pool_uid }@${ mining_pool_ip }` )
-        return { success: true, ...result.rows[0] }
+        return { success: true, ...limit == 1 ? result.rows[0] : { pools: result.rows } }
     } catch ( e ) {
-        log.error( `Error reading mining pool metadata: ${ e.message }` )
+        log.error( `Error reading mining pool metadata: ${ e.message }`, { wheres, values } )
         throw new Error( `Error reading mining pool metadata: ${ e.message }` )
     }
 }

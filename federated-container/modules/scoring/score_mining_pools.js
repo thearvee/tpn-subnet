@@ -1,4 +1,4 @@
-import { cache, log, shuffle_array, wait } from "mentie"
+import { cache, log, round_number_to_decimals, shuffle_array, wait } from "mentie"
 import { get_tpn_cache } from "../caching.js"
 import { get_worker_countries_for_pool, get_workers, read_worker_broadcast_metadata, write_workers } from "../database/workers.js"
 import { cochrane_sample_size } from "../math/samples.js"
@@ -186,16 +186,31 @@ async function score_single_mining_pool( { mining_pool_uid, mining_pool_ip } ) {
     const size_score = last_known_worker_pool_size * stability_fraction
 
     // Calculate performance score
-    const mean_test_length_s = successes.reduce( ( acc, { test_duration_s=Infinity } ) => acc + test_duration_s, 0 ) / successes.length
-    log.info( `Mean test length ${ mean_test_length_s } based on ${ successes.length } tests` )
-    const s_considered_good = 3
-    const performance_score = Math.min( 100 / ( mean_test_length_s / s_considered_good ), 100 )
+    const no_response_penalty_s = 60
+    const mean_test_length_s = successes.reduce( ( acc, worker_test ) => {
+        let { ip, test_duration_s, error } = worker_test || {}
+        if( !test_duration_s ) {
+            log.warn( `No test duration for a successful worker ${ ip } in pool ${ pool_label }, err:`, error )
+            test_duration_s = no_response_penalty_s
+        }
+        const incremented_acc = acc + test_duration_s
+        if( isNaN( incremented_acc ) ) log.warn( `NaN encountered when calculating mean test length for pool ${ pool_label }:`, { acc, test_duration_s, worker_test } )
+        return incremented_acc
+    }, 0 ) / successes.length
+
+    // Calculate median test length by grabbing the middle value if odd, or averaging the two
+    const middle_values = successes.map( w => w.test_duration_s || no_response_penalty_s ).sort( ( a, b ) => a - b ).slice( Math.floor( ( successes.length - 1 ) / 2 ), Math.ceil( ( successes.length + 1 ) / 2 ) )
+    let median_test_length_s = middle_values.reduce( ( acc, val ) => acc + val, 0 ) / middle_values.length
+    log.info( `Mean test length for ${ pool_label } ${ mean_test_length_s } based on ${ successes.length } tests and ${ middle_values.length } values` )
+    log.info( `Median test length for ${ pool_label } ${ median_test_length_s } based on ${ successes.length } tests` )
+    const s_considered_good = 5
+    const performance_score = Math.min( 100 / ( median_test_length_s / s_considered_good ), 100 )
     const performance_fraction = performance_score / 100
 
     // Calculate the geographic score
     const total_countries = 249
-    const geo_completeness_fraction = Math.max( countries_in_pool.length / total_countries, 1 )
-    const geo_score = Math.max( geo_completeness_fraction * 100, 1 )
+    const geo_completeness_fraction = Math.min( countries_in_pool.length / total_countries, 1 )
+    const geo_score = round_number_to_decimals( geo_completeness_fraction * 100, 2 )
     log.info( `Geo completeness for mining pool ${ pool_label }: ${ countries_in_pool.length } unique countries out of ${ total_countries }, geo_score: ${ geo_score }` )
 
     // Calculate the composite score
