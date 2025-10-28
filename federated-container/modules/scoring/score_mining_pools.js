@@ -208,14 +208,16 @@ async function score_single_mining_pool( { mining_pool_uid, mining_pool_ip } ) {
     const performance_fraction = performance_score / 100
 
     // Calculate the geographic score
-    const total_countries = 249
-    const geo_completeness_fraction = Math.min( countries_in_pool.length / total_countries, 1 )
+    const unique_countries = await get_worker_countries_for_pool()
+    log.debug( `Unique countries across all pools: `, unique_countries )
+    const total_countries = unique_countries.length
+    const geo_completeness_fraction = round_number_to_decimals( countries_in_pool.length / total_countries, 4 )
     const geo_score = round_number_to_decimals( geo_completeness_fraction * 100, 2 )
     log.info( `Geo completeness for mining pool ${ pool_label }: ${ countries_in_pool.length } unique countries out of ${ total_countries }, geo_score: ${ geo_score }` )
 
     // Calculate the composite score
-    log.info( `Scoring inputs for ${ pool_label }: `, { size_score, stability_score, stability_fraction, performance_score, performance_fraction, geo_score, geo_completeness_fraction } )
-    const score = size_score * performance_fraction * geo_completeness_fraction * stability_fraction
+    log.info( `Scoring inputs for ${ pool_label }: `, { size_score, stability_score, stability_fraction, performance_score, performance_fraction, geo_score, geo_completeness_fraction, total_countries } )
+    const score = size_score * performance_fraction * Math.sqrt( geo_completeness_fraction ) * stability_fraction
     log.info( `Final score for mining pool ${ pool_label }: ${ score }` )
 
     // Return the scores
