@@ -44,8 +44,11 @@ export async function write_mining_pool_metadata( { mining_pool_uid, mining_pool
  * @param {string} params.mining_pool_uid - Unique identifier of the mining pool.
  * @param {string} params.mining_pool_ip - IPv4/IPv6 address of the mining pool.
  * @param {number} [params.limit=1] - Maximum number of records to retrieve.
- * @returns {Promise<{ success: boolean, data?: Record<string, any>, message?: string }>} 
- * @returns {Promise<{data: Object}|{message: string}>} - Array of responses if limit > 1 or null, otherwise single response object.
+ * @returns {Promise<
+ *   | { success: false, message: string }
+ *   | { success: true } & Record<string, any>
+ *   | { success: true, pools: Array<Record<string, any>> }
+ * >} Resolves to an object indicating success and either the mining pool metadata or an error message.
  * @throws {Error} If the Postgres pool is unavailable or if the database query fails.
  */
 export async function read_mining_pool_metadata( { mining_pool_uid, mining_pool_ip, limit=1 } ) {
