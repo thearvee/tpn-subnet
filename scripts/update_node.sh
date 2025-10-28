@@ -130,7 +130,7 @@ if [ "$ENABLE_AUTOUPDATE" = "true" ]; then
     existing_cron=$(crontab -l 2>/dev/null || true)
     
     # Check if restart_command already exists
-    if ! echo "$existing_cron" | grep -Fq "$restart_command"; then
+    if ! printf '%s\n' "$existing_cron" | grep -Fxq "$restart_command"; then
         # Remove any old node update entries
         new_cron=$(printf "%s" "$existing_cron" | grep -v "scripts/update_node.sh" || true)
 
