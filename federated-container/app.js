@@ -145,6 +145,11 @@ handle_exit_gracefully( server, intervals )
 // Initialise Daemons
 // /////////////////////////////*/
 
+// Clean up stale database entries
+import { database_cleanup } from './modules/database/cleanup.js'
+await database_cleanup()
+intervals.push( setInterval( database_cleanup, DAEMON_INTERVAL_SECONDS * 1_000 ) )
+
 // Update geolocation databases
 if( validator_mode || miner_mode ) {
 

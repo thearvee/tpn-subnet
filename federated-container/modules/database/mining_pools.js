@@ -19,15 +19,15 @@ export async function write_mining_pool_metadata( { mining_pool_uid, mining_pool
 
     // Create query
     const query = `
-        INSERT INTO mining_pool_metadata_broadcast (mining_pool_uid, mining_pool_ip, protocol, url, port)
-        VALUES ($1, $2, $3, $4, $5)
+        INSERT INTO mining_pool_metadata_broadcast (mining_pool_uid, mining_pool_ip, protocol, url, port, updated)
+        VALUES ($1, $2, $3, $4, $5, $6)
         ON CONFLICT (mining_pool_uid, mining_pool_ip) DO UPDATE
-        SET protocol = $3, url = $4, port = $5
+        SET protocol = $3, url = $4, port = $5, updated = $6
     `
     
     try {
 
-        await pool.query( query, [ mining_pool_uid, mining_pool_ip, protocol, url, port ] )
+        await pool.query( query, [ mining_pool_uid, mining_pool_ip, protocol, url, port, Date.now() ] )
         log.info( `Wrote mining pool metadata for ${ mining_pool_uid }@${ mining_pool_ip }: `, { mining_pool_uid, mining_pool_ip, protocol, url, port } )
         return { success: true, mining_pool_uid, mining_pool_ip, protocol, url, port }
 
@@ -99,14 +99,14 @@ export async function write_pool_score( { mining_pool_ip, mining_pool_uid, stabi
 
     // Formulate insert (not update) query
     const query = `
-        INSERT INTO scores (mining_pool_ip, mining_pool_uid, stability_score, size_score, performance_score, geo_score, score)
-        VALUES ($1, $2, $3, $4, $5, $6, $7)
+        INSERT INTO scores (mining_pool_ip, mining_pool_uid, stability_score, size_score, performance_score, geo_score, score, updated)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
         ON CONFLICT (mining_pool_ip, mining_pool_uid) DO UPDATE
-        SET stability_score = $3, size_score = $4, performance_score = $5, geo_score = $6, score = $7
+        SET stability_score = $3, size_score = $4, performance_score = $5, geo_score = $6, score = $7, updated = $8
     `
 
     try {
-        await pool.query( query, [ mining_pool_ip, mining_pool_uid, stability_score, size_score, performance_score, geo_score, score ] )
+        await pool.query( query, [ mining_pool_ip, mining_pool_uid, stability_score, size_score, performance_score, geo_score, score, Date.now() ] )
         log.info( `Wrote pool score for ${ mining_pool_uid }@${ mining_pool_ip }` )
         return { success: true, mining_pool_ip, mining_pool_uid, stability_score, size_score, performance_score, geo_score, score }
     } catch ( e ) {

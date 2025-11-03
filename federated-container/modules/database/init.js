@@ -8,6 +8,11 @@ export async function init_database() {
     const pool = await get_pg_pool()
     const { validator_mode, miner_mode, worker_mode } = run_mode()
 
+
+    /* ///////////////////////////////
+    // Init database
+    // //////////////////////////// */
+
     // In dev, delete old table
     if( CI_MODE === 'true' || FORCE_DESTROY_DATABASE === 'true' ) {
         log.info( 'Dropping old tables in CI mode' )
@@ -81,6 +86,7 @@ export async function init_database() {
                 protocol TEXT NOT NULL,
                 url TEXT NOT NULL,
                 port INTEGER NOT NULL,
+                updated BIGINT NOT NULL,
                 PRIMARY KEY (mining_pool_uid, mining_pool_ip)
             )
         ` )
@@ -93,7 +99,8 @@ export async function init_database() {
             CREATE TABLE IF NOT EXISTS challenge_solution (
                 challenge TEXT NOT NULL,
                 solution TEXT NOT NULL,
-                PRIMARY KEY (challenge)
+                PRIMARY KEY (challenge),
+                updated BIGINT NOT NULL
             )
         ` )
         log.info( `✅ Challenge solution table initialized` )
@@ -110,7 +117,8 @@ export async function init_database() {
                 size_score INTEGER NOT NULL,
                 performance_score INTEGER NOT NULL,
                 geo_score INTEGER NOT NULL,
-                score INTEGER NOT NULL
+                score INTEGER NOT NULL,
+                updated BIGINT NOT NULL
             )
         ` )
         log.info( `✅ Scores table initialized` )
@@ -139,5 +147,59 @@ export async function init_database() {
         )
     ` )
     log.info( `✅ Timestamps table initialized` )
+
+    /* ///////////////////////////////
+    // Backwards compatibility section
+    // ///////////////////////////// */
+
+    // If mining_pool_metadata_broadcast has no updated column, add it (check if table exists first)
+    if( validator_mode ) {
+        await pool.query( `
+            DO $$
+            BEGIN
+                IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'mining_pool_metadata_broadcast') THEN
+                    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='mining_pool_metadata_broadcast' AND column_name='updated') THEN
+                        ALTER TABLE mining_pool_metadata_broadcast ADD COLUMN updated BIGINT NOT NULL DEFAULT 0;
+                        RAISE NOTICE 'Added updated column to mining_pool_metadata_broadcast table';
+                    END IF;
+                END IF;
+            END
+            $$;
+        ` )
+    }
+
+    // If the challenge_solution table is missing updated column, add it (check if table exists first)
+    if( miner_mode || validator_mode ) {
+        await pool.query( `
+            DO $$
+            BEGIN
+                IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'challenge_solution') THEN
+                    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='challenge_solution' AND column_name='updated') THEN
+                        ALTER TABLE challenge_solution ADD COLUMN updated BIGINT NOT NULL DEFAULT 0;
+                        RAISE NOTICE 'Added updated column to challenge_solution table';
+                    END IF;
+                END IF;
+            END
+            $$;
+        ` )
+    }
+
+    // If scores has no update field, add it (check if table exists first)
+    if( validator_mode ) {
+        await pool.query( `
+            DO $$
+            BEGIN
+                IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'scores') THEN
+                    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='scores' AND column_name='updated') THEN
+                        ALTER TABLE scores ADD COLUMN updated BIGINT NOT NULL DEFAULT 0;
+                        RAISE NOTICE 'Added updated column to scores table';
+                    END IF;
+                END IF;
+            END
+            $$;
+        ` )
+    }
+
+    log.info( `✅ Backwards compatibility section complete` )
 
 }

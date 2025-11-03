@@ -123,14 +123,14 @@ printf ' %q' "${DOCKER_CMD[@]}"
 printf '\n'
 
 # Define the command to ensure in crontab
-restart_command="0 * * * * $TPN_DIR/scripts/update_node.sh --force_restart=false"
+restart_command="0 * * * * bash $TPN_DIR/scripts/update_node.sh --force_restart=false"
 
 if [ "$ENABLE_AUTOUPDATE" = "true" ]; then
     # Dump crontab, fallback to empty if none exists
     existing_cron=$(crontab -l 2>/dev/null || true)
     
     # Check if restart_command already exists
-    if ! echo "$existing_cron" | grep -Fq "$restart_command"; then
+    if ! printf '%s\n' "$existing_cron" | grep -Fxq "$restart_command"; then
         # Remove any old node update entries
         new_cron=$(printf "%s" "$existing_cron" | grep -v "scripts/update_node.sh" || true)
 

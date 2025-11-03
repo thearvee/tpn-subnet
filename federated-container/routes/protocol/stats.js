@@ -2,7 +2,7 @@ import { Router } from "express"
 import { get_complete_tpn_cache, get_tpn_cache } from "../../modules/caching.js"
 import { get_pool_scores, read_mining_pool_metadata } from "../../modules/database/mining_pools.js"
 import { abort_controller, cache, log } from "mentie"
-import { get_worker_countries_for_pool } from "../../modules/database/workers.js"
+import { get_worker_countries_for_pool, read_worker_broadcast_metadata } from "../../modules/database/workers.js"
 
 export const router = Router()
 
@@ -35,14 +35,18 @@ router.get( "/stats/pools", async ( req, res ) => {
         log.info( `Fetched metadata for ${ pools_metadata?.length || 0 } mining pools from database` )
         pools_metadata = pools_metadata.filter( ( { mining_pool_ip, mining_pool_uid }  ) => {
             const expected_ip = miner_uid_to_ip?.[ mining_pool_uid ]
-            if (expected_ip === undefined) {
-                log.debug(`Excluding mining pool ${mining_pool_uid} with IP ${mining_pool_ip}: not found in miner_uid_to_ip cache`)
+            if( expected_ip === undefined ) {
+                log.debug( `Excluding mining pool ${ mining_pool_uid } with IP ${ mining_pool_ip }: not found in miner_uid_to_ip cache` )
                 return false
             }
             return mining_pool_ip === expected_ip
         }  )
         log.info( `Filtered metadata to ${ pools_metadata?.length || 0 } mining pools` )
         log.debug( `Pools metadata example: `, pools_metadata[0] )
+
+        // Sort pools_metadata by mining_pool_uid ascending
+        pools_metadata = pools_metadata.map( ( { mining_pool_uid, ...pool } ) => ( { mining_pool_uid: Number( mining_pool_uid ), ...pool } ) )
+        pools_metadata.sort( ( a, b ) => a.mining_pool_uid - b.mining_pool_uid )
 
         // Get mining pool scores
         const { scores: mining_pool_scores } = await get_pool_scores()
@@ -59,8 +63,11 @@ router.get( "/stats/pools", async ( req, res ) => {
             // Get worker countries for this pool
             const countries = await get_worker_countries_for_pool( { mining_pool_uid } )
 
+            // Get pool metadata
+            const [ { last_known_worker_pool_size }={} ] = await read_worker_broadcast_metadata( { mining_pool_uid } )
+
             // Get pool broadcast data
-            const { fetch_options } = abort_controller( { timeout_ms: 5_000 } )
+            const { fetch_options } = abort_controller( { timeout_ms: 1_000 } )
             const { version, MINING_POOL_REWARDS, MINING_POOL_WEBSITE_URL } = await fetch( url, fetch_options ).then( res => res.json() ).catch( e => ( { error: e.message } ) )
 
             const data = {
@@ -74,7 +81,8 @@ router.get( "/stats/pools", async ( req, res ) => {
                 version,
                 MINING_POOL_REWARDS,
                 MINING_POOL_WEBSITE_URL,
-                countries
+                countries,
+                last_known_worker_pool_size
             }
 
             // Return data for this pool
@@ -83,7 +91,8 @@ router.get( "/stats/pools", async ( req, res ) => {
         }  ) )
 
         // Cache the full pools array
-        cache( 'protocol_stats_pools', pools, 10_000 ) // 10 seconds
+        const cache_minutes = 10
+        cache( 'protocol_stats_pools', pools, cache_minutes * 60_000 )
 
         // Return pools data
         return res.json( pools )
