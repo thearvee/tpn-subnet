@@ -60,16 +60,20 @@ router.get( '/worker_performance', async ( req, res ) => {
             if( format === 'csv' ) return res.type( 'text/csv' ).send( cached_response )
         }
 
-        // If the from and to values are timestamps, keep them, if strings, parse to timestamps
+        // If the from and to values are timestamps, type them, if strings, parse to timestamps
         if( from && isNaN( Number( from ) ) ) {
             const parsed_from = Date.parse( from )
             log.debug( `Parsed 'from' date string ${ from } to timestamp ${ parsed_from }` )
             from = parsed_from
+        } else {
+            from = Number( from )
         }
         if( to && isNaN( Number( to ) ) ) {
             const parsed_to = Date.parse( to )
             log.debug( `Parsed 'to' date string ${ to } to timestamp ${ parsed_to }` )
             to = parsed_to
+        } else {
+            to = Number( to )
         }
 
         // If parsing failed, return with invalid date error
@@ -84,7 +88,7 @@ router.get( '/worker_performance', async ( req, res ) => {
         workers = await Promise.all( workers.map( async worker => {
             const cached_metadata = cache( `worker_metadata_${ worker.ip }` )
             if( cached_metadata ) return { ...worker, ...cached_metadata }
-            const { success ,workers=[] } = await get_workers( { ip: worker.ip } )
+            const { success, workers=[] } = await get_workers( { ip: worker.ip } )
             if( !success || workers.length === 0 ) return worker
             cache( `worker_metadata_${ worker.ip }`, workers?.[0], 10_000 )
             return { ...worker, ...workers[0] }
@@ -173,6 +177,7 @@ router.get( '/worker_performance', async ( req, res ) => {
         return res.json( response_data )
 
     } catch ( error ) {
+        log.error( `Error in worker performance route: `, error )
         return res.status( 500 ).json( { error: `Error handling performance route: ${ error.message }` } )
     }
 } )
