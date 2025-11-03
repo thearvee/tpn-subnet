@@ -125,15 +125,16 @@ export async function write_worker_performance( { workers }  ) {
 /**  
  * Fetches the worker performance entries from the database within the specified time range.
  * @param {Object} params - Query parameters.
- * @param {number} params.before - Upper time boundary (timestamp in milliseconds). Defaults to current time.
- * @param {number} params.after - Lower time boundary (timestamp in milliseconds). Defaults to 0 (epoch).
+ * @param {number} params.to - Upper time boundary (timestamp in milliseconds). Defaults to current time.
+ * @param {number} params.from - Lower time boundary (timestamp in milliseconds). Defaults to 0 (epoch).
  * @returns {Promise<{ success: boolean, workers: Array }>} - Result object with success status and array of worker performance entries.
  * @throws {Error} - If there is an error retrieving the data from the database.
  */
-export async function get_worker_performance( { before=Date.now(), after=0 } ) {
+export async function get_worker_performance( { to=Date.now(), from=0 } ) {
 
     // Get the postgres pool
     const pool = await get_pg_pool()
+    log.info( `Fetching worker performance entries from database between ${ new Date( from ).toISOString() } and ${ new Date( to ).toISOString() }` )
 
     // Prepare the query
     const query = `
@@ -142,7 +143,7 @@ export async function get_worker_performance( { before=Date.now(), after=0 } ) {
         WHERE updated_at <= $1 AND updated_at >= $2
         ORDER BY updated_at DESC
     `
-    const values = [ before, after ]
+    const values = [ to, from ]
 
     // Execute the query
     try {
