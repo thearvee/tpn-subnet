@@ -401,6 +401,14 @@ class BaseValidatorNeuron(BaseNeuron):
         )
         bt.logging.debug(f"Updated moving avg scores: {self.scores}")
 
+        # For every score that is above min_log_score, log which uid has that score, include both the score and the moving average score
+        min_log_score = 0.0
+        for uid, score in zip(uids_array, scattered_rewards[uids_array]):
+            if score >= min_log_score:
+                bt.logging.info(
+                    f"Uid {uid} received score {score} | moving avg score {self.scores[uid]}"
+                )
+
     def save_state(self):
         """Saves the state of the validator to a file."""
         bt.logging.info("Saving validator state.")
