@@ -21,7 +21,7 @@ export async function database_cleanup() {
     ]
     const neuron_tables = [
         { table: 'workers', time_field: 'updated_at', max_stale_minutes: epoch_minutes },
-        { table: 'worker_performance', time_field: 'updated_at', max_stale_minutes: month_in_mins },
+        { table: 'worker_performance', time_field: 'updated_at', max_stale_minutes: year_in_mins },
         { table: 'worker_broadcast_metadata', time_field: 'updated', max_stale_minutes: epoch_minutes },
         { table: 'challenge_solution', time_field: 'updated', max_stale_minutes: epoch_minutes },
     ]
