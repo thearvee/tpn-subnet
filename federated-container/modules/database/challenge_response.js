@@ -13,14 +13,14 @@ export async function write_challenge_solution_pair( { challenge, solution } ) {
     const pool = await get_pg_pool()
 
     const query = `
-        INSERT INTO challenge_solution (challenge, solution)
-        VALUES ($1, $2)
-        ON CONFLICT (challenge) DO UPDATE SET solution = $2
+        INSERT INTO challenge_solution (challenge, solution, updated)
+        VALUES ($1, $2, $3)
+        ON CONFLICT (challenge) DO UPDATE SET solution = $2, updated = $3
     `
 
     try {
 
-        await pool.query( query, [ challenge, solution ] )
+        await pool.query( query, [ challenge, solution, Date.now() ] )
         return { success: true, challenge, solution }
 
     } catch ( e ) {
