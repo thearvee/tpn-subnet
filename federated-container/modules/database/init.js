@@ -113,11 +113,11 @@ export async function init_database() {
                 PRIMARY KEY (mining_pool_uid, mining_pool_ip),
                 mining_pool_ip TEXT NOT NULL,
                 mining_pool_uid TEXT NOT NULL,
-                stability_score INTEGER NOT NULL,
-                size_score INTEGER NOT NULL,
-                performance_score INTEGER NOT NULL,
-                geo_score INTEGER NOT NULL,
-                score INTEGER NOT NULL,
+                stability_score NUMERIC NOT NULL,
+                size_score NUMERIC NOT NULL,
+                performance_score NUMERIC NOT NULL,
+                geo_score NUMERIC NOT NULL,
+                score NUMERIC NOT NULL,
                 updated BIGINT NOT NULL
             )
         ` )
@@ -193,6 +193,38 @@ export async function init_database() {
                     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='scores' AND column_name='updated') THEN
                         ALTER TABLE scores ADD COLUMN updated BIGINT NOT NULL DEFAULT 0;
                         RAISE NOTICE 'Added updated column to scores table';
+                    END IF;
+                END IF;
+            END
+            $$;
+        ` )
+    }
+
+    // If scores have integer fields, convert them to numeric (check if table exists first)
+    if( validator_mode ) {
+        await pool.query( `
+            DO $$
+            BEGIN
+                IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'scores') THEN
+                    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='scores' AND column_name='stability_score' AND data_type='integer') THEN
+                        ALTER TABLE scores ALTER COLUMN stability_score TYPE NUMERIC USING stability_score::NUMERIC;
+                        RAISE NOTICE 'Converted stability_score to NUMERIC in scores table';
+                    END IF;
+                    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='scores' AND column_name='size_score' AND data_type='integer') THEN
+                        ALTER TABLE scores ALTER COLUMN size_score TYPE NUMERIC USING size_score::NUMERIC;
+                        RAISE NOTICE 'Converted size_score to NUMERIC in scores table';
+                    END IF;
+                    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='scores' AND column_name='performance_score' AND data_type='integer') THEN
+                        ALTER TABLE scores ALTER COLUMN performance_score TYPE NUMERIC USING performance_score::NUMERIC;
+                        RAISE NOTICE 'Converted performance_score to NUMERIC in scores table';
+                    END IF;
+                    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='scores' AND column_name='geo_score' AND data_type='integer') THEN
+                        ALTER TABLE scores ALTER COLUMN geo_score TYPE NUMERIC USING geo_score::NUMERIC;
+                        RAISE NOTICE 'Converted geo_score to NUMERIC in scores table';
+                    END IF;
+                    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='scores' AND column_name='score' AND data_type='integer') THEN
+                        ALTER TABLE scores ALTER COLUMN score TYPE NUMERIC USING score::NUMERIC;
+                        RAISE NOTICE 'Converted score to NUMERIC in scores table';
                     END IF;
                 END IF;
             END
