@@ -182,7 +182,7 @@ def process_weights_for_netuid(
     # These parameters determine the range of acceptable weights for each neuron.
     quantile = exclude_quantile / U16_MAX
     min_allowed_weights = subtensor.min_allowed_weights(netuid=netuid) # This is set to 1 on chain
-    max_weight_limit = subtensor.max_weight_limit(netuid=netuid) # This is subtensor level, set to U16_MAX by default
+    max_weight_limit = subtensor.max_weight_limit(netuid=netuid) # This is subtensor level normalisation to U16_MAX, which reflects as 1.0 here
     bittensor.logging.debug("quantile", quantile)
     bittensor.logging.debug("min_allowed_weights", min_allowed_weights)
     bittensor.logging.debug("max_weight_limit", max_weight_limit)
