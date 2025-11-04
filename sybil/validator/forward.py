@@ -43,6 +43,7 @@ async def forward(self):
     await broadcast_neurons(self.metagraph, self.validator_server_url)
     
     try:
+        bt.logging.info(f"Getting mining pool scores from {self.validator_server_url}/validator/score/mining_pools")
         async with aiohttp.ClientSession() as session:
             async with session.get(
                 f"{self.validator_server_url}/validator/score/mining_pools"
