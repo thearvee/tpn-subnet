@@ -109,6 +109,13 @@ fi
 # Generate docker command base
 DOCKER_CMD=(docker compose -f "$TPN_DIR/federated-container/docker-compose.yml")
 
+# If swag-related environment variables are set, set profile to proxy. SWAG_DOMAIN_NAME must be set and SWAG_DISABLE_SSL must not be true, SWAG_DOMAIN_NAME must not be the default value of your.domain.com
+if [ -n "${SWAG_DOMAIN_NAME:-}" ] && [ "${SWAG_DISABLE_SSL:-false}" != "true" ] && [ "${SWAG_DOMAIN_NAME:-}" != "your.domain.com" ]; then
+    echo "Enabling proxy profile for SWAG configuration."
+    DOCKER_CMD+=(--profile proxy)
+fi
+
+
 # If run mode is worker, add --profile worker
 if [ "$RUN_MODE" = "worker" ]; then
     DOCKER_CMD+=(--profile worker)

@@ -355,6 +355,15 @@ bash ~/tpn-subnet/scripts/update_node.sh
 > [!NOTE]
 > The update script can be customised, for details run `bash ~/tpn-subnet/scripts/update_node.sh --help`
 
+## Configuring TLS
+
+To enable TLS connections for your node, take the following steps:
+
+- [ ] Register a domain name, for example `example.com`
+- [ ] Create a subdomain that points to the ip address of your node, for example `validator.example.com` to `1.2.3.4`
+- [ ] In your `.env` file set the relevant variables: `SWAG_DOMAIN_NAME`, `SWAG_SUBDOMAINS`, `SWAG_EMAIL`
+- [ ] Run the update script, then test your domain name at `https://validator.example.com`, it should show your validator information
+
 ## FAQ
 
 ### How will workers get paid?
