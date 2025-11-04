@@ -404,11 +404,11 @@ class BaseValidatorNeuron(BaseNeuron):
         # For every score that is above min_log_score, add the uid:score pair to a two dimensional list and log that list
         min_log_score = 0.00001
         logged_scores = [
-            (uid, score)
+            (uid, round(float(score), 2))
             for uid, score in enumerate(self.scores)
             if score >= min_log_score
         ]
-        bt.logging.info(f"UID/Score pairs where score is >= {min_log_score}:\n{logged_scores}")
+        bt.logging.info(f"UID/Score pairs where score is >= {min_log_score} (rounded):\n{logged_scores}")
 
     def save_state(self):
         """Saves the state of the validator to a file."""
