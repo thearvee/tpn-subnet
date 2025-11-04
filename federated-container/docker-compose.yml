@@ -108,7 +108,7 @@ services:
       - DISABLE_SSL=${SWAG_DISABLE_SSL:-false}
     volumes:
       - ./swag:/config
-      - ./swag/nginx/nginx.conf:/config/nginx/nginx.conf:ro
+      - ./swag/nginx/default.conf:/config/nginx/site-confs/default.conf:ro
     ports:
       - "80:80"
       - "443:443"
