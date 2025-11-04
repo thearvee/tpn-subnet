@@ -95,24 +95,23 @@ services:
       - PUID=1000
       - PGID=1000
       - TZ=${TZ:-UTC}
-      - URL="${SERVER_PUBLIC_PROTOCOL:-http}://${SERVER_PUBLIC_HOST}:${SERVER_PUBLIC_PORT:-3000}"
+      - URL="${SWAG_DOMAIN_NAME}"
       - VALIDATION=${SWAG_VALIDATION:-http}
       - SUBDOMAINS=${SWAG_SUBDOMAINS:-www}
       - CERTPROVIDER=${SWAG_CERTPROVIDER:-}
       - DNSPLUGIN=${SWAG_DNSPLUGIN:-}
       - PROPAGATION=${SWAG_PROPAGATION:-}
       - EMAIL=${SWAG_EMAIL}
-      - ONLY_SUBDOMAINS=${SWAG_ONLY_SUBDOMAINS:-false}
+      - ONLY_SUBDOMAINS=${SWAG_ONLY_SUBDOMAINS:-true}
       - EXTRA_DOMAINS=${SWAG_EXTRA_DOMAINS:-}
       - STAGING=${SWAG_STAGING:-false}
       - DISABLE_SSL=${SWAG_DISABLE_SSL:-false}
     volumes:
       - ./swag:/config
-      - ./config/nginx:/config/nginx/site-confs
+      - ./swag/nginx/default.conf:/config/nginx/site-confs/default.conf:ro
     ports:
       - "80:80"
       - "443:443"
-      - "${SERVER_PUBLIC_PORT:-3000}:${SERVER_PUBLIC_PORT:-3000}"
     networks:
       - tpn-external
       - tpn-internal
