@@ -222,11 +222,11 @@ async function score_single_mining_pool( { mining_pool_uid, mining_pool_ip } ) {
 
     // Return the scores
     return {
-        size_score: Math.floor( size_score ),
-        stability_score: Math.floor( stability_score ),
-        performance_score: Math.floor( performance_score ),
-        geo_score: Math.floor( geo_score ),
-        score: Math.floor( score )
+        size_score: round_number_to_decimals( size_score ),
+        stability_score: round_number_to_decimals( stability_score ),
+        performance_score: round_number_to_decimals( performance_score ),
+        geo_score: round_number_to_decimals( geo_score ),
+        score: round_number_to_decimals( score )
     }
 
 }

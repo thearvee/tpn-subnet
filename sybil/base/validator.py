@@ -388,10 +388,10 @@ class BaseValidatorNeuron(BaseNeuron):
         bt.logging.info(f"Uids array: {len(uids_array)}")
         bt.logging.info(f"Rewards: {len(rewards)}")
         
-        bt.logging.info(f"Uids array: {uids_array}")
+        bt.logging.info(f"Uids array:\n{uids_array}")
 
         scattered_rewards[uids_array] = rewards
-        bt.logging.debug(f"Scattered rewards: {rewards}")
+        bt.logging.debug(f"Scattered rewards:\n{rewards}")
 
         # Update scores with rewards produced by this step.
         # shape: [ metagraph.n ]
@@ -399,15 +399,16 @@ class BaseValidatorNeuron(BaseNeuron):
         self.scores: np.ndarray = (
             alpha * scattered_rewards + (1 - alpha) * self.scores
         )
-        bt.logging.debug(f"Updated moving avg scores: {self.scores}")
+        bt.logging.debug(f"Updated moving avg scores:\n{self.scores}")
 
-        # For every score that is above min_log_score, log which uid has that score, include both the score and the moving average score
-        min_log_score = 0.0
-        for uid, score in zip(uids_array, scattered_rewards[uids_array]):
-            if score >= min_log_score:
-                bt.logging.info(
-                    f"Uid {uid} received score {score} | moving avg score {self.scores[uid]}"
-                )
+        # For every score that is above min_log_score, add the uid:score pair to a two dimensional list and log that list
+        min_log_score = 0.00001
+        logged_scores = [
+            (uid, round(float(score), 2))
+            for uid, score in enumerate(self.scores)
+            if score >= min_log_score
+        ]
+        bt.logging.info(f"UID/Score pairs where score is >= {min_log_score} (rounded):\n{logged_scores}")
 
     def save_state(self):
         """Saves the state of the validator to a file."""
