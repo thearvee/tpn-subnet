@@ -1,7 +1,13 @@
 import { cache, log, wait } from "mentie"
 import { format, get_pg_pool } from "./postgres.js"
+import { run } from "../system/shell.js"
 
-
+/**
+ * Writes SOCKS5 proxy configurations to the database
+ * @param {Object} params
+ * @param {Array<{ ip_address: string, port: number, username: string, password: string, available: boolean }>} params.socks - Array of SOCKS5 configurations
+ * @returns {Promise<{ success: boolean, error?: string }>}
+ */
 export async function write_socks( { socks } ) {
 
     try {
@@ -19,6 +25,12 @@ export async function write_socks( { socks } ) {
         // Annotate with timestamp
         const now = Date.now()
         valid_socks = valid_socks.map( sock => ( { ...sock, updated: now } ) )
+
+        // If no valid socks, return
+        if( valid_socks.length === 0 ) {
+            log.warn( `No valid socks to write` )
+            return { success: false, error: `No valid socks to write` }
+        }
 
         // Prepare a query that deletes existing entries for the given IPs
         const ips = valid_socks.map( sock => sock.ip_address )
@@ -42,12 +54,16 @@ export async function write_socks( { socks } ) {
         return { success: true }
 
     } catch ( e ) {
-        console.error( `Error in write_available_socks:`, e )
+        log.error( `Error in write_available_socks:`, e )
         return { success: false, error: e.message }
     }
 
 }
 
+/**
+ * Counts the number of available SOCKS5 proxy configurations
+ * @returns {Promise<{ success: boolean, available_socks_count?: number, error?: string }>}
+ */
 export async function count_available_socks() {
 
     try {
@@ -73,7 +89,15 @@ export async function count_available_socks() {
 
 }
 
+/**
+ * Registers a SOCKS5 proxy lease by marking an available proxy as unavailable
+ * @param {Object} params
+ * @param {number} params.expires_at - Timestamp when the lease expires
+ * @returns {Promise<{ success: boolean, sock?: Object, error?: string }>}
+ */
 export async function register_socks5_lease( { expires_at } ) {
+
+    const working_key = `register_socks5_lease_working`
 
     try {
 
@@ -81,7 +105,6 @@ export async function register_socks5_lease( { expires_at } ) {
         const pool = await get_pg_pool()
 
         // Mitigate race conditions
-        const working_key = `register_socks5_lease_working`
         let working = cache( working_key )
         while( working ) {
             log.debug( `register_socks5_lease is already in progress, waiting...` )
@@ -118,8 +141,6 @@ export async function register_socks5_lease( { expires_at } ) {
         const { PASSWORD_DIR='/passwords' } = process.env
         if( sock ) await run( `touch ${ PASSWORD_DIR }/${ sock.username }.password.used` )
         
-        // Release working lock
-        cache( working_key, false )
 
         return { success: true, sock }
 
@@ -127,6 +148,9 @@ export async function register_socks5_lease( { expires_at } ) {
     } catch ( e ) {
         log.error( `Error in register_socks5_lease:`, e )
         return { success: false, error: e.message }
+    } finally {
+        // Release working lock
+        cache( working_key, false )
     }
 
 }

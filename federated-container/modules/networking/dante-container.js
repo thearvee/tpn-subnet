@@ -76,8 +76,8 @@ export async function load_socks5_from_disk() {
         let { stdout: used_auth_files } = await run( `ls -1 ${ PASSWORD_DIR }/*.password.used || echo ""` )
 
         // Parse file lists
-        auth_files = auth_files.split( '\n'  ).filter( f => !!f.trim().length )
-        used_auth_files = used_auth_files.split( '\n' ).filter( f => !!f.trim().length )
+        auth_files = auth_files?.split( '\n'  )?.filter( f => !!f.trim().length )
+        used_auth_files = used_auth_files?.split( '\n' )?.filter( f => !!f.trim().length )
         log.info( `Found ${ auth_files.length } auth files, ${ used_auth_files.length } used auth files` )
 
         // Create socks objects from auth files
