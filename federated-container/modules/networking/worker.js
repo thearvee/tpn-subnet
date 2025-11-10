@@ -1,5 +1,9 @@
 import { abort_controller, log, sanetise_string } from "mentie"
 
+/**
+ * Gets the configured mining pool URL for the worker, with fallback.
+ * @returns {string} - The mining pool URL.
+ */
 export const get_worker_mining_pool_url = () => {
 
     // Get url setting
@@ -22,14 +26,16 @@ export const get_worker_mining_pool_url = () => {
 export const MINING_POOL_URL = get_worker_mining_pool_url()
 
 /**
- * 
- * @param {Object} params 
- * @param {Object} params.worker - The worker object
- * @param {number} [params.max_retries=1] - The maximum number of retry attempts
- * @param {number} [params.lease_seconds=120] - The lease duration in seconds
- * @param {string} [params.format='json'] - The response format
- * @param {number} [params.timeout_ms=5_000] - The request timeout in milliseconds
- * @returns {Promise<Object|String>} - The WireGuard configuration
+ * Fetches WireGuard configuration directly from a worker node.
+ * @param {Object} params - Request parameters.
+ * @param {Object} params.worker - The worker object.
+ * @param {string} params.worker.ip - Worker's IP address.
+ * @param {number} [params.worker.public_port=3000] - Worker's public port.
+ * @param {number} [params.max_retries=1] - Maximum retry attempts.
+ * @param {number} [params.lease_seconds=120] - Lease duration in seconds.
+ * @param {string} [params.format='text'] - Response format (text or json).
+ * @param {number} [params.timeout_ms=5000] - Request timeout in milliseconds.
+ * @returns {Promise<string|Object>} - WireGuard configuration.
  */
 export async function get_wireguard_config_directly_from_worker( { worker, max_retries=1, lease_seconds=120, format='text', timeout_ms=5_000 } ) {
 

@@ -71,7 +71,9 @@ export async function is_miner_request( request ) {
 }
 
 /**
- * Convenience: resolve a miner by UID using cache.
+ * Resolves a miner by UID using cached data.
+ * @param {number|string} uid - The miner's unique identifier.
+ * @returns {{uid: number, ip: string}|{}} - Miner object or empty object if not found.
  */
 export function get_miner_by_uid( uid ) {
     const uid_to_ip = get_tpn_cache( 'miner_uid_to_ip', {} )
@@ -80,7 +82,9 @@ export function get_miner_by_uid( uid ) {
 }
 
 /**
- * Convenience: resolve a miner by IP using cache.
+ * Resolves a miner by IP address using cached data.
+ * @param {string} ip - The miner's IP address.
+ * @returns {{uid: number, ip: string}|{}} - Miner object or empty object if not found.
  */
 export function get_miner_by_ip( ip ) {
     if( !is_ipv4( ip ) ) return {}

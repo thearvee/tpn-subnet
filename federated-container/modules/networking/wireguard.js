@@ -69,6 +69,12 @@ export async function wait_for_ip_free( { ip_address, timeout_s=test_timeout_sec
 
 }
 
+/**
+ * Cleans up TPN network namespaces.
+ * @param {Object} [params] - Cleanup parameters.
+ * @param {string[]} [params.namespaces] - Array of namespace IDs to clean up. If not provided, cleans all TPN namespaces.
+ * @returns {Promise<boolean>} - True if namespaces were cleaned up, false otherwise.
+ */
 export async function clean_up_tpn_namespaces( { namespaces }={} ) {
 
     log.info( `Cleaning up ${ namespaces?.length || 'all' } namespaces` )
