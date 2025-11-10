@@ -91,8 +91,8 @@ export async function load_socks5_from_disk() {
             const available = !used_auth_files.includes( auth_path )
             
             // Read password from file
-            let { stdout: password } = await run( `cat ${ auth_path }` )
-            password = password.trim()
+            let { stdout: password } = await run( `cat ${ PASSWORD_DIR }/${ auth_path }` )
+            password = `${ password }`.trim()
 
             // Create sock object
             const sock = {
