@@ -229,7 +229,7 @@ services:
     environment:
       - USER_COUNT=${DANTE_USER_COUNT:-4096}
     volumes:
-      - ./dante/passwords:/passwords
+      - ./dante_passwords:/passwords
       - dante_etc:/etc:ro
     ports:
       - "${DANTE_PORT:-1080}:1080"
