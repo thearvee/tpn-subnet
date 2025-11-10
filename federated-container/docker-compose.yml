@@ -231,6 +231,7 @@ services:
     volumes:
       - ./dante_passwords:/passwords
       - dante_etc:/etc
+      - ./dante_logs:/var/log
     ports:
       - "${DANTE_PORT:-1080}:1080"
     networks:
