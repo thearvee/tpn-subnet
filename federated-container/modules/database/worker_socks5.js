@@ -41,9 +41,9 @@ export async function write_socks( { socks } ) {
 
         // Prepare the addition query
         const insert_query = format( `
-            INSERT INTO worker_socks5_configs ( ip_address, port, username, password, available, updated )
+            INSERT INTO worker_socks5_configs ( ip_address, port, username, password, available, updated, expires_at )
             VALUES %L
-        `, valid_socks.map( sock => [ sock.ip_address, sock.port, sock.username, sock.password, sock.available, sock.updated ] ) )
+        `, valid_socks.map( sock => [ sock.ip_address, sock.port, sock.username, sock.password, sock.available, sock.updated, 0 ] ) )
 
         // Execute the delete
         await pool.query( delete_query )
