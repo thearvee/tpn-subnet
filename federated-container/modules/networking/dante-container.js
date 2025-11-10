@@ -15,7 +15,7 @@ async function check_if_dante_reachable() {
         const { DANTE_PORT=1080, SERVER_PUBLIC_HOST } = process.env
         if( !SERVER_PUBLIC_HOST ) throw new Error( `SERVER_PUBLIC_HOST is not set in environment variables` )
         if( !DANTE_PORT ) throw new Error( `DANTE_PORT is not set in environment variables` )
-        const command = `nc -vzu -w 10 ${ SERVER_PUBLIC_HOST } ${ DANTE_PORT }`
+        const command = `nc -vz -w 10 ${ SERVER_PUBLIC_HOST } ${ DANTE_PORT }`
         log.info( `Checking Dante reachability with command: ${ command }` )
         const { stdout, stderr } = await run( command )
         const outputs = `stdout: ${ stdout }, stderr: ${ stderr }`
