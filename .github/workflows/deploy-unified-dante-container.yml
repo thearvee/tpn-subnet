@@ -7,6 +7,7 @@ on:
     # Trigger only when package.json is modified
     paths:
       - "federated-container/tpn_dante.Dockerfile"
+      - "federated-container/dante/**"
     branches:
       - main
       - development

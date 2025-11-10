@@ -92,6 +92,20 @@ if (( PROGRESS_STEP_SIZE == 0 )); then
     PROGRESS_STEP_SIZE=1
 fi
 
+# Before anything else, delete all users except the current and root
+current_user=$(whoami)
+echo "Cleaning up existing users except root and current user ($current_user)..."
+for user in $(cut -f1 -d: /etc/passwd); do
+
+    if [[ "$user" != "root" && "$user" != "$current_user" ]]; then
+        echo "Deleting existing user: $user"
+        userdel "$user"
+    fi
+    rm -f "$PASSWORD_DIR/$user.password"
+    rm -f "$PASSWORD_DIR/$user.password.used"
+
+done
+
 echo "Generated 0/${USER_COUNT} users (0%)..."
 offset=0
 start_time=$(date +%s)
