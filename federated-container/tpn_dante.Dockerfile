@@ -18,7 +18,7 @@ COPY dante/danted.conf.template /etc/danted.conf.template
 COPY dante/gen_users_and_start.sh /usr/local/bin/gen_users_and_start.sh
 RUN chmod +x /usr/local/bin/gen_users_and_start.sh
 
-# Expose the dante server port
+# Document the dante server port
 EXPOSE 1080
 
 # Start the dante server
