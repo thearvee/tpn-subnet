@@ -62,9 +62,9 @@ export async function count_available_socks() {
             WHERE available = TRUE
         `
         const result = await pool.query( query )
-        const available_count = Number( result.rows[0]?.available_count || 0 )
+        const available_socks_count = Number( result.rows[0]?.available_count || 0 )
 
-        return { success: true, available_count }
+        return { success: true, available_socks_count }
 
     } catch ( e ) {
         console.error( `Error in count_available_socks:`, e )
