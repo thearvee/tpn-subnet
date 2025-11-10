@@ -4,6 +4,21 @@ import { parse_wireguard_config } from "../networking/wireguard.js"
 import { MINING_POOL_URL } from "../networking/worker.js"
 import { mark_config_as_free } from "../database/worker_wireguard.js"
 import { base_url } from "../networking/url.js"
+import { get_valid_socks5_config } from "../networking/dante-container.js"
+
+export async function get_socks5_config_as_worker( { lease_seconds, priority, format } ) {
+
+    const { socks5_config, expires_at } = await get_valid_socks5_config( { lease_seconds } )
+    if( !socks5_config ) throw new Error( `Failed to get valid socks5 config for ${ lease_seconds }, ${ priority ? 'with' : 'without' } priority` )
+    log.info( `Obtained Socks5 config for ${ socks5_config?.username }, expires at ${ new Date( expires_at ).toISOString() }` )
+
+    // Return right format
+    const json_config = socks5_config
+    const text_config = `socks5://${ socks5_config.username }:${ socks5_config.password }@${ socks5_config.ip_address }:${ socks5_config.port }`
+    if( format == 'text' ) return text_config
+    return json_config
+
+}
 
 /**
  * Get the worker configuration as a worker.

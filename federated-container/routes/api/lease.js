@@ -4,7 +4,7 @@ import { cooldown_in_s, retry_times } from "../../modules/networking/routing.js"
 import { run_mode } from "../../modules/validations.js"
 import { get_worker_config_as_miner } from "../../modules/api/mining_pool.js"
 import { get_worker_config_as_validator } from "../../modules/api/validator.js"
-import { get_worker_config_as_worker } from "../../modules/api/worker.js"
+import { get_worker_config_as_worker, get_socks5_config_as_worker } from "../../modules/api/worker.js"
 import { is_validator_request } from "../../modules/networking/validators.js"
 import { ip_from_req, resolve_domain_to_ip } from "../../modules/networking/network.js"
 import { MINING_POOL_URL } from "../../modules/networking/worker.js"
@@ -71,7 +71,7 @@ router.get( [ '/config/new', '/lease/new' ], async ( req, res ) => {
         // Get all relevant data
         log.insane( `Request query params:`, Object.keys( req.query ), Object.values( req.query ), req.query )
         allow_props( req.query, [ ...mandatory_props, ...optional_props ], true )
-        let { lease_seconds, lease_minutes, format='json', geo='any', whitelist, blacklist, priority=false } = req.query
+        let { lease_seconds, lease_minutes, format='json', geo='any', whitelist, blacklist, priority=false, type='wireguard' } = req.query
 
         // Backwards compatibility
         if( !`${ lease_seconds }`.length && `${ lease_minutes }`.length ) {
@@ -83,6 +83,7 @@ router.get( [ '/config/new', '/lease/new' ], async ( req, res ) => {
         // Sanetise and parse inputs for each prop set
         lease_seconds = lease_seconds && parseInt( lease_seconds, 10 )
         format = format && sanetise_string( format )
+        type = type && sanetise_string( type )
         geo = geo && `${ sanetise_string( geo ) }`.toUpperCase()
         whitelist = whitelist && sanetise_string( whitelist ).split( ',' )
         blacklist = blacklist && sanetise_string( blacklist ).split( ',' )
@@ -100,16 +101,23 @@ router.get( [ '/config/new', '/lease/new' ], async ( req, res ) => {
         // Validate inputs as specified in props
         if( !lease_seconds || isNaN( lease_seconds ) ) throw new Error( `Invalid lease_seconds: ${ lease_seconds }` )
         if( format?.length && ![ 'json', 'text' ].includes( format ) ) throw new Error( `Invalid format: ${ format }` )
+        if( type?.length && ![ 'wireguard', 'socks5' ].includes( type ) ) throw new Error( `Invalid type: ${ type }` )
         if( geo?.length && !geo_available ) throw new Error( `No workers found for geo: ${ geo }.` )
         if( whitelist?.length && whitelist.some( ip => !is_ipv4( ip ) ) ) throw new Error( `Invalid ip addresses in whitelist` )
         if( blacklist?.length && blacklist.some( ip => !is_ipv4( ip ) ) ) throw new Error( `Invalid ip addresses in blacklist` )
 
-        // Get relevant config based on run mode
+        // Get relevant wireguard config based on run mode
         log.debug( `Getting config as ${ mode } with params:`, config_meta )
         let config = null
-        if( validator_mode ) config = await get_worker_config_as_validator( config_meta )
-        if( miner_mode ) config = await get_worker_config_as_miner( config_meta )
-        if( worker_mode ) config = await get_worker_config_as_worker( config_meta )
+        if( type == 'wireguard' && validator_mode ) config = await get_worker_config_as_validator( config_meta )
+        if( type == 'wireguard' && miner_mode ) config = await get_worker_config_as_miner( config_meta )
+        if( type == 'wireguard' && worker_mode ) config = await get_worker_config_as_worker( config_meta )
+
+        // Get relevant socks5 config based on run mode
+        // if( type == 'socks5' && validator_mode ) config = await get_socks5_config_as_validator( config_meta )
+        // if( type == 'socks5' && miner_mode ) config = await get_socks5_config_as_miner( config_meta )
+        if( type == 'socks5' && worker_mode ) config = await get_socks5_config_as_worker( config_meta )
+
 
         // Validate config
         if( !config ) throw new Error( `${ mode } failed to get config for ${ geo }` )

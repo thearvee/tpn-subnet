@@ -219,6 +219,29 @@ services:
       retries: 3
       start_period: 60s
 
+  dante:
+    image: "taofuprotocol/tpn-dante:${TPN_IMAGE_TAG:-latest}"
+    build:
+      context: .
+      dockerfile: tpn_dante.Dockerfile
+    container_name: dante
+    restart: unless-stopped
+    environment:
+      - USER_COUNT=${DANTE_USER_COUNT:-4096}
+    volumes:
+      - ./dante/passwords:/passwords
+      - ./dante/passwd:/etc/passwd:ro
+      - ./dante/shadow:/etc/shadow:ro
+      - ./dante/group:/etc/group:ro
+      - ./dante/gshadow:/etc/gshadow:ro
+
+    ports:
+      - "${DANTE_PORT:-1080}:1080"
+    networks:
+      - tpn-external
+    profiles:
+      - worker
+
 networks:
   # Internal network - has internal connectivity only, cannot reach internet or be reached from it
   tpn-internal:
