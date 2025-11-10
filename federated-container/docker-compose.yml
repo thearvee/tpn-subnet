@@ -230,11 +230,7 @@ services:
       - USER_COUNT=${DANTE_USER_COUNT:-4096}
     volumes:
       - ./dante/passwords:/passwords
-      - ./dante/passwd:/etc/passwd:ro
-      - ./dante/shadow:/etc/shadow:ro
-      - ./dante/group:/etc/group:ro
-      - ./dante/gshadow:/etc/gshadow:ro
-
+      - dante_etc:/etc:ro
     ports:
       - "${DANTE_PORT:-1080}:1080"
     networks:
@@ -268,3 +264,4 @@ volumes:
   ip2location_data:
   container_cache:
   wireguard_config:
+  dante_etc:
