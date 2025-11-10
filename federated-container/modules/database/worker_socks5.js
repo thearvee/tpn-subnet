@@ -27,7 +27,7 @@ export async function write_socks( { socks } ) {
         valid_socks = valid_socks.map( sock => ( { ...sock, updated: now } ) )
 
         // If no valid socks, return
-        if( valid_socks.length === 0 ) {
+        if( !valid_socks?.length ) {
             log.warn( `No valid socks to write` )
             return { success: false, error: `No valid socks to write` }
         }

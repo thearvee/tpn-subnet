@@ -78,7 +78,7 @@ export async function load_socks5_from_disk() {
         // Parse file lists
         auth_files = auth_files?.split( '\n'  )?.filter( f => !!f.trim().length )
         used_auth_files = used_auth_files?.split( '\n' )?.filter( f => !!f.trim().length )
-        log.info( `Found ${ auth_files.length } auth files, ${ used_auth_files.length } used auth files` )
+        log.info( `Found ${ auth_files?.length } auth files, ${ used_auth_files?.length } used auth files` )
 
         // Create socks objects from auth files
         const socks = await Promise.all( auth_files.map( async auth_path => {
