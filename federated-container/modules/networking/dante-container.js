@@ -68,12 +68,12 @@ export async function load_socks5_from_disk() {
     try {
 
         // Load the auth files from /passwords/*.password
-        const { PASSWORD_DIR='/passwords', DANTE_PORT, SERVER_PUBLIC_HOST } = process.env
+        const { PASSWORD_DIR='/passwords', DANTE_PORT=1080, SERVER_PUBLIC_HOST } = process.env
         log.info( `Loading SOCKS5 auth files from directory: ${ PASSWORD_DIR }` )
 
         // Get auth files and used auth files
-        let { stdout: auth_files='' } = await run( `ls -1 ${ PASSWORD_DIR }/*.password` )
-        let { stdout: used_auth_files='' } = await run( `ls -1 ${ PASSWORD_DIR }/*.password.used || echo ""` )
+        let { stdout: auth_files='' } = await run( `ls -d1 ${ PASSWORD_DIR }/*.password` )
+        let { stdout: used_auth_files='' } = await run( `ls -d1 ${ PASSWORD_DIR }/*.password.used || echo ""` )
 
         // Parse file lists
         auth_files = auth_files?.split( '\n'  )?.filter( f => !!`${ f }`.trim().length )
@@ -91,8 +91,9 @@ export async function load_socks5_from_disk() {
             const available = !used_auth_files.includes( auth_path )
             
             // Read password from file
-            let { stdout: password } = await run( `cat ${ PASSWORD_DIR }/${ auth_path }` )
+            let { stdout: password } = await run( `cat ${ auth_path }` )
             password = `${ password }`.trim()
+            if( !password?.length ) log.warn( `Password file ${ auth_path } is empty` )
 
             // Create sock object
             const sock = {
