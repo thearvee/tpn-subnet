@@ -230,7 +230,7 @@ services:
       - USER_COUNT=${DANTE_USER_COUNT:-4096}
     volumes:
       - ./dante_passwords:/passwords
-      - dante_etc:/etc:ro
+      - dante_etc:/etc
     ports:
       - "${DANTE_PORT:-1080}:1080"
     networks:

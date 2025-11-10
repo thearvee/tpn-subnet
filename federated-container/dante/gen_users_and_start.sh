@@ -16,6 +16,10 @@ echo "Password length: ${PASSWORD_LENGTH}"
 echo "Username length: ${USER_LENGTH}"
 echo "User count: ${USER_COUNT}"
 
+# Exit and trap on errors
+set -e
+trap 'echo "Error occurred at line $LINENO. Exiting."; exit 1;' ERR
+
 # Start the Dante server
 function start_dante() {
 
