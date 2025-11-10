@@ -36,7 +36,7 @@ async function check_if_dante_reachable() {
  * @param {number} [params.max_wait_ms=Infinity] - The maximum time in milliseconds to wait.
  * @returns {Promise<boolean>} A promise that resolves to true if the server becomes reachable within the wait period, or false otherwise.
  */
-export async function dante_server_ready( { max_wait_ms=Infinity } ) {
+export async function dante_server_ready( { max_wait_ms=Infinity } = {} ) {
 
     // Time tracking
     const start_time = Date.now()
