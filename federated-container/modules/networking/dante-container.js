@@ -19,7 +19,7 @@ async function check_if_dante_reachable() {
         log.info( `Checking Dante reachability with command: ${ command }` )
         const { stdout, stderr } = await run( command )
         const outputs = `stdout: ${ stdout }, stderr: ${ stderr }`
-        const reachable = stdout.includes( 'succeeded' ) || stderr.includes( 'succeeded' )
+        const reachable = outputs.includes( 'succeeded' )
         log.info( `Dante reachable: ${ reachable }, outputs: ${ outputs }` )
         return reachable
 
