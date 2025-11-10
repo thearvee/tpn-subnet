@@ -6,6 +6,14 @@ import { mark_config_as_free } from "../database/worker_wireguard.js"
 import { base_url } from "../networking/url.js"
 import { get_valid_socks5_config } from "../networking/dante-container.js"
 
+/**
+ * Gets SOCKS5 proxy configuration as a worker.
+ * @param {Object} params - Configuration parameters.
+ * @param {number} params.lease_seconds - Duration of the lease in seconds.
+ * @param {boolean} [params.priority] - Whether to prioritize this request.
+ * @param {string} [params.format] - Response format (text or json).
+ * @returns {Promise<string|Object>} - SOCKS5 configuration in requested format.
+ */
 export async function get_socks5_config_as_worker( { lease_seconds, priority, format } ) {
 
     const { socks5_config, expires_at } = await get_valid_socks5_config( { lease_seconds } )
@@ -21,9 +29,12 @@ export async function get_socks5_config_as_worker( { lease_seconds, priority, fo
 }
 
 /**
- * Get the worker configuration as a worker.
- * @param {Object<{ lease_seconds: number, priority: boolean, format: string }>} params
- * @returns {Promise<Object>}
+ * Gets WireGuard VPN configuration as a worker.
+ * @param {Object} params - Configuration parameters.
+ * @param {number} params.lease_seconds - Duration of the lease in seconds.
+ * @param {boolean} [params.priority] - Whether to prioritize this request.
+ * @param {string} [params.format] - Response format (text or json).
+ * @returns {Promise<string|Object>} - WireGuard configuration in requested format.
  */
 export async function get_worker_config_as_worker( { lease_seconds, priority, format } ) {
 

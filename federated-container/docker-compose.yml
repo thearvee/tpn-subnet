@@ -227,7 +227,7 @@ services:
     container_name: dante
     restart: unless-stopped
     environment:
-      - USER_COUNT=${DANTE_USER_COUNT:-4096}
+      - USER_COUNT=${DANTE_USER_COUNT:-256}
     volumes:
       - ./dante_passwords:/passwords
       - dante_etc:/etc

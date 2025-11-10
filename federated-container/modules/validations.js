@@ -44,6 +44,11 @@ export const is_valid_worker = ( worker ) => {
 
 }
 
+/**
+ * Annotates a worker object with default values for missing properties.
+ * @param {Object} worker - The worker object to annotate.
+ * @returns {Object} - The worker object with defaults applied.
+ */
 export const annotate_worker_with_defaults = worker => {
 
     if( !worker || typeof worker !== 'object' ) return worker
@@ -60,6 +65,11 @@ export const annotate_worker_with_defaults = worker => {
 
 }
 
+/**
+ * Sanitizes and normalizes worker object properties.
+ * @param {Object} worker - The worker object to sanitize.
+ * @returns {Object} - The sanitized worker object.
+ */
 export const sanetise_worker = worker => {
 
     // If not object, return
@@ -94,7 +104,7 @@ export const sanetise_worker = worker => {
 
 /**
  * Gets the current run mode and its associated flags.
- * @returns {Object<{ run_mode: string, worker_mode: boolean, miner_mode: boolean, validator_mode: boolean }>} - An object containing the run mode and its flags.
+ * @returns {{ mode: string, worker_mode: boolean, miner_mode: boolean, validator_mode: boolean }} - An object containing the run mode and its flags.
  */
 export const run_mode = () => {
     const { RUN_MODE } = process.env

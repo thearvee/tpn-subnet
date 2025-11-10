@@ -9,10 +9,11 @@ import { base_url } from "../networking/url.js"
 const { CI_MODE, CI_MOCK_WORKER_RESPONSES } = process.env
 
 /**
- * 
- * @param {Object} params
- * @param {Object} params.worker - worker object to test
- * @returns {Promise<{ is_member: boolean } | { error: string }>} Result of membership verification
+ * Verifies if a worker is a member of the current mining pool.
+ * @param {Object} params - Verification parameters.
+ * @param {Object} params.worker - Worker object to test.
+ * @param {string} params.worker.public_url - Public URL of the worker.
+ * @returns {Promise<{is_member: boolean}|{error: string}>} - Result of membership verification.
  */
 async function verify_worker_membership( { worker } ) {
 
@@ -39,7 +40,9 @@ async function verify_worker_membership( { worker } ) {
 }
 
 /**
- * Miner function to test all known workers
+ * Tests and scores all known workers registered with the mining pool.
+ * @param {number} [max_duration_minutes=15] - Maximum duration in minutes before function times out.
+ * @returns {Promise<void>}
  */
 export async function score_all_known_workers( max_duration_minutes=15 ) {
 
@@ -107,14 +110,14 @@ export async function score_all_known_workers( max_duration_minutes=15 ) {
 }
 
 /**
- * 
- * @param {Object} params
- * @param {Object} params.worker - Worker object
- * @param {string} params.worker.ip - IP address of the worker
- * @param {number} params.worker.public_port - Public port of the worker
- * @param {string} params.mining_pool_url - URL of the mining pool the worker is expected to be associated with
- * @param {boolean} params.throw_on_mismatch - Whether to throw an error on mismatch (default: false)
- * @returns 
+ * Verifies that a worker is associated with the expected mining pool.
+ * @param {Object} params - Verification parameters.
+ * @param {Object} params.worker - Worker object.
+ * @param {string} params.worker.ip - IP address of the worker.
+ * @param {number} params.worker.public_port - Public port of the worker.
+ * @param {string} params.mining_pool_url - Expected URL of the mining pool.
+ * @param {boolean} [params.throw_on_mismatch=false] - Whether to throw an error on mismatch.
+ * @returns {Promise<boolean>} - True if worker matches miner, false otherwise.
  */
 export async function worker_matches_miner( { worker, mining_pool_url, throw_on_mismatch=false } ) {
 

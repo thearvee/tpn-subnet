@@ -25,4 +25,4 @@ EXPOSE 1080
 CMD ["/usr/local/bin/gen_users_and_start.sh"]
 
 # Healthcheck call, expect the dante server to be up and listening on port 1080
-HEALTHCHECK --interval=10s --timeout=5s --start-period=180s --retries=3 CMD nc -z localhost 1080 || exit 1
+HEALTHCHECK --interval=10s --timeout=5s --start-period=600s --retries=3 CMD nc -z localhost 1080 || exit 1

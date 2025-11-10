@@ -4,6 +4,16 @@ import { get_worker_config_through_mining_pool } from "../networking/miners.js"
 import { worker_matches_miner } from "../scoring/score_workers.js"
 import { resolve_domain_to_ip } from "../networking/network.js"
 
+/**
+ * Retrieves worker VPN configuration as a validator by coordinating with mining pools.
+ * @param {Object} params - Configuration parameters.
+ * @param {string} params.geo - Geographic location code.
+ * @param {string} [params.format='text'] - Response format (text or json).
+ * @param {string[]} [params.whitelist] - List of whitelisted IPs.
+ * @param {string[]} [params.blacklist] - List of blacklisted IPs.
+ * @param {number} [params.lease_seconds] - Duration of the lease in seconds.
+ * @returns {Promise<string|Object|null>} - Worker configuration or null if no workers available.
+ */
 export async function get_worker_config_as_validator( { geo, format='text', whitelist, blacklist, lease_seconds } ) {
 
     // Do payment authentication here in future

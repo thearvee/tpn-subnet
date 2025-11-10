@@ -5,6 +5,16 @@ import { get_workers } from "../database/workers.js"
 import { base_url } from "../networking/url.js"
 const { CI_MODE, CI_MOCK_MINING_POOL_RESPONSES } = process.env
 
+/**
+ * Retrieves WireGuard configuration from a worker as a mining pool.
+ * @param {Object} params - Configuration parameters.
+ * @param {string} params.geo - Geographic location code.
+ * @param {string} [params.format='text'] - Response format (text or json).
+ * @param {string[]} [params.whitelist] - List of whitelisted IPs.
+ * @param {string[]} [params.blacklist] - List of blacklisted IPs.
+ * @param {number} [params.lease_seconds] - Duration of the lease in seconds.
+ * @returns {Promise<string|Object|null>} - WireGuard configuration or null if no workers available.
+ */
 export async function get_worker_config_as_miner( { geo, format='text', whitelist, blacklist, lease_seconds } ) {
 
     // Get relevant workers
@@ -44,6 +54,10 @@ export async function get_worker_config_as_miner( { geo, format='text', whitelis
 
 }
 
+/**
+ * Registers the mining pool with all known validators.
+ * @returns {Promise<{successes: Array, failures: Array}>} - Registration results with successes and failures.
+ */
 export async function register_mining_pool_with_validators() {
 
     // Get validator ip list
@@ -93,6 +107,10 @@ export async function register_mining_pool_with_validators() {
 
 }
 
+/**
+ * Registers all mining pool workers with validators by broadcasting worker list.
+ * @returns {Promise<{successes: Array, failures: Array}>} - Registration results with successes and failures.
+ */
 export async function register_mining_pool_workers_with_validators() {
 
     // Get validator ip list

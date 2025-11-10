@@ -133,6 +133,13 @@ export async function score_mining_pools( max_duration_minutes=30 ) {
 
 }
 
+/**
+ * Scores a single mining pool based on worker performance metrics.
+ * @param {Object} params - Scoring parameters.
+ * @param {string} params.mining_pool_uid - Unique identifier of the mining pool.
+ * @param {string} params.mining_pool_ip - IP address of the mining pool.
+ * @returns {Promise<{size_score: number, stability_score: number, performance_score: number, geo_score: number, score: number}>} - Scoring metrics for the pool.
+ */
 async function score_single_mining_pool( { mining_pool_uid, mining_pool_ip } ) {
 
     // Prepare for scoring
