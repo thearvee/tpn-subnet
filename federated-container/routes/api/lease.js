@@ -66,7 +66,7 @@ router.get( [ '/config/new', '/lease/new' ], async ( req, res ) => {
 
         // Prepare validation props based on run mode
         const mandatory_props = [ 'lease_seconds' ]
-        const optional_props = [ 'geo', 'whitelist', 'blacklist', 'priority', 'format', 'lease_minutes' ]
+        const optional_props = [ 'geo', 'whitelist', 'blacklist', 'priority', 'format', 'lease_minutes', 'type' ]
 
         // Get all relevant data
         log.insane( `Request query params:`, Object.keys( req.query ), Object.values( req.query ), req.query )
