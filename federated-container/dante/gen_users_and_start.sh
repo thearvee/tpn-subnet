@@ -98,13 +98,13 @@ fi
 
 # Before anything else, delete all users except the current and root
 current_user=$(whoami)
-allowed_users=("root" "$current_user" "ubuntu" "nobody" "bin", "list" "man" "daemon" "sys" "sync" "games" "lp" "mail" "news" "uucp" "proxy" "www-data" "backup" "list" "irc" "gnats" "nobody" "systemd-network" "systemd-resolve" "syslog" "_apt" "tss" "messagebus" "uuidd" "dnsmasq" "sshd" "landscape" "pollinate" )
+allowed_users=("root" "$current_user" "ubuntu" "nobody" "bin" "list" "man" "daemon" "sys" "sync" "games" "lp" "mail" "news" "uucp" "proxy" "www-data" "backup" "list" "irc" "gnats" "nobody" "systemd-network" "systemd-resolve" "syslog" "_apt" "tss" "messagebus" "uuidd" "dnsmasq" "sshd" "landscape" "pollinate" )
 echo "Cleaning up existing users except special users..."
 for user in $(cut -f1 -d: /etc/passwd); do
 
     if [[ ! " ${allowed_users[@]} " =~ " ${user} " ]]; then
         echo "Deleting existing user: $user"
-        userdel "$user"
+        userdel "$user" 2>/dev/null || true
     fi
     rm -f "$PASSWORD_DIR/$user.password"
     rm -f "$PASSWORD_DIR/$user.password.used"
