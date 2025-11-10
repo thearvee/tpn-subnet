@@ -56,6 +56,7 @@ services:
       - container_cache:/app/cache
       - ../.git:/app/.git:ro
       - /var/run/docker.sock:/var/run/docker.sock
+      - ./dante_passwords:/passwords
     depends_on:
       postgres:
         condition: service_healthy
