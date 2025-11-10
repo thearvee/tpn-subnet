@@ -37,6 +37,12 @@ function start_dante() {
     cat $DANTE_CONFIG_FILE
     echo "==============================="
 
+    # If unprivileged user "nobody" does not yet exist, create it
+    if ! id -u nobody >/dev/null 2>&1; then
+        echo "Creating unprivileged user 'nobody'..."
+        useradd -r -s /usr/sbin/nologin nobody
+    fi
+
     # Start the Dante server in foreground mode
     cpu_core_count=$(nproc --all)
     echo "Running Dante server on ${cpu_core_count} CPU cores"
