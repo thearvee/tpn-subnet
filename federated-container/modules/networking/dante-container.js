@@ -184,8 +184,9 @@ export async function get_valid_socks5_config( { lease_seconds } ) {
     }
     
     // Get lease
-    const sock = await register_socks5_lease( { expires_at } )
+    const { success, error, sock } = await register_socks5_lease( { expires_at } )
     log.info( `Leased SOCKS5 config: ${ sock.username }@${ sock.ip_address }:${ sock.port }, expires at ${ new Date( expires_at ).toISOString() }` )
+    if( !success ) throw new Error( `Error leasing SOCKS5 config: ${ error }` )
 
     // Return the sock config
     const socks5_config = {
