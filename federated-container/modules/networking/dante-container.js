@@ -111,6 +111,7 @@ export async function load_socks5_from_disk() {
         // Write sockt to database
         await write_socks( { socks } )
         cache( 'dante_config_initialised', true )
+        log.info( `Loaded ${ socks.length } SOCKS5 configs from disk and saved to database` )
 
         return { success: true }
 
@@ -175,6 +176,7 @@ export async function get_valid_socks5_config( { lease_seconds } ) {
 
     // If no socks available, restart the container
     if( !available_socks_count ) {
+        log.info( `No available socks, restarting Dante container to refresh configs` )
         await restart_dante_container()
         await check_if_dante_reachable()
         const { available_socks_count: new_available_socks_count } = await count_available_socks()

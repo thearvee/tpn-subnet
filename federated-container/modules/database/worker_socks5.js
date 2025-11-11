@@ -22,6 +22,8 @@ export async function write_socks( { socks } ) {
             return expected_properties.every( prop => sock_props.includes( prop ) )
         } )
 
+        log.info( `Received  ${ socks.length  } socks, ${ valid_socks.length } valid socks, exerpt: `, socks.slice( 0, 1 ) )
+
         // Annotate with timestamp
         const now = Date.now()
         valid_socks = valid_socks.map( sock => ( { ...sock, updated: now } ) )
@@ -46,11 +48,14 @@ export async function write_socks( { socks } ) {
         `, valid_socks.map( sock => [ sock.ip_address, sock.port, sock.username, sock.password, sock.available, sock.updated, 0 ] ) )
 
         // Execute the delete
+        log.info( `Deleting existing SOCKS5 configs for ${ ips.length } ips` )
         await pool.query( delete_query )
 
         // Execute the insert
+        log.info( `Inserting ${ valid_socks.length } new SOCKS5 configs` )
         await pool.query( insert_query )
 
+        log.info( `Successfully wrote SOCKS5 configs` )
         return { success: true }
 
     } catch ( e ) {
