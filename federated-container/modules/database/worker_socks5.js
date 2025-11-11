@@ -136,16 +136,15 @@ export async function register_socks5_lease( { expires_at } ) {
             const update_query = `
                 UPDATE worker_socks5_configs
                 SET available = FALSE, expires_at = $1, updated = $2
-                WHERE ip_address = $3
+                WHERE username = $3 AND password = $4
             `
-            await pool.query( update_query, [ expires_at, Date.now(), sock.ip_address ] )
+            await pool.query( update_query, [ expires_at, Date.now(), sock.username, sock.password ] )
             log.info( `Registered SOCKS5 lease for ${ sock.ip_address }:${ sock.port }, expires at ${ new Date( expires_at ).toISOString() }` )
         }
 
         // Mark the password as unavailable through touching /passwords/<username>.password.used
         const { PASSWORD_DIR='/passwords' } = process.env
         if( sock ) await run( `touch ${ PASSWORD_DIR }/${ sock.username }.password.used` )
-        
 
         return { success: true, sock }
 

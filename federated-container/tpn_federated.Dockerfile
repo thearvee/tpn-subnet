@@ -41,7 +41,7 @@ COPY package*.json ./
 RUN npm i -g npm
 RUN npm ci --omit=dev
 
-# Cachebuster
+# Cachebuster, used in local development to force rebuilds
 ARG CACHEBUST=1
 RUN echo "CACHEBUST=$CACHEBUST"
 
