@@ -17,7 +17,7 @@ jobs:
 
       # 1. Checkout with enough history to compare previous commit
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 2  # Need previous commit for diff
 
@@ -65,5 +65,5 @@ jobs:
           tags: |
             taofuprotocol/tpn-federated:${{ steps.version_check.outputs.version }}${{ github.ref == 'refs/heads/development' && '-dev'  || '' }}
             taofuprotocol/tpn-federated:latest${{ github.ref == 'refs/heads/development' && '-dev'  || '' }}
-          cache-from: type=registry,ref=taofuprotocol/tpn-federated:buildcache
-          cache-to: type=registry,ref=taofuprotocol/tpn-federated:buildcache,mode=max
+          cache-from: type=gha,ref=taofuprotocol/tpn-federated:buildcache
+          cache-to: type=gha,ref=taofuprotocol/tpn-federated:buildcache,mode=max
