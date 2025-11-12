@@ -9,6 +9,7 @@ ENV MAX_PROCESS_RAM_MB=8192
 
 # Install all dependencies
 ENV DEBIAN_FRONTEND=noninteractive
+RUN apt update
 RUN apt update && apt install -y --no-install-recommends \
     # curl for healthcheck
     curl \
@@ -28,7 +29,7 @@ RUN apt update && apt install -y --no-install-recommends \
     && apt clean && rm -rf /var/lib/apt/lists/*
 
 # wg-quick resolver dependency
-RUN apt install -y --no-install-recommends resolvconf || echo "resolvconf postinstall is expected to fail"
+RUN apt update && apt install -y --no-install-recommends resolvconf || echo "resolvconf postinstall is expected to fail"; apt clean && rm -rf /var/lib/apt/lists/*
 RUN echo '#!/bin/sh\nexit 0' > /var/lib/dpkg/info/resolvconf.postinst && chmod +x /var/lib/dpkg/info/resolvconf.postinst
 RUN dpkg --configure resolvconf
 
