@@ -4,48 +4,48 @@ import { parse_wireguard_config } from "../networking/wireguard.js"
 import { MINING_POOL_URL } from "../networking/worker.js"
 import { mark_config_as_free } from "../database/worker_wireguard.js"
 import { base_url } from "../networking/url.js"
-import { get_valid_socks5_config } from "../networking/dante-container.js"
+import { get_valid_socks5_config } from '../networking/dante-container.js'
 
 /**
- * Gets SOCKS5 proxy configuration as a worker.
+ * Gets WireGuard/Socks5 VPN configuration as a worker.
  * @param {Object} params - Configuration parameters.
- * @param {number} params.lease_seconds - Duration of the lease in seconds.
- * @param {boolean} [params.priority] - Whether to prioritize this request.
- * @param {string} [params.format] - Response format (text or json).
- * @returns {Promise<string|Object>} - SOCKS5 configuration in requested format.
- */
-export async function get_socks5_config_as_worker( { lease_seconds, priority, format } ) {
-
-    const { socks5_config, expires_at } = await get_valid_socks5_config( { lease_seconds } )
-    if( !socks5_config ) throw new Error( `Failed to get valid socks5 config for ${ lease_seconds }, ${ priority ? 'with' : 'without' } priority` )
-    log.info( `Obtained Socks5 config for ${ socks5_config?.username }, expires at ${ new Date( expires_at ).toISOString() }` )
-
-    // Return right format
-    const json_config = socks5_config
-    const text_config = `socks5://${ socks5_config.username }:${ socks5_config.password }@${ socks5_config.ip_address }:${ socks5_config.port }`
-    if( format == 'text' ) return text_config
-    return json_config
-
-}
-
-/**
- * Gets WireGuard VPN configuration as a worker.
- * @param {Object} params - Configuration parameters.
+ * @param {string} [params.type='wireguard'] - Type of worker config to retrieve ('wireguard' or 'socks5').
  * @param {number} params.lease_seconds - Duration of the lease in seconds.
  * @param {boolean} [params.priority] - Whether to prioritize this request.
  * @param {string} [params.format] - Response format (text or json).
  * @returns {Promise<string|Object>} - WireGuard configuration in requested format.
  */
-export async function get_worker_config_as_worker( { lease_seconds, priority, format } ) {
+export async function get_worker_config_as_worker( { type='wireguard', lease_seconds, priority, format } ) {
 
-    const { wireguard_config, peer_id, peer_slots, expires_at } = await get_valid_wireguard_config( { lease_seconds, priority } )
-    if( !wireguard_config ) throw new Error( `Failed to get valid wireguard config for ${ lease_seconds }, ${ priority ? 'with' : 'without' } priority` )
-    log.info( `Obtained WireGuard config for peer_id ${ peer_id } with ${ peer_slots } slots, expires at ${ new Date( expires_at ).toISOString() }` )
+    let config = null
 
-    // Return right format
-    const { json_config, text_config } = parse_wireguard_config( { wireguard_config } )
-    if( format == 'text' ) return text_config
-    return json_config
+    // Get relevant wireguard config
+    if( type === 'wireguard' ) {
+
+        const { wireguard_config, peer_id, peer_slots, expires_at } = await get_valid_wireguard_config( { lease_seconds, priority } )
+        if( !wireguard_config ) throw new Error( `Failed to get valid wireguard config for ${ lease_seconds }, ${ priority ? 'with' : 'without' } priority` )
+        log.info( `Obtained WireGuard config for peer_id ${ peer_id } with ${ peer_slots } slots, expires at ${ new Date( expires_at ).toISOString() }` )
+
+        // Return right format
+        const { json_config, text_config } = parse_wireguard_config( { wireguard_config } )
+        if( format == 'text' ) config = text_config
+        else config = json_config
+    }
+
+    // Get relevant socks5 config
+    if( type === 'socks5' ) {
+        const { socks5_config, expires_at } = await get_valid_socks5_config( { lease_seconds } )
+        if( !socks5_config ) throw new Error( `Failed to get valid socks5 config for ${ lease_seconds }, ${ priority ? 'with' : 'without' } priority` )
+        log.info( `Obtained Socks5 config for ${ socks5_config?.username }, expires at ${ new Date( expires_at ).toISOString() }` )
+
+        // Return right format
+        const json_config = socks5_config
+        const text_config = `socks5://${ socks5_config.username }:${ socks5_config.password }@${ socks5_config.ip_address }:${ socks5_config.port }`
+        if( format == 'text' ) config = text_config
+        else config = json_config
+    }
+
+    return config
 
 }
 

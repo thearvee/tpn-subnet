@@ -2,9 +2,9 @@ import { Router } from "express"
 import { allow_props, is_ipv4, log, make_retryable, sanetise_ipv4, sanetise_string } from "mentie"
 import { cooldown_in_s, retry_times } from "../../modules/networking/routing.js"
 import { run_mode } from "../../modules/validations.js"
-import { get_worker_config_as_miner, get_socks5_config_as_miner } from "../../modules/api/mining_pool.js"
+import { get_worker_config_as_miner } from "../../modules/api/mining_pool.js"
 import { get_worker_config_as_validator } from "../../modules/api/validator.js"
-import { get_worker_config_as_worker, get_socks5_config_as_worker } from "../../modules/api/worker.js"
+import { get_worker_config_as_worker } from "../../modules/api/worker.js"
 import { is_validator_request } from "../../modules/networking/validators.js"
 import { ip_from_req, resolve_domain_to_ip } from "../../modules/networking/network.js"
 import { MINING_POOL_URL } from "../../modules/networking/worker.js"
@@ -110,14 +110,9 @@ router.get( [ '/config/new', '/lease/new' ], async ( req, res ) => {
         // Get relevant wireguard config based on run mode
         log.debug( `Getting config as ${ mode } with params:`, config_meta )
         let config = null
-        if( type == 'wireguard' && validator_mode ) config = await get_worker_config_as_validator( config_meta )
-        if( type == 'wireguard' && miner_mode ) config = await get_worker_config_as_miner( config_meta )
-        if( type == 'wireguard' && worker_mode ) config = await get_worker_config_as_worker( config_meta )
-
-        // Get relevant socks5 config based on run mode
-        if( type == 'socks5' && validator_mode ) config = await get_worker_config_as_validator( config_meta )
-        if( type == 'socks5' && miner_mode ) config = await get_socks5_config_as_miner( config_meta )
-        if( type == 'socks5' && worker_mode ) config = await get_socks5_config_as_worker( config_meta )
+        if( validator_mode ) config = await get_worker_config_as_validator( config_meta )
+        if( miner_mode ) config = await get_worker_config_as_miner( config_meta )        
+        if( worker_mode ) config = await get_worker_config_as_worker( config_meta )
 
         // Validate config
         if( !config ) throw new Error( `${ mode } failed to get config for ${ geo }` )
