@@ -9,7 +9,6 @@ ENV MAX_PROCESS_RAM_MB=8192
 
 # Install all dependencies
 ENV DEBIAN_FRONTEND=noninteractive
-RUN apt update
 RUN apt update && apt install -y --no-install-recommends \
     # curl for healthcheck
     curl \
@@ -40,7 +39,7 @@ RUN git config --global --add safe.directory /app
 COPY package*.json ./
 
 # Install dependencies, data files from maxmind and ip2location are downloaded later and not during build
-RUN --mount=type=cache,target=/root/.npm npm i -g npm
+RUN npm config set update-notifier false
 RUN --mount=type=cache,target=/root/.npm npm ci --omit=dev
 
 # Cachebuster, used in local development to force rebuilds
