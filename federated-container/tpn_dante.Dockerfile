@@ -3,20 +3,19 @@ FROM ubuntu:24.04
 
 # Install security updates
 ENV DEBIAN_FRONTEND=noninteractive
-RUN apt update && apt upgrade -y
-
-# Install commands: ip, envsubst, nc
-RUN apt update && apt install -y iproute2 gettext-base netcat-openbsd
-
-# Install dante server
-RUN apt update && apt install -y dante-server
+RUN apt update \
+    && apt install -y --no-install-recommends \
+        dante-server \
+        gettext-base \
+        iproute2 \
+        netcat-openbsd \
+    && rm -rf /var/lib/apt/lists/*
 
 # Copy our dante config file
 COPY dante/danted.conf.template /etc/danted.conf.template
 
 # Copy startup script
-COPY dante/gen_users_and_start.sh /usr/local/bin/gen_users_and_start.sh
-RUN chmod +x /usr/local/bin/gen_users_and_start.sh
+COPY --chmod=755 dante/gen_users_and_start.sh /usr/local/bin/gen_users_and_start.sh
 
 # Document the dante server port
 EXPOSE 1080

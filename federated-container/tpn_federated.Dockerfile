@@ -12,6 +12,8 @@ ENV DEBIAN_FRONTEND=noninteractive
 RUN apt update && apt install -y --no-install-recommends \
     # curl for healthcheck
     curl \
+    # certificates
+    ca-certificates \
     # wireguard for vpn connections
     wireguard wireguard-tools \
     # networking tools

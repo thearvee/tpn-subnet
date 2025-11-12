@@ -6,6 +6,7 @@ import { get_workers, write_workers, write_worker_performance } from "../databas
 import { get_config_directly_from_worker } from "../networking/worker.js"
 import { map_ips_to_geodata } from "../geolocation/ip_mapping.js"
 import { base_url } from "../networking/url.js"
+import { test_socks5_connection } from "../networking/socks5.js"
 const { CI_MODE, CI_MOCK_WORKER_RESPONSES } = process.env
 
 /**
@@ -75,6 +76,9 @@ export async function score_all_known_workers( max_duration_minutes=15 ) {
             const wireguard_config = await get_config_directly_from_worker( { worker } )
             const { text_config, json_config } = parse_wireguard_config( { wireguard_config } )
             if( text_config ) workers[ index ].wireguard_config = text_config
+
+            const socks5_config = await get_config_directly_from_worker( { worker, type: 'socks5', format: 'text' } )
+            if( socks5_config ) workers[ index ].socks5_config = socks5_config
 
         } ) )
 
@@ -194,13 +198,18 @@ export async function validate_and_annotate_workers( { workers_with_configs=[] }
 
             // Validate that wireguard config works
             const { valid, message } = await test_wireguard_connection( { wireguard_config: text_config } )
-            if( !valid ) throw new Error( `Wireguard config invalid: ${ message }` )
+            if( !valid ) throw new Error( `Wireguard config invalid for ${ worker.ip }: ${ message }` )
+
+            // Test the socks5 config works
+            const { socks5_config: sock } = worker
+            const socks5_valid = await test_socks5_connection( { sock } )
+            if( !socks5_valid ) throw new Error( `Socks5 config invalid for ${ worker.ip }` )
 
             // Get the most recent country data for these workers
             const { country_code, datacenter } = await ip_geodata( worker.ip )
             test_result.country_code = country_code
             test_result.datacenter = datacenter
-
+    
             // Set test result
             test_result.success = true
             test_result.status = 'up'
