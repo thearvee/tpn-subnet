@@ -18,16 +18,16 @@ export async function test_socks5_connection( { sock } ) {
         log.debug( `Testing SOCKS5 connection using curl commands:`, { curl_icanhaz, curl_socks5 } )
 
         // Test ips
-        let { stdout: direct_ip } = await run( curl_icanhaz )
-        let { stdout: socks5_ip } = await run( curl_socks5 )
-        log.debug( `Direct IP: ${ direct_ip }, SOCKS5 IP: ${ socks5_ip }` )
+        let { stdout: direct_ip, stderr: direct_err } = await run( curl_icanhaz )
+        let { stdout: socks5_ip, stderr: socks5_err } = await run( curl_socks5 )
+        log.debug( `Direct IP: ${ direct_ip }, SOCKS5 IP: ${ socks5_ip }. Errors: direct_err=${ direct_err }, socks5_err=${ socks5_err }` )
 
         // Sanetise
-        direct_ip = sanetise_ipv4( { ip: direct_ip } )
-        socks5_ip = sanetise_ipv4( { ip: socks5_ip } )
+        direct_ip = direct_ip && sanetise_ipv4( { ip: direct_ip } )
+        socks5_ip = socks5_ip && sanetise_ipv4( { ip: socks5_ip } )
 
         // Compare
-        const is_working = direct_ip !== socks5_ip
+        const is_working = direct_ip && socks5_ip && direct_ip !== socks5_ip
         if( !is_working ) {
             log.info( `SOCKS5 proxy test failed: direct IP (${ direct_ip }) matches SOCKS5 IP (${ socks5_ip })` )
         }
