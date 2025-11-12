@@ -1,7 +1,7 @@
 import { is_ipv4, log, require_props, sanetise_string } from "mentie"
 import { country_name_from_code } from "./geolocation/helpers.js"
 
-const { CI_MODE } = process.env
+const { CI_MODE, SERVER_PUBLIC_PORT=3000 } = process.env
 export const default_mining_pool='https://pool.taofu.xyz'
 
 /**
@@ -53,7 +53,7 @@ export const annotate_worker_with_defaults = worker => {
 
     if( !worker || typeof worker !== 'object' ) return worker
 
-    let { public_port=3000, ip, mining_pool_url=default_mining_pool, status='unknown' } = worker
+    let { public_port=SERVER_PUBLIC_PORT, ip, mining_pool_url=default_mining_pool, status='unknown' } = worker
 
     return {
         ...worker,
@@ -94,7 +94,7 @@ export const sanetise_worker = worker => {
     // Sanetise public_port property
     if( worker?.public_port ) {
         let port = Number( worker.public_port )
-        if( isNaN( port ) || port < 1 || port > 65535 ) port = 3000
+        if( isNaN( port ) || port < 1 || port > 65535 ) port = SERVER_PUBLIC_PORT
         worker.public_port = port
     }
 

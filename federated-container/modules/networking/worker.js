@@ -1,4 +1,5 @@
 import { abort_controller, log, sanetise_string } from "mentie"
+const { SERVER_PUBLIC_PORT=3000 } = process.env
 
 /**
  * Gets the configured mining pool URL for the worker, with fallback.
@@ -39,7 +40,7 @@ export const MINING_POOL_URL = get_worker_mining_pool_url()
  */
 export async function get_wireguard_config_directly_from_worker( { worker, max_retries=1, lease_seconds=120, format='text', timeout_ms=5_000 } ) {
 
-    const { ip, public_port=3000 } = worker
+    const { ip, public_port=SERVER_PUBLIC_PORT } = worker
     const { CI_MOCK_WORKER_RESPONSES } = process.env
     const query = `http://${ ip }:${ public_port }/api/lease/new?lease_seconds=${ lease_seconds }&format=${ format }`
     log.info( `Fetching WireGuard config directly from worker at ${ query }` )
@@ -66,7 +67,7 @@ export async function get_wireguard_config_directly_from_worker( { worker, max_r
 
 export async function get_socks5_config_directly_from_worker( { worker, max_retries=1, lease_seconds=120, format='text', timeout_ms=5_000 } ) {
 
-    const { ip, public_port=3000 } = worker
+    const { ip, public_port=SERVER_PUBLIC_PORT } = worker
     const query = `http://${ ip }:${ public_port }/api/lease/new?type=socks5&lease_seconds=${ lease_seconds }&format=${ format }`
     log.info( `Fetching SOCKS5 config directly from worker at ${ query }` )
 

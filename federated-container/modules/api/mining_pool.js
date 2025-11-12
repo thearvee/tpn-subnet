@@ -4,6 +4,7 @@ import { get_validators } from "../networking/validators.js"
 import { get_workers } from "../database/workers.js"
 import { base_url } from "../networking/url.js"
 const { CI_MODE, CI_MOCK_MINING_POOL_RESPONSES } = process.env
+let { SERVER_PUBLIC_PORT: port=3000, SERVER_PUBLIC_PROTOCOL: protocol='http', SERVER_PUBLIC_HOST } = process.env
 
 export async function get_socks5_config_as_miner( { geo, format='json', whitelist, blacklist, lease_seconds } ) {
 
@@ -106,7 +107,6 @@ export async function register_mining_pool_with_validators() {
     const validator_ips = await get_validators( { ip_only: true } )
 
     // Formulate identity
-    let { SERVER_PUBLIC_PORT: port=3000, SERVER_PUBLIC_PROTOCOL: protocol='http', SERVER_PUBLIC_HOST } = process.env
     const identity = { protocol, url: base_url, port }
     log.info( `Registering mining pool with validators:`, identity )
 

@@ -15,9 +15,6 @@ import { resolve_domain_to_ip } from "../networking/network.js"
  * @returns {Promise<string|Object|null>} - Worker configuration or null if no workers available.
  */
 export async function get_worker_config_as_validator( { geo, format='text', whitelist, blacklist, lease_seconds } ) {
-
-    // Do payment authentication here in future
-    // ...
     
     // Get relevant workers
     let { workers: relevant_workers } = await get_workers( { country_code: geo, status: 'up', limit: 50, randomize: true } )
@@ -31,10 +28,10 @@ export async function get_worker_config_as_validator( { geo, format='text', whit
         log.info( `No workers available for geo ${ geo } after applying whitelist(${ whitelist?.length })/blacklist(${ blacklist?.length })` )
         return null
     }
-    
+
     // Shuffle the worker ip array
     shuffle_array( relevant_workers )
-    
+
     // Get config from workers
     let config = null
     let attempts = 0
@@ -49,7 +46,7 @@ export async function get_worker_config_as_validator( { geo, format='text', whit
             attempts++
             continue
         }
-    
+
         // Fetch config
         log.info( `Attempting to get config from worker:`, worker )
         const { ip, mining_pool_uid, mining_pool_url } = worker || {}
