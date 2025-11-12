@@ -8,13 +8,14 @@ import { resolve_domain_to_ip } from "../networking/network.js"
  * Retrieves worker VPN configuration as a validator by coordinating with mining pools.
  * @param {Object} params - Configuration parameters.
  * @param {string} params.geo - Geographic location code.
+ * @param {string} [params.type='wireguard'] - Type of worker config to retrieve ('wireguard' or 'socks5').
  * @param {string} [params.format='text'] - Response format (text or json).
  * @param {string[]} [params.whitelist] - List of whitelisted IPs.
  * @param {string[]} [params.blacklist] - List of blacklisted IPs.
  * @param {number} [params.lease_seconds] - Duration of the lease in seconds.
  * @returns {Promise<string|Object|null>} - Worker configuration or null if no workers available.
  */
-export async function get_worker_config_as_validator( { geo, format='text', whitelist, blacklist, lease_seconds } ) {
+export async function get_worker_config_as_validator( { geo, type='wireguard', format='text', whitelist, blacklist, lease_seconds } ) {
     
     // Get relevant workers
     let { workers: relevant_workers } = await get_workers( { country_code: geo, status: 'up', limit: 50, randomize: true } )
@@ -48,16 +49,16 @@ export async function get_worker_config_as_validator( { geo, format='text', whit
         }
 
         // Fetch config
-        log.info( `Attempting to get config from worker:`, worker )
+        log.info( `Attempting to get ${ type } config from worker:`, worker )
         const { ip, mining_pool_uid, mining_pool_url } = worker || {}
         const { ip: mining_pool_ip } = await resolve_domain_to_ip( { domain: mining_pool_url } )
         attempts++
         if( !is_ipv4( ip ) ) continue
-        config = await get_worker_config_through_mining_pool( { worker, mining_pool_ip, mining_pool_uid, format, lease_seconds } ).catch( e => {
-            log.info( `Error fetching config from worker ${ ip } via mining pool ${ mining_pool_uid }@${ mining_pool_ip }: ${ e.message }` )
+        config = await get_worker_config_through_mining_pool( { worker, mining_pool_ip, mining_pool_uid, type, format, lease_seconds } ).catch( e => {
+            log.info( `Error fetching ${ type } config from worker ${ ip } via mining pool ${ mining_pool_uid }@${ mining_pool_ip }: ${ e.message }` )
             return null
         } )
-        if( config ) log.info( `Successfully retrieved config from worker ${ ip } via mining pool ${ mining_pool_uid }@${ mining_pool_ip }` )
+        if( config ) log.info( `Successfully retrieved ${ type } config from worker ${ ip } via mining pool ${ mining_pool_uid }@${ mining_pool_ip }` )
 
     }
 

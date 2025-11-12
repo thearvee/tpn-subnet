@@ -10,6 +10,7 @@ import { ip_from_req, resolve_domain_to_ip } from "../../modules/networking/netw
 import { MINING_POOL_URL } from "../../modules/networking/worker.js"
 import { country_name_from_code } from "../../modules/geolocation/helpers.js"
 import { get_worker_countries_for_pool } from "../../modules/database/workers.js"
+import { test_socks5_connection } from "../../modules/networking/socks5.js"
 const { CI_MOCK_WORKER_RESPONSES } = process.env
 
 export const router = Router()
@@ -88,7 +89,7 @@ router.get( [ '/config/new', '/lease/new' ], async ( req, res ) => {
         whitelist = whitelist && sanetise_string( whitelist ).split( ',' )
         blacklist = blacklist && sanetise_string( blacklist ).split( ',' )
         priority = priority === 'true'
-        const config_meta = { lease_seconds, format, geo, whitelist, blacklist, priority }
+        const config_meta = { lease_seconds, format, geo, whitelist, blacklist, priority, type }
 
         // Geo availability check in non-worker mode, workers do not need geo check as they are static and only called with 'any'
         let geo_available = true
@@ -114,13 +115,17 @@ router.get( [ '/config/new', '/lease/new' ], async ( req, res ) => {
         if( type == 'wireguard' && worker_mode ) config = await get_worker_config_as_worker( config_meta )
 
         // Get relevant socks5 config based on run mode
-        // if( type == 'socks5' && validator_mode ) config = await get_socks5_config_as_validator( config_meta )
+        if( type == 'socks5' && validator_mode ) config = await get_worker_config_as_validator( config_meta )
         if( type == 'socks5' && miner_mode ) config = await get_socks5_config_as_miner( config_meta )
         if( type == 'socks5' && worker_mode ) config = await get_socks5_config_as_worker( config_meta )
 
-
         // Validate config
         if( !config ) throw new Error( `${ mode } failed to get config for ${ geo }` )
+        if( type == 'socks5' ) {
+            const sock = format == 'text' ? config : `socks5://${ config.username }:${ config.config.password }@${ config.ip_address }:${ config.port }`
+            const valid = await test_socks5_connection( { sock } )
+            log.info( `Socks5 config validation result: ${ valid } for config: ${ sock }` )
+        }
 
         return config
 

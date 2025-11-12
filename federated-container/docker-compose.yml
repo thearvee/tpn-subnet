@@ -234,7 +234,7 @@ services:
       - dante_etc:/etc
       - ./dante_logs:/var/log
     ports:
-      - "${DANTE_PORT:-1080}:1080"
+      - "${DANTE_PORT:-1080}:${DANTE_PORT:-1080}"
     networks:
       - tpn-external
     profiles:
