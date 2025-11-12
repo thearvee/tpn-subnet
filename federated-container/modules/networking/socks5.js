@@ -1,5 +1,7 @@
 import { log, sanetise_ipv4 } from "mentie"
 import { run } from "../system/shell.js"
+import { run_mode } from "../validations.js"
+
 
 /**
  * 
@@ -27,7 +29,14 @@ export async function test_socks5_connection( { sock } ) {
         socks5_ip = socks5_ip && sanetise_ipv4( { ip: socks5_ip } )
 
         // Compare
-        const is_working = direct_ip && socks5_ip && direct_ip !== socks5_ip
+        const { worker_mode } = run_mode()
+        let is_working = direct_ip && socks5_ip
+
+        // For worker expect same ip
+        if( is_working && worker_mode ) is_working = direct_ip == socks5_ip
+        // For non-worker expect different ip
+        else if( is_working && !worker_mode ) is_working = direct_ip != socks5_ip
+
         if( !is_working ) {
             log.info( `SOCKS5 proxy test failed: direct IP (${ direct_ip }) matches SOCKS5 IP (${ socks5_ip })` )
         }
