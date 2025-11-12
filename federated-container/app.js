@@ -112,6 +112,11 @@ if( worker_mode ) {
     await wait_for_wireguard_config_count()
     await wait_for_wg_port_to_be_reachable()
 
+    // Wait for the dante container to be ready
+    const { dante_server_ready } = await import( './modules/networking/dante-container.js' )
+    await dante_server_ready()
+
+    // Register worker routes
     const { router: worker_register_router } = await import( './routes/worker/register.js' )
     app.use( '/worker/register', worker_register_router )
     if( CI_MODE === 'true' && CI_MOCK_MINING_POOL_RESPONSES === 'true' ) {
