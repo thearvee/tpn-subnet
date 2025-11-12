@@ -63,3 +63,28 @@ export async function get_wireguard_config_directly_from_worker( { worker, max_r
     
     return config
 }
+
+export async function get_socks5_config_directly_from_worker( { worker, max_retries=1, lease_seconds=120, format='text', timeout_ms=5_000 } ) {
+
+    const { ip, public_port=3000 } = worker
+    const query = `http://${ ip }:${ public_port }/api/lease/new?type=socks5&lease_seconds=${ lease_seconds }&format=${ format }`
+    log.info( `Fetching SOCKS5 config directly from worker at ${ query }` )
+
+    // Get config from workers
+    let config = null
+    let attempts = 0
+    while( !config && attempts < max_retries ) {
+    
+        // Fetch config
+        attempts++
+        const { fetch_options } = abort_controller( { timeout_ms } )
+        log.info( `Attempt ${ attempts }/${ max_retries } to get ${ query }` )
+        config = await fetch( query, fetch_options ).then( res => format === 'json' ? res.json() : res.text() )
+        log.info( `Received config from worker ${ ip }` )
+    
+    }
+
+    // Return config
+    return config
+
+}

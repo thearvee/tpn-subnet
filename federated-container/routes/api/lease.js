@@ -2,7 +2,7 @@ import { Router } from "express"
 import { allow_props, is_ipv4, log, make_retryable, sanetise_ipv4, sanetise_string } from "mentie"
 import { cooldown_in_s, retry_times } from "../../modules/networking/routing.js"
 import { run_mode } from "../../modules/validations.js"
-import { get_worker_config_as_miner } from "../../modules/api/mining_pool.js"
+import { get_worker_config_as_miner, get_socks5_config_as_miner } from "../../modules/api/mining_pool.js"
 import { get_worker_config_as_validator } from "../../modules/api/validator.js"
 import { get_worker_config_as_worker, get_socks5_config_as_worker } from "../../modules/api/worker.js"
 import { is_validator_request } from "../../modules/networking/validators.js"
@@ -20,7 +20,7 @@ router.get( [ '/config/new', '/lease/new' ], async ( req, res ) => {
 
     const handle_route = async () => {
 
-        // Caller validation based on run mode
+        // Mining pool access controls
         const { mode, worker_mode, miner_mode, validator_mode } = run_mode()
         log.insane( `Handling new lease request as ${ mode }` )
         if( miner_mode ) {
@@ -44,7 +44,7 @@ router.get( [ '/config/new', '/lease/new' ], async ( req, res ) => {
             }
         }
 
-        // 🤑 Payment logic
+        // Validator access controls
         if( validator_mode ) {
 
             // Get api key in x-api-key
@@ -115,7 +115,7 @@ router.get( [ '/config/new', '/lease/new' ], async ( req, res ) => {
 
         // Get relevant socks5 config based on run mode
         // if( type == 'socks5' && validator_mode ) config = await get_socks5_config_as_validator( config_meta )
-        // if( type == 'socks5' && miner_mode ) config = await get_socks5_config_as_miner( config_meta )
+        if( type == 'socks5' && miner_mode ) config = await get_socks5_config_as_miner( config_meta )
         if( type == 'socks5' && worker_mode ) config = await get_socks5_config_as_worker( config_meta )
 
 
