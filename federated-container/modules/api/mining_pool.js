@@ -32,7 +32,10 @@ export async function get_socks5_config_as_miner( { geo, format='json', whitelis
         const worker = relevant_workers[ attempts ]
         attempts++
         if( !is_ipv4( worker.ip ) ) continue
-        config = await get_socks5_config_directly_from_worker( { worker, format, lease_seconds } )
+        config = await get_socks5_config_directly_from_worker( { worker, format, lease_seconds } ).catch( e => {
+            log.info( `Error fetching SOCKS5 config from worker ${ worker.ip }: ${ e.message }` )
+            return null
+        } )
 
     }
 
@@ -78,7 +81,10 @@ export async function get_worker_config_as_miner( { geo, format='text', whitelis
         const worker = relevant_workers[ attempts ]
         attempts++
         if( !is_ipv4( worker.ip ) ) continue
-        config = await get_wireguard_config_directly_from_worker( { worker, format, lease_seconds } )
+        config = await get_wireguard_config_directly_from_worker( { worker, format, lease_seconds } ).catch( e => {
+            log.info( `Error fetching WireGuard config from worker ${ worker.ip }: ${ e.message }` )
+            return null
+        } )
 
     }
 

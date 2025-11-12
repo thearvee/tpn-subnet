@@ -85,7 +85,8 @@ export async function register_with_mining_pool() {
         return { registered, worker }
         
     } catch ( e ) {
-        log.error( `Error registering with mining pool ${ MINING_POOL_URL }: `, e )
+        log.error( `Error registering with mining pool ${ MINING_POOL_URL }: `, e.message )
+        log.insane( e )
         return { registered: false, error: e.message }
     }
 

@@ -56,7 +56,10 @@ export async function get_worker_config_as_validator( { geo, format='text', whit
         const { ip: mining_pool_ip } = await resolve_domain_to_ip( { domain: mining_pool_url } )
         attempts++
         if( !is_ipv4( ip ) ) continue
-        config = await get_worker_config_through_mining_pool( { worker, mining_pool_ip, mining_pool_uid, format, lease_seconds } )
+        config = await get_worker_config_through_mining_pool( { worker, mining_pool_ip, mining_pool_uid, format, lease_seconds } ).catch( e => {
+            log.info( `Error fetching config from worker ${ ip } via mining pool ${ mining_pool_uid }@${ mining_pool_ip }: ${ e.message }` )
+            return null
+        } )
         if( config ) log.info( `Successfully retrieved config from worker ${ ip } via mining pool ${ mining_pool_uid }@${ mining_pool_ip }` )
 
     }
