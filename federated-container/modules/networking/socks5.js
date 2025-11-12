@@ -13,15 +13,15 @@ export async function test_socks5_connection( { sock } ) {
     try {
 
         // Build the curl commands
-        const ip_host = `${ base_url() }/ping`
+        const ip_host = `${ base_url }/ping`
         const curl_icanhaz = `curl -m 2 -s ${ ip_host }`
         const curl_socks5 = `curl -m 2 -s -x ${ sock } ${ ip_host }`
-        log.info( `Testing SOCKS5 connection using curl commands:`, { curl_icanhaz, curl_socks5 } )
+        log.debug( `Testing SOCKS5 connection using curl commands:`, { curl_icanhaz, curl_socks5 } )
 
         // Test ips
         let { stdout: direct_ip } = await run( curl_icanhaz )
         let { stdout: socks5_ip } = await run( curl_socks5 )
-        log.info( `Direct IP: ${ direct_ip }, SOCKS5 IP: ${ socks5_ip }` )
+        log.debug( `Direct IP: ${ direct_ip }, SOCKS5 IP: ${ socks5_ip }` )
 
         // Sanetise
         direct_ip = sanetise_ipv4( direct_ip )
