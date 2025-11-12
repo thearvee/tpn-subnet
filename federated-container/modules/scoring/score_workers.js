@@ -3,7 +3,7 @@ import { parse_wireguard_config, test_wireguard_connection } from "../networking
 import { default_mining_pool, is_valid_worker } from "../validations.js"
 import { ip_geodata } from "../geolocation/helpers.js"
 import { get_workers, write_workers, write_worker_performance } from "../database/workers.js"
-import { get_wireguard_config_directly_from_worker } from "../networking/worker.js"
+import { get_config_directly_from_worker } from "../networking/worker.js"
 import { map_ips_to_geodata } from "../geolocation/ip_mapping.js"
 import { base_url } from "../networking/url.js"
 const { CI_MODE, CI_MOCK_WORKER_RESPONSES } = process.env
@@ -72,7 +72,7 @@ export async function score_all_known_workers( max_duration_minutes=15 ) {
             // Skip non members
             if( worker.mining_pool_uid !== 'internal' ) return log.info( `Skipping worker ${ worker.public_url } as it is not a member of this mining pool` )
             
-            const wireguard_config = await get_wireguard_config_directly_from_worker( { worker } )
+            const wireguard_config = await get_config_directly_from_worker( { worker } )
             const { text_config, json_config } = parse_wireguard_config( { wireguard_config } )
             if( text_config ) workers[ index ].wireguard_config = text_config
 
