@@ -1,4 +1,5 @@
 import { log, sanetise_ipv4 } from "mentie"
+import { run } from "../system/shell.js"
 
 /**
  * 
@@ -11,12 +12,12 @@ export async function test_socks5_connection( { sock } ) {
     try {
 
         // Build the curl commands
-        const curl_icanhaz = `curl ipv4.icanhazip.com`
-        const curl_socks5 = `curl -x ${ sock } ipv4.icanhazip.com`
+        const curl_icanhaz = `curl -m 2 -s ipv4.icanhazip.com`
+        const curl_socks5 = `curl -m 2 -s -x ${ sock } ipv4.icanhazip.com`
 
         // Test ips
-        let { stdout: direct_ip } = await run( curl_icanhaz, { timeout: 2_000 } )
-        let { stdout: socks5_ip } = await run( curl_socks5, { timeout: 2_000 } )
+        let { stdout: direct_ip } = await run( curl_icanhaz )
+        let { stdout: socks5_ip } = await run( curl_socks5 )
 
         // Sanetise
         direct_ip = sanetise_ipv4( direct_ip )

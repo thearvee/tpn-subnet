@@ -1,6 +1,7 @@
 // Dependencies
 import { cache, log, log_environment, wait } from "mentie"
 import { restore_tpn_cache_from_disk } from "./modules/caching.js"
+import { ip_from_req } from "./modules/networking/network.js"
 
 // Get relevant environment data
 import { get_git_branch_and_hash, check_system_warnings, run } from './modules/system/shell.js'
@@ -73,6 +74,16 @@ app.use( '/', health_router )
 /* ///////////////////////////////
 // Routes
 // /////////////////////////////*/
+
+// Canhazip route
+app.use( '/ping', async ( req, res ) => {
+    try {
+        const { unspoofable_ip } = ip_from_req( req )
+        return res.send( unspoofable_ip )
+    } catch ( e ) {
+        return res.status( 500 ).send( `Error: ${ e.message }` )
+    }
+} )
 
 // Protocol routes
 if( validator_mode || miner_mode ) {
