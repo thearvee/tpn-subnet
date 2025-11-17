@@ -54,7 +54,7 @@ function start_dante() {
 for used_auth_file in "$PASSWORD_DIR"/*.password.used; do
     if [[ -f "$used_auth_file" ]]; then
         username=$(basename "$used_auth_file" .password.used)
-        userdel "$username"
+        userdel "$username" || echo "No need to delete user $username, it does not exist."
         rm -f "$PASSWORD_DIR/$username.password"
         rm -f "$PASSWORD_DIR/$username.password.used"
     fi
