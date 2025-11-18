@@ -203,7 +203,10 @@ export async function validate_and_annotate_workers( { workers_with_configs=[] }
             // Test the socks5 config works
             const { socks5_config: sock } = worker
             const socks5_valid = await test_socks5_connection( { sock } )
-            if( !socks5_valid ) throw new Error( `Socks5 config invalid for ${ worker.ip }` )
+            if( !socks5_valid ) {
+                log.warn( `Socks5 config invalid for ${ worker.ip }, this will reject workers soon, update your workers!` )
+                // throw new Error( `Socks5 config invalid for ${ worker.ip }` )
+            }
 
             // Get the most recent country data for these workers
             const { country_code, datacenter } = await ip_geodata( worker.ip )

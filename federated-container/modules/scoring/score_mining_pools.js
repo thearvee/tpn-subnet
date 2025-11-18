@@ -201,7 +201,10 @@ async function score_single_mining_pool( { mining_pool_uid, mining_pool_ip } ) {
             test_duration_s = no_response_penalty_s
         }
         const incremented_acc = acc + test_duration_s
-        if( isNaN( incremented_acc ) ) log.warn( `NaN encountered when calculating mean test length for pool ${ pool_label }:`, { acc, test_duration_s, worker_test } )
+        if( isNaN( incremented_acc ) ) {
+            log.warn( `NaN encountered when calculating mean test length for pool ${ pool_label }:`, { acc, test_duration_s, worker_test } )
+            return acc
+        }
         return incremented_acc
     }, 0 ) / successes.length
 
@@ -217,6 +220,7 @@ async function score_single_mining_pool( { mining_pool_uid, mining_pool_ip } ) {
     // Calculate the geographic score
     const unique_countries = await get_worker_countries_for_pool()
     log.debug( `Unique countries across all pools: `, unique_countries )
+    if( !unique_countries?.length ) throw new Error( `No unique countries found across all pools, cannot calculate geo score` )
     const total_countries = unique_countries.length
     const geo_completeness_fraction = round_number_to_decimals( countries_in_pool.length / total_countries, 4 )
     const geo_score = round_number_to_decimals( geo_completeness_fraction * 100, 2 )
