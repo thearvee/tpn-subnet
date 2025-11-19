@@ -64,7 +64,7 @@ services:
       - tpn-internal
       - tpn-external
     ports:
-      - "127.0.0.1:572872:${SERVER_PUBLIC_PORT:-3000}" # Make this container available from localhost so the neuron can access it, hardcoded to :572872 for the neuron
+      - "127.0.0.1:57287:${SERVER_PUBLIC_PORT:-3000}" # Make this container available from localhost so the neuron can access it, hardcoded to :57287 for the neuron
       - "${SERVER_PUBLIC_PORT:-3000}:${SERVER_PUBLIC_PORT:-3000}"
     cap_add:
       - NET_ADMIN
